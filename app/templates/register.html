@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+{% block title %} Login {% endblock %}
+
+{% block content %}
+<div class="tab">
+    <button class="tablinks" onclick="openTab(event, 'formLogin')">Login</button>
+    <button class="tablinks" onclick="openTab(event, 'formRegister')">Register</button>
+</div>
+
+<div id="formLogin" class="tabcontent" style="display: block;">
+    <form id="Login" method="post" onsubmit="return validateLogin()">
+        <h3 class="subtitulo">Iniciar sesión</h3>
+        <input type="text" name="username" placeholder="Username">
+        <input type="password" name="password" placeholder="Password">
+        {% if request.query_params.error %}
+            <p style="color: red;">{{ request.query_params.error }}</p>
+        {% endif %}
+        <div class="container">
+            <a class="hipertext" href="/login" onclick="return olvideContrasena()">Olvide contraseña</a>
+            <button type="submit">Ingresar</button>
+        </div>
+
+        {% if login_error %}
+        <p>{{ login_error }}</p>
+        {% endif %}
+    </form>
+</div>
+
+<div id="formRegister" class="tabcontent" style="display: none;">
+    <h3>Registro</h3>
+    <form id="Register" method="post"  onsubmit="return validatePassword()">
+        <div class="registerbox">
+            <input type="text" name="names" placeholder="Nombres">
+            <input type="text" name="surnames" placeholder="Apellidos">
+        </div>
+        <div class="registerbox">
+            <input type="text" name="username" placeholder="Username">
+            <input type="text" name="document" placeholder="Documento">
+        </div>
+        <div class="registerbox">
+            <input type="text" name="email" placeholder="Correo electrónico">
+            <input type="text" name="phone_number" placeholder="Teléfono">
+        </div>
+        <div class="registerbox">
+            <input type="text" name="job" placeholder="Cargo">
+            <input type="text" name="profession" placeholder="Profesión">
+        </div>
+        <div class="registerbox">
+            <input type="password" name="password" placeholder="Contraseña">
+            <input type="password" name="confirm_password" placeholder="Repetir contraseña">
+        </div>
+
+        <button type="submit">Registrar</button>
+        {% if register_error %}
+        <p>{{ register_error }}</p>
+        {% endif %}
+    </form>
+</div>
+<script>
+    document.getElementById("Register").addEventListener("submit", async function(event) {
+        event.preventDefault();
+        const formData = new FormData(event.target);
+        const data = new URLSearchParams(formData).toString();
+
+        const response = await fetch("/api/register", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+            },
+            body: data,
+        });
+        responseJson = await response.json();
+        console.log("response", responseJson);
+        if (response.ok) {
+            window.location.href = `/success?names=${encodeURIComponent(responseJson["data"]["names"])}`;
+        } else {
+            const error = await response.json();
+            form.querySelector("Error en el registro", response.statusText);
+        }
+    });
+    document.getElementById("Login").addEventListener("submit", async function(event) {
+        event.preventDefault();
+        const formData = new FormData(event.target);
+        const data = new URLSearchParams(formData).toString();
+        console.log("body", data);
+        const response = await fetch("/api/auth", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+            },
+            body: data,
+        });
+        responseJson = await response.json();
+        console.log("response", responseJson);
+        if (response.ok) {
+            window.location.href = `/success?names=${encodeURIComponent(responseJson["data"]["names"])}`;
+        } else {
+            window.location.href = "/login?error=usuario o contraseña incorrectos";
+            const error = await response.json();
+            //RedirectResponse(url="/login?error=usuario o contraseña incorrectos", status_code=303)
+            form.querySelector("Error en el login", response.statusText);
+        }
+    });
+</script>
+
+<script>
+    function openTab(evt, tabName) {
+        var i, tabcontent, tablinks;
+        tabcontent = document.getElementsByClassName("tabcontent");
+        for (i = 0; i < tabcontent.length; i++) {
+            tabcontent[i].style.display = "none";
+        }
+        tablinks = document.getElementsByClassName("tablinks");
+        for (i = 0; i < tablinks.length; i++) {
+            tablinks[i].className = tablinks[i].className.replace(" active", "");
+        }
+        document.getElementById(tabName).style.display = "block";
+        evt.currentTarget.className += " active";
+    }
+
+    function olvideContrasena() {
+        alert("Temporalmente deshabilitado.");
+    }
+
+    function validateLogin() {
+        var username = document.querySelector("input[name='username']").value.trim();
+        var password = document.querySelector("input[name='password']").value.trim();
+        if (username === "" || password === "") {
+            alert("Todos los campos deben estar llenos.");
+            if (username === "") {
+                document.querySelector("input[name='username']").style.borderColor = "red";
+            } else {
+                document.querySelector("input[name='username']").style.borderColor = "initial";
+            }
+            if (password === "") {
+                document.querySelector("input[name='password']").style.borderColor = "red";
+            } else {
+                document.querySelector("input[name='password']").style.borderColor = "initial";
+            }
+            return false;
+        }
+        return true;
+    }
+
+    function validatePassword() {
+        var password = document.querySelector("input[name='password_register']").value;
+        var confirmPassword = document.querySelector("input[name='confirm_password']").value;
+        console.log("las constraseñas son 1: ",password," y confirmar contraseña 2: ", confirmPassword);
+        if (password !== confirmPassword) {
+            alert("Las contraseñas no coinciden.");
+            return false;
+        }
+        return true;
+    }
+
+</script>
+
+{% endblock %}

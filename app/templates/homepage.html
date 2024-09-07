@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}
+    Inicio Software Odontologico 
+{% endblock %}
+
+{% block content %}
+
+<div class="global">
+    {% include "modellers/homepage/modulos.html" %}
+</div>
+<div class="tableclass">
+    {% include "modellers/homepage/tablas.html" %}
+</div>
+
+<!-- Asegúrate de que el modal esté incluido en el DOM -->
+{% include "modellers/pacientes/paciente.html" %}
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // Obtener el modal
+        var modal = document.getElementById("pacienteModal");
+
+        // Obtener el botón que abre el modal
+        var btn = document.getElementById("nuevoPacienteBtn");
+
+        // Obtener el elemento <span> que cierra el modal
+        var span = document.getElementsByClassName("close")[0];
+
+        // Verificar si los elementos existen
+        if (btn && span && modal) {
+            // Cuando el usuario hace clic en el botón, abre el modal
+            btn.onclick = function() {
+                modal.style.display = "block";
+            }
+
+            // Cuando el usuario hace clic en <span> (x), cierra el modal
+            span.onclick = function() {
+                modal.style.display = "none";
+            }
+
+            // Cuando el usuario hace clic fuera del modal, cierra el modal
+            window.onclick = function(event) {
+                if (event.target == modal) {
+                    modal.style.display = "none";
+                }
+            }
+        } else {
+            console.error("No se encontraron los elementos necesarios en el DOM.");
+        }
+    });
+</script>
+
+{% endblock %}

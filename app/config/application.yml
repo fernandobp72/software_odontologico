@@ -1,0 +1,13 @@
+application:
+  name: "software odontológico"
+  version: "1.0.0"
+  port: "8080"
+
+connection:
+  mysql:
+    host: 'localhost'
+    port: 3306
+    username: software
+    password: odontologico
+    db: software_odontologico
+    connect_timeout: 4

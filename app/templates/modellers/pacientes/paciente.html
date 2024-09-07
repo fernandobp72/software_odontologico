@@ -1,0 +1,153 @@
+<!-- Modal -->
+<div id="pacienteModal" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h2>Registro de Paciente</h2>
+        <form id="pacienteForm">
+            <div class="form-group">
+                <label for="nombre">Primer Nombre:</label>
+                <input type="text" id="nombre" name="nombre" required>
+            </div>
+            <div class="form-group">
+                <label for="segundo_nombre">Segundo Nombre:</label>
+                <input type="text" id="segundo_nombre" name="segundo_nombre"> 
+            </div>
+            <div class="form-group">
+                <label for="apellido">Primer apellido:</label>
+                <input type="text" id="apellido" name="apellido" required>  
+            </div>
+            <div class="form-group">
+                <label for="segundo_apellido">Segundo apellido:</label>
+                <input type="text" id="segundo_apellido" name="segundo_apellido">
+            </div>
+            <div class="form-group">
+                <label for="tipo_documento">Tipo de Documento:</label>
+                <select id="tipo_documento" name="tipo_documento" required>
+                    <option value="CC">Cédula de Ciudadanía</option>
+                    <option value="TI">Tarjeta de Identidad</option>
+                    <option value="CE">Cédula de Extranjería</option>
+                    <option value="PA">Pasaporte</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="cedula">Identificación:</label>
+                <input type="text" id="cedula" name="cedula" required>
+            </div>
+            <div class="form-group">
+                <label for="direccion">Dirección:</label>
+                <input type="text" id="direccion" name="direccion" required>
+            </div>
+            <div class="form-group">
+                <label for="ciudad">Ciudad:</label>
+                <input type="text" id="ciudad" name="ciudad" required>
+            </div>
+            <div class="form-group">
+                <label for="departamento">Departamento:</label>
+                <input type="text" id="departamento" name="departamento" required>
+            </div>
+            <div class="form-group">
+                <label for="pais">País:</label>
+                <input type="text" id="pais" name="pais" required>
+            </div>
+            <div class="form-group">
+                <label for="barrio">Barrio:</label>
+                <input type="text" id="barrio" name="barrio" required>
+            </div>
+            <div class="form-group">
+                <label for="email">Correo Electrónico:</label>
+                <input type="email" id="email" name="email" required>
+            </div>
+            <div class="form-group">
+                <label for="telefono">Teléfono:</label>
+                <input type="text" id="telefono" name="telefono" required>
+            </div>
+            <div class="form-group">
+                <label for="fecha_nacimiento">Fecha de Nacimiento:</label>
+                <input type="date" id="fecha_nacimiento" name="fecha_nacimiento" required>
+            </div>
+            <div class="form-group">
+                <label for="genero">Género:</label>
+                <select id="genero" name="genero" required>
+                    <option value="N">No definido</option>
+                    <option value="M">Masculino</option>
+                    <option value="F">Femenino</option>
+                    <option value="O">Otro</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="estado_civil">Estado Civil:</label>
+                <select id="estado_civil" name="estado_civil" required>
+                    <option value="S">Soltero</option>
+                    <option value="C">Casado</option>
+                    <option value="U">Unión Libre</option>
+                    <option value="D">Divorciado</option>
+                    <option value="V">Viudo</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="ocupacion">Ocupación:</label>
+                <input type="text" id="ocupacion" name="ocupacion" required>
+            </div>
+            <div class="form-group">
+                <label for="escolaridad">Escolaridad:</label>
+                <input type="text" id="escolaridad" name="escolaridad" required>
+            </div>
+            <div class="form-group">
+                <label for="eps">EPS:</label>
+                <input type="text" id="eps" name="eps" required>
+            </div>
+            <div class="form-group">
+                <label for="regimen">Régimen:</label>
+                <select id="regimen" name="regimen" required>
+                    <option value="S">Subsidiado</option>
+                    <option value="C">Contributivo</option>
+                    <option value="E">Especial</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="acompanante">Acompañante:</label>
+                <input type="text" id="acompanante" name="acompanante" required>
+            </div>
+            <div class="form-group">
+                <label for="telefono_acompanante">Teléfono Acompañante:</label>
+                <input type="text" id="telefono_acompanante" name="telefono_acompanante" required>
+            </div>
+            <div class="form-group">
+                <label for="parentesco">Parentesco:</label>
+                <input type="text" id="parentesco" name="parentesco" required>
+            </div>
+            <div class="form-group">
+                <label for="direccion_acompanante">Dirección Acompañante:</label>
+                <input type="text" id="direccion_acompanante" name="direccion_acompanante" required>
+            </div>
+            <button id="register" type="submit">Registrar</button>
+        </form>
+    </div>
+</div>
+
+<script>
+    document.getElementById('pacienteForm').addEventListener('submit', async function(event) {
+        event.preventDefault();
+        
+        const formData = new FormData(event.target);
+        const data = Object.fromEntries(formData.entries());
+        
+        const response = await fetch('/api/pacientes/create', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        });
+        
+        if (response.ok) {
+            alert('Paciente registrado exitosamente');
+            await fetchAndUpdateTable();
+            const model = document.getElementById('pacienteModal');
+            model.closest('.modal').style.display = 'none';
+            document.getElementById('pacienteForm').reset();
+        } else {
+            alert('Error al registrar el paciente');
+        }
+    });
+    </script>

@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}Title{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='css/page.css') }}">
+</head>
+<body>
+    <header>
+        <div id="titulo" class="cabecera">
+            <div>
+                <h1>software odontológico</h1>
+            </div>
+            {% if user_authenticated %}
+            <div class="logout-button">
+                <form action="{{ url_for('logout') }}" method="get">
+                    <button type="submit">Cerrar Sesión</button>
+                </form>
+            </div>
+            {% endif %}
+        </div>
+
+    </header>
+
+    {% block content %}{% endblock %}
+</body>
+<footer>
+    <nav id="nav-tabs" class="footer-links">
+        <p>Realizado por Fernando Benavides Perez</p>
+    </nav>
+</footer>
+</html>

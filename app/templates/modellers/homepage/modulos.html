@@ -1,0 +1,51 @@
+
+<div class="tools">
+    <div class="search_admin">
+        <h4>Buscar paciente</h4>
+        <input type="text" placeholder="Cedula" name="buscar_cedula">
+        <input type="text" placeholder="Nombres y/o apellidos" name="buscar_texto">
+        <button type="submit">Buscar</button>
+    </div>
+    <div class="tool-center">
+        <div>
+            <h4>Consultar</h4>
+        </div>
+        <div class="elements">
+            <div class="inv">
+                <p>Total</p>
+                <p id="totalPacientes">0</p>
+                <button id="botonPacientes" type="submit" disabled>Pacientes</button>
+            </div>
+            <div class="inv">
+                <p>Total</p>
+                <p>4</p>
+                <button type="submit" disabled>Consentimientos</button>
+            </div>
+            <div class="inv">
+                <p>Total</p>
+                <p>004</p>
+                <button type="submit" disabled>Facturación</button>
+            </div>
+        </div>
+    </div>
+    <div class="tool-new">
+        <h4>Nuevo</h4>
+        <div>
+            <button type="submit" id="nuevoPacienteBtn">Paciente</button>
+        </div>
+        <div>
+            <button type="submit">Consentimiento</button>
+        </div>
+    </div>
+</div>
+<div></div>
+<script>
+    // Selecciona el botón por su ID
+    const botonPacientes = document.getElementById("botonPacientes");
+    // Desactiva el botón
+    botonPacientes.disabled = true;
+    async function updateTotalPatient(totalPacientes){
+        const totalPacientesElement = document.getElementById("totalPacientes");
+        totalPacientesElement.textContent = totalPacientes;    
+    }
+</script>

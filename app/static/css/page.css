@@ -1,0 +1,75 @@
+/* Contenedor principal de herramientas */
+.tools {
+    display: flex;
+    justify-content: space-between; /* Distribuye los divs con espacio entre ellos */
+    align-items: flex-start; /* Alinea los divs en la parte superior */
+    padding: 20px;
+    background-color: white;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+}
+
+/* Estilo para el div de búsqueda */
+.search_admin {
+    flex: 1;
+    margin-right: 20px;
+    align-self: normal;
+    height: 100%;
+    padding: 20px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    background-color: #f9f9f9;
+}
+
+.search_admin input {
+    display: flex;
+    width: -webkit-fill-available;
+    padding: 10px;
+    margin-bottom: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+/* Estilo para el div de consulta */
+.tool-center {
+    flex: 2; /* Ocupa el doble de espacio comparado con los otros divs */
+    margin-right: 20px;
+    align-self: normal;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    background-color: #f9f9f9;
+}
+
+.consulta {
+    display: flex;
+    justify-content: space-around;
+    margin-top: 10px;
+}
+
+.consulta > div {
+    flex: 1;
+    text-align: center;
+    align-self: normal;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    background-color: #fff;
+}
+
+
+
+/* Estilo para el div de nuevas acciones */
+.tool-new {
+    flex: 1; /* Ocupa el mismo espacio que los otros divs */
+    align-self: normal;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    background-color: #f9f9f9;
+}
+
+.tool-new button {
+    width: 50%;
+    margin-top: 10px;
+}

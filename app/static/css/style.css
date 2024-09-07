@@ -1,0 +1,305 @@
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f4f4f4;
+    margin: 0;
+    padding: 20px;
+}
+
+.tab {
+    overflow: hidden;
+    background-color: #333;
+}
+
+.tab button {
+    background-color: inherit;
+    border: none;
+    outline: none;
+    cursor: pointer;
+    padding: 14px 16px;
+    transition: 0.3s;
+    color: white;
+}
+
+.tab button:hover {
+    background-color: #ddd;
+    color: black;
+}
+
+.tab button.active {
+    background-color: #666;
+}
+
+.tabcontent {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    width: 30%;
+    transform: translate(-50%, -50%);
+    border-radius: 10px;
+    display: none;
+    padding: 20px;
+    border: 1px solid #ccc;
+    background-color: rgb(230, 230, 230);
+    justify-content: center;
+
+}
+
+form {
+    margin: 20px;
+}
+
+input[type="text"], 
+input[type="password"], 
+input[type="email"],
+input[type="date"],
+input[type="number"],
+input[type="tel"],
+input[type="time"],
+select[id="genero"],
+select[id="estado_civil"],
+select[id="regimen"],
+select[id="tipo_documento"] {
+    width: 100%;
+    padding: 10px;
+    margin: 10px 0;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+.cabecera {
+    width: 100%;
+    background-color: rgb(151,72,255);
+    border: none;
+    color: white;
+    text-align: center;
+    padding: 20px
+}
+
+.container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-top: 20px;
+}
+
+
+.hipertext {
+    margin: 10px;
+    text-align: center;
+}
+
+.subtitulo {
+    text-align: center;
+}
+
+button {
+    background-color: rgb(151,72,255);
+    color: white;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+button:disabled {
+    background-color: rgb(195, 201, 215);
+    cursor: not-allowed;
+}
+
+button:hover {
+    background-color: rgb(131,42,255);
+}
+button:disabled:hover {
+    background-color: rgb(195, 201, 215);
+}
+
+p {
+    color: black;
+}
+.global {
+    background-color: rgb(195, 201, 215);
+    justify-content: center;
+    padding: 20px;
+    display: flex;
+    flex-direction: column; /* Asegura que los elementos se apilen verticalmente */
+    align-items: center; /* Centra los elementos horizontalmente */
+}
+
+/* Contenedor principal de herramientas */
+.tools {
+    display: flex;
+    justify-content: space-between; /* Distribuye los divs con espacio entre ellos */
+    align-items: flex-start; /* Alinea los divs en la parte superior */
+    padding: 20px;
+    background-color: white;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    text-align: center;
+    width: 90%;
+}
+
+.search_admin button {
+    padding: 10px;
+}
+
+
+/* Estilo para el div de consulta */
+.tool-center {
+    flex: 2; /* Ocupa el doble de espacio comparado con los otros divs */
+    margin-right: 20px;
+    height: 90%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    background-color: #f9f9f9;
+    justify-content: space-around;
+}
+
+.inv {
+    flex: 1;
+    padding: 5px;
+    margin: 8px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    background-color: white
+}
+
+
+.elements {
+    display: flex;
+    justify-content: space-between;
+}
+
+h4 {
+    padding: 0;
+}
+
+.registerbox {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px; /* Espacio entre los elementos */
+    border-radius: 8px; /* Bordes redondeados */
+    max-width: 500px; /* Tamaño máximo del formulario */
+    margin: auto; /* Centramos el formulario */
+}
+
+.registerbox input {
+    flex: 1 1 40%; /* Los inputs ocupan casi la mitad del contenedor, dejando espacio */
+    padding: 10px; /* Padding interno de los inputs */
+    border: 1px solid #ccc; /* Borde de los inputs */
+    border-radius: 4px; /* Bordes redondeados */
+    box-sizing: border-box; /* Ajusta el tamaño total de los inputs */
+}
+
+
+.tableclass {
+    border: 1px solid #ccc;
+    padding: 20px;
+    margin: 20px;
+}
+
+/* Estilos generales para la tabla */
+table {
+    width: 100%; /* La tabla ocupa todo el ancho del contenedor */
+    border-collapse: collapse; /* Colapsa los bordes de la tabla */
+    margin: 20px 0; /* Margen superior e inferior */
+    font-size: 18px; /* Tamaño de fuente */
+    text-align: left; /* Alineación del texto a la izquierda */
+}
+
+/* Estilos para las celdas del encabezado */
+table thead th {
+    background-color: #f2f2f2; /* Color de fondo */
+    color: #333; /* Color del texto */
+    padding: 10px; /* Padding interno */
+    border-bottom: 2px solid #ddd; /* Borde inferior */
+}
+
+/* Estilos para las celdas del cuerpo */
+table tbody td {
+    padding: 10px; /* Padding interno */
+    border-bottom: 1px solid #ddd; /* Borde inferior */
+}
+
+/* Estilos para las filas alternas */
+table tbody tr:nth-child(even) {
+    background-color: #f9f9f9; /* Color de fondo para filas pares */
+}
+
+/* Estilos para el icono de edición */
+.edit-icon {
+    font-size: 20px; /* Tamaño del icono */
+    color: #007bff; /* Color del icono */
+    cursor: pointer; /* Cambia el cursor al pasar sobre el icono */
+}
+
+/* Estilos para el enlace de edición */
+a {
+    text-decoration: none; /* Sin subrayado */
+}
+
+/* Estilos para el modal */
+.modal {
+    display: none; /* Oculto por defecto */
+    position: fixed; /* Posición fija */
+    z-index: 1; /* Por encima de otros elementos */
+    left: 0;
+    top: 0;
+    width: 100%; /* Ancho completo */
+    height: 100%; /* Alto completo */
+    overflow: auto; /* Habilita el scroll si es necesario */
+    background-color: rgb(0,0,0); /* Color de fondo */
+    background-color: rgba(0,0,0,0.4); /* Fondo con opacidad */
+    backdrop-filter: blur(3px); /* Filtro de desenfoque */
+}
+
+/* Contenido del modal */
+.modal-content {
+    background-color: #363536a8;
+    margin: 15% auto; /* Centrado vertical y horizontal */
+    padding: 20px;
+    border: 1px solid #888;
+    border-radius: 10px; /* Bordes redondeados */
+    width: 50%; /* Ancho del contenido */
+    color: white;
+}
+
+#pacienteForm {
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* Dos columnas iguales */
+    gap: 20px; /* Espacio entre filas y columnas */
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column; /* Coloca la etiqueta encima del input */
+    padding-right: 10px; /* Espacio entre elementos */
+}
+
+
+#register {
+    grid-column: span 2; /* Los botones ocupan ambas columnas */
+    display: flex; /* Alinea los botones horizontalmente */
+    justify-content: center;
+    gap: 10px;
+}
+
+
+@media (max-width: 768px) {
+    #pacienteForm {
+        grid-template-columns: 1fr; /* Cambia a una columna en pantallas pequeñas */
+    }
+}
+/* Botón de cierre */
+.close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+}
+
+.close:hover,
+.close:focus {
+    color: black;
+    text-decoration: none;
+    cursor: pointer;
+}
