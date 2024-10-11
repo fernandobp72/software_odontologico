@@ -21,4 +21,4 @@ def get_paciente(paciente_id: int):
 async def create_paciente(request: Request, paciente: Paciente, db_connection=Depends(get_db_connection)):
     request_json = Patients(**paciente.model_dump())
     await register_patients_db(request_json, db_connection)
-    return {"message": "Crear un nuevo paciente"}
+    return {"message": "Paciente creado", "data": request_json.json()}

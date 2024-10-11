@@ -1,4 +1,6 @@
 import json
+
+from starlette.responses import JSONResponse
 from uvicorn.config import logger
 from app.adapters.database.mysql.mysql_config_repository_adapters import DataBaseConnection
 from app.domains.Users import Register, Users
@@ -26,18 +28,15 @@ class MysqlQueryRequestAdapter:
                     return "Inserción en base de datos exitosa"
             except Exception as e:
                 logger.error(f"error al insertar la base de datos, {str(e)}")
-                raise
+                return None
 
     async def get_user_db(self, username, password):
         async with DataBaseConnection.get_connection() as consulta:
-            logger.info(f"Este es el usuario hacia base de datos {username}")
-            logger.info(f"Este es el password hacia base de datos {password}")
             sql = ('SELECT * FROM users WHERE username = %s and password = %s')
             try:
                 async with consulta.cursor() as cursor:
                     await cursor.execute(sql, (username, password))
                     result = await cursor.fetchone()
-                    logger.info(f"Este es el resultado de la consulta {result}")
                     if result: 
                         columnas = [col[0] for col in cursor.description]
                         user_data = dict(zip(columnas, result))

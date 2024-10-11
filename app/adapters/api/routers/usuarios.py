@@ -58,8 +58,9 @@ async def create_user(request: Request, form: RegisterUser = Depends(as_form)):
     success = await register_user_db(user)
     user.password = "********"
     user.confirm_password = "********"
-    logger.info(f"Este es el usuario que se va a registrar {user}")
+    logger.info(f"Solicitud de regitro de usuario: {user.json()}")
     if success:
         return JSONResponse(content={"message": "Usuario registrado", "data": user.json()}, status_code=200)
     else:
+        logger.error(f"No se pudo registrar el usuario {user.names}")
         return JSONResponse(content={"message": "No se pudo registrar el usuario", "data": ""}, status_code=404)

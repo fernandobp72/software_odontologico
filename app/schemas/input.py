@@ -1,8 +1,11 @@
-from datetime import date
+from binascii import b2a_hex
+from datetime import date, datetime
 from typing import Optional
+
+from bson import ObjectId
 from fastapi import Form
 from pydantic import BaseModel, Field
-from pydantic.networks import email_validator
+
 
 
 class RegisterUser(BaseModel):
@@ -83,3 +86,23 @@ class Paciente(BaseModel):
     parentesco: str
     direccion_acompanante: str
 
+class AgendaBase(BaseModel):
+    title: str
+    description: str
+    owner: str
+    professional: str
+    patient: str
+    date: datetime
+    time: str
+    status: str
+
+class AgendaBaseConsult(BaseModel):
+    id: Optional[str] = Field(default=None, min_length=24, max_length=24, example="60f3b3b3b3b3b3b3b3b3b3b3")
+    title: Optional[str] = None
+    description: Optional[str] = None
+    owner: Optional[str] = None
+    professional: Optional[str] = None
+    patient: Optional[str] = None
+    date: Optional[datetime] = None
+    time: Optional[str] = None
+    status: Optional[str] = None

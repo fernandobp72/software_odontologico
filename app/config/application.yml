@@ -11,3 +11,9 @@ connection:
     password: odontologico
     db: software_odontologico
     connect_timeout: 4
+
+  mongodb:
+    host_port: 'cluster0.47zut.mongodb.net'
+    username: 'fernandobenavides72'
+    password: 'X1rnGYF3La3AzHGd'
+    db: 'software_odontologico'
