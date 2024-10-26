@@ -73,3 +73,46 @@
     width: 50%;
     margin-top: 10px;
 }
+
+/* Contenido del modal */
+.event-form-container {
+    background-color: #363536a8;
+    margin: 15% auto; /* Centrado vertical y horizontal */
+    padding: 20px;
+    border: 1px solid #888;
+    border-radius: 10px; /* Bordes redondeados */
+    width: 50%; /* Ancho del contenido */
+    color: white;
+}
+
+.calendar .today {
+    border: 2px solid #7c0988;
+    padding: 5px;
+    color: black;
+}
+.calendar .today:hover, .calendar td:hover {
+    background-color: #7c0988;
+    color: white;
+    cursor: pointer;
+}
+
+.calendar th, .calendar td {
+    border: 1px solid #ddd;
+    padding: 10px;
+    text-align: center;
+}
+
+
+.event-day {
+    background-color: rgba(151, 72, 255, 0.235); /* Color de fondo amarillo */
+    font-weight: bold; /* Texto en negrita */
+}
+
+.event-day:hover {
+    background-color: rgb(151,72,255); /* Cambia el color de fondo */
+    cursor: pointer; /* Cambia el cursor a una mano */
+    /*zoom: 1.1;*/
+    font-size: larger;
+    padding: 8px;
+    /* Puedes agregar más estilos aquí */
+}

@@ -5,6 +5,7 @@ from app.config.config_yml import config
 from app.adapters.api.routers.usuarios import router as usuarios
 from app.adapters.api.routers.pacientes import router as pacientes
 from app.adapters.api.routers.agenda import router as agenda
+from app.adapters.api.routers.frontend import router as frontend
 
 # Instancia de FastAPI
 app = FastAPI()
@@ -15,6 +16,7 @@ application = config["application"]
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 # Rutas de la aplicación
+app.include_router(frontend)
 app.include_router(usuarios)
 app.include_router(pacientes)
 app.include_router(agenda)

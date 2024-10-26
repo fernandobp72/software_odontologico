@@ -1,0 +1,42 @@
+<div id="event-form-container" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h2>Agendar paciente</h2>
+        <form id="eventForm">
+            <div class="form-group">
+                <label for="eventTitle">Paciente:</label>
+                <input type="text" id="eventPatient" name="eventPatient" required>
+            </div>
+            <div class="form-group">
+                <label for="eventOwner">Documento:</label>
+                <input type="text" id="eventDocument" name="eventDocument" required>
+            </div>
+            <div class="form-group">
+                <label for="eventTime">Hora:</label>
+                <input type="time" id="eventTime" name="eventTime" required>
+            </div>
+            <div class="form-group">
+                <label for="eventProfessional">Profesional:</label>
+                <input type="text" id="eventProfessional" name="eventProfessional" required>
+            </div>
+            <div class="form-group">
+                <label for="eventStatus">Estado:</label>
+                <select id="eventStatus" name="eventStatus" required>
+                    <option value="pending">Programado</option>
+                    <option value="in-progress">Confirmado</option>
+                    <option value="completed">Cancelado</option>
+                    <option value="cancelled">No asistencia</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="eventDate">Día:</label>
+                <input type="date" id="eventDate" name="eventDate" required>
+            </div>
+            <div class="form-group">
+                <label for="eventDescription">Descripción:</label>
+                <textarea id="eventDescription" name="eventDescription" required></textarea>
+            </div>
+            <button type="submit">Crear cita</button>
+        </form>
+    </div>
+</div>

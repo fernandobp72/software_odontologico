@@ -1,27 +1,29 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Agenda</title>
-    <link rel="stylesheet" href="{{ url_for('static', path='css/style.css') }}">
-</head>
-<body>
+{% extends "base.html" %}
+{% block title %}
+    Inicio Software Odontologico
+{% endblock %}
+
+{% block content %}
+
     <div class="calendar-container">
         <div class="calendar-header">
             <button id="prevMonth">Prev</button>
             <h2 id="monthYear"></h2>
             <button id="nextMonth">Next</button>
         </div>
+        <div id="newAgendaBtn" class="new-event-button">
+            <button id="newEvent">Nueva cita</button>
+        </div>
         <table class="calendar">
             <thead>
                 <tr>
-                    <th>Sun</th>
-                    <th>Mon</th>
-                    <th>Tue</th>
-                    <th>Wed</th>
-                    <th>Thu</th>
-                    <th>Fri</th>
-                    <th>Sat</th>
+                    <th>D</th>
+                    <th>L</th>
+                    <th>M</th>
+                    <th>M</th>
+                    <th>J</th>
+                    <th>V</th>
+                    <th>S</th>
                 </tr>
             </thead>
             <tbody id="calendarBody">
@@ -30,25 +32,59 @@
         </table>
     </div>
 
-    <div class="event-form-container">
-        <h2>Create Event</h2>
-        <form id="eventForm">
-            <div class="form-group">
-                <label for="eventTitle">Title:</label>
-                <input type="text" id="eventTitle" name="eventTitle" required>
-            </div>
-            <div class="form-group">
-                <label for="eventDate">Date:</label>
-                <input type="date" id="eventDate" name="eventDate" required>
-            </div>
-            <div class="form-group">
-                <label for="eventDescription">Description:</label>
-                <textarea id="eventDescription" name="eventDescription" required></textarea>
-            </div>
-            <button type="submit">Create Event</button>
-        </form>
-    </div>
+    {% include "modellers/agenda/nueva_agenda.html" %}
+
+    <table class="event-list-container">
+        <h2>Lista de citas</h2>
+        <thead>
+            <tr>
+                <th>Hora</th>
+                <th>Paciente</th>
+                <th>Documento</th>
+                <th>Descripción</th>
+                <th>Profesional</th>
+                <th>Estado</th>
+            </tr>
+        </thead>
+        <tbody id="eventList">
+            <!-- Event list will be generated here -->
+        </tbody>
+    </table>
 
     <script src="{{ url_for('static', path='js/calendar.js') }}"></script>
-</body>
-</html>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            // Obtener el modal
+            var modal = document.getElementById("event-form-container");
+    
+            // Obtener el botón que abre el modal
+            var btn = document.getElementById("newEvent");
+    
+            // Obtener el elemento <span> que cierra el modal
+            var span = document.getElementsByClassName("close")[0];
+    
+            // Verificar si los elementos existen
+            if (btn && span && modal) {
+                // Cuando el usuario hace clic en el botón, abre el modal
+                btn.onclick = function() {
+                    modal.style.display = "block";
+                }
+    
+                // Cuando el usuario hace clic en <span> (x), cierra el modal
+                span.onclick = function() {
+                    modal.style.display = "none";
+                }
+    
+                // Cuando el usuario hace clic fuera del modal, cierra el modal
+                window.onclick = function(event) {
+                    if (event.target == modal) {
+                        modal.style.display = "none";
+                    }
+                }
+            } else {
+                console.error("No se encontraron los elementos necesarios en el DOM.");
+                console.log(btn, span, modal);
+            }
+        });
+    </script>
+{% endblock %}

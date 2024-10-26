@@ -87,22 +87,20 @@ class Paciente(BaseModel):
     direccion_acompanante: str
 
 class AgendaBase(BaseModel):
-    title: str
-    description: str
-    owner: str
-    professional: str
     patient: str
+    document_number: str
+    description: str
+    professional: str
     date: datetime
     time: str
     status: str
 
 class AgendaBaseConsult(BaseModel):
     id: Optional[str] = Field(default=None, min_length=24, max_length=24, example="60f3b3b3b3b3b3b3b3b3b3b3")
-    title: Optional[str] = None
-    description: Optional[str] = None
-    owner: Optional[str] = None
-    professional: Optional[str] = None
     patient: Optional[str] = None
+    document_number: Optional[str] = None
+    description: Optional[str] = None
+    professional: Optional[str] = None
     date: Optional[datetime] = None
     time: Optional[str] = None
     status: Optional[str] = None

@@ -9,7 +9,7 @@
 <body>
     <header>
         <div id="titulo" class="cabecera">
-            <div>
+            <div id="texto_titulo">
                 <h1>software odontológico</h1>
             </div>
             {% if user_authenticated %}
@@ -20,10 +20,24 @@
             </div>
             {% endif %}
         </div>
+        <div>
+            {% if user_authenticated %}
+            <nav id="nav-tabs1" class="nav-tabs">
+                <a href="{{ url_for('homepage') }}">Inicio</a>
+                <a href="{{ url_for('agenda') }}">Agenda</a>
+                <a href="{{ url_for('homepage') }}">Pacientes</a>
+                <a href="#">Tratamientos</a>
+                <a href="#">Historial</a>
+                <a href="#">Reportes</a>
+            </nav>
+            {% endif %}
+        </div>
 
     </header>
 
     {% block content %}{% endblock %}
+
+
 </body>
 <footer>
     <nav id="nav-tabs" class="footer-links">

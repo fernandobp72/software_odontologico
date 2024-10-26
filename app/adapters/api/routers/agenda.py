@@ -27,3 +27,8 @@ async def search_agenda_mongo(query: AgendaBaseConsult):
 async def update_agenda_mongo(id_doc:str, update: AgendaBaseConsult):
     result = await service.update_agenda(id_doc, update.model_dump(exclude_unset=True))
     return {"message": result}
+
+@router.get("/agenda/{year}/{month}")
+async def get_agenda_by_month(year: int, month: int):
+    results = await service.get_by_months(month, year)
+    return results

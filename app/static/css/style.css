@@ -2,7 +2,6 @@ body {
     font-family: Arial, sans-serif;
     background-color: #f4f4f4;
     margin: 0;
-    padding: 20px;
 }
 
 .tab {
@@ -71,8 +70,21 @@ select[id="tipo_documento"] {
     border: none;
     color: white;
     text-align: center;
-    padding: 20px
+    padding: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
+
+nav {
+    width: 100%;
+    display: flex;
+    justify-content: space-around;
+    padding: 10px;
+    text-align: center;
+    background-color: white;
+}
+
 
 .container {
     display: flex;
@@ -302,4 +314,56 @@ a {
     color: black;
     text-decoration: none;
     cursor: pointer;
+}
+
+
+
+/* Estilos para el contenedor del calendario */
+.calendar-container {
+    width: 80%;
+    margin: 0 auto;
+    text-align: center;
+}
+
+/* Estilos para el encabezado del calendario */
+.calendar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+/* Estilos para la tabla del calendario */
+.calendar {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px;
+    justify-self: center;
+    text-align-last: left;
+}
+
+
+
+.calendar th {
+    background-color: #9748ffca;
+}
+
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+}
+
+.form-group input, .form-group textarea {
+    width: 100%;
+    padding: 8px;
+    box-sizing: border-box;
+}
+
+div #texto_titulo {
+    flex: auto;
 }

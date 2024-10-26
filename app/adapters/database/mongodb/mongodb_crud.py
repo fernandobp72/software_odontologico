@@ -37,6 +37,26 @@ class MongoDB:
                 document['_id'] = str(document['_id'])
         return jsonable_encoder(documents)
 
+    async def get_by_month(self, month: int, year: int):
+        cursor = self.collection.aggregate([
+            {
+                "$match": {
+                    "$expr": {
+                        "$and": [
+                            { "$eq": [{ "$month": { "$toDate": "$date" } }, month] },
+                            { "$eq": [{ "$year": { "$toDate": "$date" } }, year] }
+                        ]
+                    }
+                }
+            }
+        ])
+        documents = [document async for document in cursor]
+        for document in documents:
+            if '_id' in document:
+                document['_id'] = str(document['_id'])
+        print("Documents: " + str(jsonable_encoder(documents)))
+        return jsonable_encoder(documents)
+
     async def insert(self, doc: dict):
         await self.validate_data(doc)
         try:
