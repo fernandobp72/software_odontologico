@@ -17,7 +17,7 @@ router = APIRouter()
 async def login(request: Request, user: UserLogin = Depends(UserLogin.as_form)):
     validate = await authenticate_user(user.username, user.password)
     if validate:
-        logger.info(f"tipo de usuario {type(validate)}")
+        logger.info(f"Response Service: {validate.json()}")
         return JSONResponse(content={"message": "Usuario autenticado", "data": validate.json()}, status_code=200)
     else: 
         return JSONResponse(content={"message": "usuario o contraseña incorrectos"}, status_code=401)

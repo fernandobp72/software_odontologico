@@ -6,7 +6,7 @@ db_service = MysqlQueryRequestAdapter()
 async def authenticate_user(username: str, password: str):
     validation = await db_service.get_user_db(username, password)
     if validation:
-        print("Usuario autenticado")
+        #print("Usuario autenticado")
         return validation
     print("Usuario no autenticado")
     return False 

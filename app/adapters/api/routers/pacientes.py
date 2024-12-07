@@ -5,6 +5,9 @@ from app.application.patients.create import register_patients_db, get_patient_db
 from app.domains.Patients import Patients
 from app.schemas.input import Paciente
 
+from uvicorn.config import logger
+
+
 router = APIRouter()
 
 @router.get("/api/pacientes")
@@ -21,4 +24,5 @@ def get_paciente(paciente_id: int):
 async def create_paciente(request: Request, paciente: Paciente, db_connection=Depends(get_db_connection)):
     request_json = Patients(**paciente.model_dump())
     await register_patients_db(request_json, db_connection)
+    logger.info(f"Response Service: {request_json.json()}")
     return {"message": "Paciente creado", "data": request_json.json()}

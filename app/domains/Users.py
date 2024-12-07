@@ -35,6 +35,6 @@ class Users:
         return f"names: {self.names}, surnames: {self.surnames}, username: {self.username}, document: {self.document}, email: {self.email}, phone_number: {self.phone_number}, job: {self.job}, profession: {self.profession}, password: {self.password}"
     
 class Register(Users):
-    def __init__(self, names, surnames, username, document, email, phone_number, job, profession, password):
+    def __init__(self, names, surnames, username, document, email, phone_number, job, profession, password, confirm_password):
         super().__init__(names, surnames, username, document, email, phone_number, job, profession)
         self.password = password
