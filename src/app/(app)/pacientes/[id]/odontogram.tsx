@@ -18,9 +18,12 @@ function shapes(tooth: number) {
   const mesialRight = [1, 4].includes(Math.floor(tooth / 10));
   const left = mesialRight ? "D" : "M";
   const right = mesialRight ? "M" : "D";
+  // Arriba: vestibular hacia afuera (arriba) y palatino hacia la línea central (abajo).
+  // Abajo se invierte: el lingual queda hacia la línea central (arriba) y el vestibular abajo.
+  const lower = tooth > 30;
   return [
-    { s: "V", pts: "2,2 98,2 70,30 30,30" },
-    { s: "L", pts: "30,70 70,70 98,98 2,98" },
+    { s: lower ? "L" : "V", pts: "2,2 98,2 70,30 30,30" },
+    { s: lower ? "V" : "L", pts: "30,70 70,70 98,98 2,98" },
     { s: left, pts: "2,2 30,30 30,70 2,98" },
     { s: right, pts: "98,2 98,98 70,70 70,30" },
     { s: "O", pts: "30,30 70,30 70,70 30,70" },
@@ -67,8 +70,10 @@ function ToothSvg({
         ))}
       {label &&
         shapes(tooth).map(({ s }) => {
-          const pos: Record<string, [number, number]> = { V: [50, 20], L: [50, 86], O: [50, 54] };
           const sh = shapes(tooth);
+          const pos: Record<string, [number, number]> = { O: [50, 54] };
+          pos[sh[0].s] = [50, 20];
+          pos[sh[1].s] = [50, 86];
           pos[sh[2].s] = [14, 54];
           pos[sh[3].s] = [86, 54];
           const [x, y] = pos[s];
@@ -289,22 +294,31 @@ export default function Odontogram({
       <div className="grid gap-4">
         <div className="@container">
           {editable && <p className="label mb-2">2. Toca el diente</p>}
-          <div className="grid gap-x-6 gap-y-3 @2xl:grid-cols-2">
-            {QUADRANTS.map((q, i) => (
-              <div key={i} className="grid grid-cols-8 gap-1">
-                {q.map((t) => (
-                  <button
-                    key={t}
-                    type="button"
-                    disabled={!editable}
-                    onClick={() => pick(t)}
-                    aria-label={`Diente ${t}`}
-                    className={`flex flex-col items-center rounded-md p-0.5 ${tooth === t ? "bg-teal-100 outline-3 outline-teal-700" : ""}`}
-                  >
-                    <span className="text-xs font-semibold text-slate-900">{t}</span>
-                    <span className="aspect-square w-full"><ToothSvg tooth={t} fillOf={fillOf(t)} whole={wholeOf(t)} pendingSurf={pendingOf(t)} /></span>
-                    <span className="h-4 text-[11px] font-bold leading-4 text-slate-800">{wholeOf(t) ? CONDITIONS[wholeOf(t)!].abbr : ""}</span>
-                  </button>
+          <div className="space-y-3">
+            {[[0, 1], [2, 3]].map((pair, r) => (
+              <div key={r} className={`grid gap-x-6 gap-y-3 @2xl:grid-cols-2 ${r ? "border-t-4 border-slate-400 pt-3" : ""}`}>
+                {pair.map((i) => (
+                  <div key={i}>
+                    <p className="mb-1 text-xs font-bold uppercase tracking-wide text-slate-700">
+                      {["Cuadrante 1 · superior derecho", "Cuadrante 2 · superior izquierdo", "Cuadrante 4 · inferior derecho", "Cuadrante 3 · inferior izquierdo"][i]}
+                    </p>
+                    <div className="grid grid-cols-8 gap-1">
+                      {QUADRANTS[i].map((t) => (
+                        <button
+                          key={t}
+                          type="button"
+                          disabled={!editable}
+                          onClick={() => pick(t)}
+                          aria-label={`Diente ${t}`}
+                          className={`flex flex-col items-center rounded-md p-0.5 ${tooth === t ? "bg-teal-100 outline-3 outline-teal-700" : ""}`}
+                        >
+                          <span className="text-xs font-semibold text-slate-900">{t}</span>
+                          <span className="aspect-square w-full"><ToothSvg tooth={t} fillOf={fillOf(t)} whole={wholeOf(t)} pendingSurf={pendingOf(t)} /></span>
+                          <span className="h-4 text-[11px] font-bold leading-4 text-slate-800">{wholeOf(t) ? CONDITIONS[wholeOf(t)!].abbr : ""}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 ))}
               </div>
             ))}
@@ -320,7 +334,7 @@ export default function Odontogram({
               <div className="space-y-3">
               <p className="font-semibold text-slate-900">Diente {tooth}</p>
               <p className="muted">
-                V vestibular · L lingual/palatino · M mesial · D distal · O oclusal. Toca una superficie para aplicar «{CONDITIONS[tool].label}».
+                V vestibular · L lingual/palatino · M mesial · D distal · O oclusal. En el diente el lado de la línea central es el palatino/lingual. Toca una superficie para aplicar «{CONDITIONS[tool].label}».
               </p>
               <button type="button" className="btn-secondary w-full" onClick={() => paint(null)}>
                 {CONDITIONS[tool].scope === "tooth" ? `Aplicar ${CONDITIONS[tool].label.toLowerCase()} al diente` : `${CONDITIONS[tool].label} en todo el diente`}
