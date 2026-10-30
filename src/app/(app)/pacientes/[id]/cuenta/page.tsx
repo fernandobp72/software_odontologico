@@ -3,16 +3,22 @@ import { db } from "@/lib/db";
 import { requireUser } from "@/lib/dal";
 import { METHODS, account, copFmt } from "@/lib/cartera";
 import { PaymentForm } from "../../../caja/forms";
+import InvoiceForm from "./invoice-form";
+import { voidInvoice } from "./actions";
 
 export default async function CuentaPage({ params }: PageProps<"/pacientes/[id]/cuenta">) {
   const user = await requireUser();
   const { id } = await params;
 
-  const [items, payments, session] = await Promise.all([
+  const [items, payments, session, invoices, patient] = await Promise.all([
     db.treatmentItem.findMany({ where: { status: "DONE", plan: { patientId: id, patient: { clinicId: user.clinicId } } }, orderBy: { doneAt: "asc" } }),
     db.payment.findMany({ where: { patientId: id, clinicId: user.clinicId }, orderBy: { receivedAt: "desc" } }),
     db.cashSession.findFirst({ where: { clinicId: user.clinicId, closedAt: null }, select: { id: true } }),
+    db.invoice.findMany({ where: { patientId: id, clinicId: user.clinicId }, orderBy: { number: "desc" }, include: { lines: { select: { itemId: true } } } }),
+    db.patient.findFirst({ where: { id, clinicId: user.clinicId }, select: { firstName: true, lastName: true, documentType: true, documentNumber: true } }),
   ]);
+  const billedIds = new Set(invoices.flatMap((i) => i.lines.map((l) => l.itemId)));
+  const unbilled = items.filter((i) => !billedIds.has(i.id)).map((i) => ({ id: i.id, label: `${i.name}${i.tooth ? ` · diente ${i.tooth}` : ""}`, amount: i.unitPrice * i.quantity }));
   const charges = items.filter((i) => i.doneAt).map((i) => ({ doneAt: i.doneAt as Date, amount: i.unitPrice * i.quantity }));
   const paid = payments.filter((p) => !p.voidedAt).reduce((s, p) => s + p.amount, 0);
   const acc = account(charges, paid);
@@ -32,6 +38,38 @@ export default async function CuentaPage({ params }: PageProps<"/pacientes/[id]/
 
       {session ? <PaymentForm fixedPatientId={id} suggested={acc.balance} /> : (
         <p className="card">No hay caja abierta. <Link href="/caja" className="font-semibold underline">Ir a Caja</Link> para abrirla y poder registrar pagos.</p>
+      )}
+
+      {user.role !== "DENTIST" && unbilled.length > 0 && patient && (
+        <InvoiceForm patientId={id} items={unbilled} defaultName={`${patient.firstName} ${patient.lastName}`} defaultDocument={`${patient.documentType} ${patient.documentNumber}`} />
+      )}
+      {invoices.length > 0 && (
+        <section className="space-y-2">
+          <h2 className="section-title">Cuentas de cobro</h2>
+          <ul className="card divide-y divide-slate-200 p-0">
+            {invoices.map((v) => (
+              <li key={v.id} className="px-4 py-3 text-sm text-slate-900">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className={v.voidedAt ? "line-through opacity-70" : ""}>N.º {v.number} · {fmt.format(v.issuedAt)} · {v.customerName}</span>
+                  <span className="flex items-center gap-3">
+                    <span className={`font-semibold ${v.voidedAt ? "line-through" : ""}`}>{copFmt.format(v.total)}</span>
+                    <Link href={`/cuenta-de-cobro/${v.id}`} target="_blank" className="font-semibold underline">Abrir</Link>
+                  </span>
+                </div>
+                {v.voidedAt && <p className="error-text">Anulada: {v.voidReason}</p>}
+                {user.role === "ADMIN" && !v.voidedAt && (
+                  <details className="mt-2">
+                    <summary className="cursor-pointer font-semibold text-red-700">Anular</summary>
+                    <form action={voidInvoice.bind(null, v.id)} className="mt-2 flex flex-wrap gap-2">
+                      <input name="reason" required minLength={5} placeholder="Motivo de la anulación" aria-label="Motivo de la anulación" className="field mt-0 min-w-48 flex-1" />
+                      <button className="btn-danger">Confirmar anulación</button>
+                    </form>
+                  </details>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
 
       <div className="grid gap-6 xl:grid-cols-2 xl:items-start">

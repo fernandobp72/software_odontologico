@@ -68,12 +68,15 @@ model Clinic {
   id           String        @id @default(cuid())
   name         String
   nit          String?
+  address      String?
+  phone        String?
   createdAt    DateTime      @default(now())
   users        User[]
   patients     Patient[]
   appointments Appointment[]
   cashSessions CashSession[]
   payments     Payment[]
+  invoices     Invoice[]
 }
 
 model User {
@@ -100,6 +103,7 @@ model User {
   cashSessions        CashSession[]
   payments            Payment[]
   clinicalImages      ClinicalImage[]
+  invoices            Invoice[]
 }
 
 model Patient {
@@ -142,6 +146,7 @@ model Patient {
   perioExams      PerioExam[]
   payments        Payment[]
   clinicalImages  ClinicalImage[]
+  invoices        Invoice[]
 
   @@unique([clinicId, documentType, documentNumber])
   @@index([clinicId, lastName])
@@ -415,4 +420,42 @@ model ClinicalImage {
   createdAt       DateTime  @default(now())
 
   @@index([patientId, takenAt])
+}
+
+// Cuenta de cobro: documento interno numerado con los procedimientos realizados.
+// NO es factura electrónica de venta; esa se emite con un proveedor tecnológico autorizado.
+model Invoice {
+  id               String        @id @default(cuid())
+  clinicId         String
+  clinic           Clinic        @relation(fields: [clinicId], references: [id])
+  number           Int
+  patientId        String
+  patient          Patient       @relation(fields: [patientId], references: [id])
+  customerName     String
+  customerDocument String?
+  issuedAt         DateTime      @default(now())
+  total            Int
+  note             String?
+  createdById      String
+  createdBy        User          @relation(fields: [createdById], references: [id])
+  voidedAt         DateTime?
+  voidedById       String?
+  voidReason       String?
+  lines            InvoiceLine[]
+
+  @@unique([clinicId, number])
+  @@index([patientId])
+}
+
+model InvoiceLine {
+  id            String  @id @default(cuid())
+  invoiceId     String
+  invoice       Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  // Un procedimiento solo puede estar en una cuenta vigente; al anular la cuenta se libera.
+  itemId        String? @unique
+  description   String
+  tooth         Int?
+  procedureCode String?
+  quantity      Int
+  unitPrice     Int
 }

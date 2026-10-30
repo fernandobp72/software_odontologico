@@ -3,15 +3,18 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-const links = [
+const base = [
   { href: "/agenda", label: "Agenda" },
   { href: "/pacientes", label: "Pacientes" },
   { href: "/caja", label: "Caja" },
   { href: "/cartera", label: "Cartera" },
 ];
 
-export function SideNav() {
+const linksFor = (role: string) => (role === "ADMIN" ? [...base, { href: "/configuracion", label: "Consultorio" }] : base);
+
+export function SideNav({ role }: { role: string }) {
   const path = usePathname();
+  const links = linksFor(role);
   return (
     <nav aria-label="Principal" className="flex flex-col gap-1">
       {links.map((l) => {
@@ -31,8 +34,9 @@ export function SideNav() {
   );
 }
 
-export function BottomNav() {
+export function BottomNav({ role }: { role: string }) {
   const path = usePathname();
+  const links = linksFor(role);
   return (
     <nav aria-label="Principal" className="fixed inset-x-0 bottom-0 z-20 flex border-t border-slate-300 bg-white md:hidden">
       {links.map((l) => {

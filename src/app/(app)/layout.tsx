@@ -10,7 +10,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     <div className="min-h-dvh md:flex">
       <aside className="hidden w-60 shrink-0 flex-col border-r border-slate-300 bg-white p-4 md:flex">
         <p className="mb-6 text-lg font-bold text-teal-800">Odontología</p>
-        <SideNav />
+        <SideNav role={user.role} />
         <div className="mt-auto space-y-2 border-t border-slate-300 pt-4">
           <p className="text-sm font-semibold text-slate-900">{user.name}</p>
           <p className="muted">{ROLE[user.role]}</p>
@@ -28,7 +28,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </header>
         <main className="mx-auto w-full max-w-7xl p-4 md:p-8">{children}</main>
       </div>
-      <BottomNav />
+      <BottomNav role={user.role} />
     </div>
   );
 }
