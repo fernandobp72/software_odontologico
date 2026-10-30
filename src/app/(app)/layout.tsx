@@ -1,34 +1,34 @@
-import Link from "next/link";
 import { requireUser } from "@/lib/dal";
 import { logout } from "../login/actions";
+import { BottomNav, SideNav } from "./nav";
 
-const links = [
-  { href: "/agenda", label: "Agenda" },
-  { href: "/pacientes", label: "Pacientes" },
-];
+const ROLE: Record<string, string> = { ADMIN: "Administrador", DENTIST: "Odontólogo", RECEPTION: "Recepción" };
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await requireUser();
   return (
-    <div className="min-h-dvh bg-slate-50 pb-20 md:pb-0">
-      <header className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3">
-        <span className="font-semibold text-teal-700">Odontología</span>
-        <nav className="hidden gap-4 md:flex">
-          {links.map((l) => (
-            <Link key={l.href} href={l.href} className="text-sm text-slate-700 hover:text-teal-700">{l.label}</Link>
-          ))}
-        </nav>
-        <form action={logout} className="flex items-center gap-3">
-          <span className="hidden text-sm text-slate-500 sm:inline">{user.name}</span>
-          <button className="text-sm text-slate-600 underline">Salir</button>
-        </form>
-      </header>
-      <main className="mx-auto max-w-3xl p-4">{children}</main>
-      <nav className="fixed inset-x-0 bottom-0 flex border-t border-slate-200 bg-white md:hidden">
-        {links.map((l) => (
-          <Link key={l.href} href={l.href} className="flex-1 py-4 text-center text-sm font-medium text-slate-700">{l.label}</Link>
-        ))}
-      </nav>
+    <div className="min-h-dvh md:flex">
+      <aside className="hidden w-60 shrink-0 flex-col border-r border-slate-300 bg-white p-4 md:flex">
+        <p className="mb-6 text-lg font-bold text-teal-800">Odontología</p>
+        <SideNav />
+        <div className="mt-auto space-y-2 border-t border-slate-300 pt-4">
+          <p className="text-sm font-semibold text-slate-900">{user.name}</p>
+          <p className="muted">{ROLE[user.role]}</p>
+          <form action={logout}><button className="btn-secondary w-full">Salir</button></form>
+        </div>
+      </aside>
+
+      <div className="min-w-0 flex-1 pb-20 md:pb-0">
+        <header className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-300 bg-white px-4 py-3 md:hidden">
+          <span className="font-bold text-teal-800">Odontología</span>
+          <form action={logout} className="flex items-center gap-3">
+            <span className="text-sm font-medium text-slate-800">{user.name}</span>
+            <button className="btn-secondary min-h-10 px-3">Salir</button>
+          </form>
+        </header>
+        <main className="mx-auto w-full max-w-7xl p-4 md:p-8">{children}</main>
+      </div>
+      <BottomNav />
     </div>
   );
 }

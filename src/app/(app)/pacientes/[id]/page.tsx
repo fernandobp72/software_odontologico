@@ -32,28 +32,34 @@ export default async function PacientePage({ params }: PageProps<"/pacientes/[id
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-semibold">{p.firstName} {p.lastName}</h1>
-      <dl className="divide-y divide-slate-200 rounded-xl bg-white ring-1 ring-slate-200">
-        {rows.map(([k, v]) => (
-          <div key={k} className="flex justify-between px-4 py-3">
-            <dt className="text-sm text-slate-500">{k}</dt>
-            <dd className="text-sm font-medium">{v || "—"}</dd>
-          </div>
-        ))}
-      </dl>
-      <Odontogram patientId={p.id} findings={findings} canEdit={canEdit} />
-      {canEdit && <EvolutionForm patientId={p.id} />}
-      <section className="space-y-2">
-        <h2 className="font-medium">Evoluciones</h2>
-        {evolutions.map((e) => (
-          <article key={e.id} className="rounded-xl bg-white p-4 ring-1 ring-slate-200">
-            <p className="text-xs text-slate-500">{fmt.format(e.signedAt)} · {e.dentist.name}{e.diagnosisCode ? ` · ${e.diagnosisCode}` : ""}{e.procedureCode ? ` · CUPS ${e.procedureCode}` : ""}</p>
-            {e.reason && <p className="text-sm font-medium">{e.reason}</p>}
-            <p className="whitespace-pre-wrap text-sm">{e.note}</p>
-          </article>
-        ))}
-        {evolutions.length === 0 && <p className="rounded-xl bg-white p-6 text-center text-slate-500 ring-1 ring-slate-200">Sin evoluciones</p>}
-      </section>
+      <h1 className="page-title">{p.firstName} {p.lastName}</h1>
+      <div className="grid gap-6 lg:grid-cols-3 lg:items-start">
+        <aside className="order-first lg:order-last lg:sticky lg:top-8">
+          <dl className="card divide-y divide-slate-200 p-0">
+            {rows.map(([k, v]) => (
+              <div key={k} className="flex justify-between gap-4 px-4 py-3">
+                <dt className="muted">{k}</dt>
+                <dd className="text-right text-sm font-semibold text-slate-900">{v || "—"}</dd>
+              </div>
+            ))}
+          </dl>
+        </aside>
+        <div className="space-y-6 lg:col-span-2">
+          <Odontogram patientId={p.id} findings={findings} canEdit={canEdit} />
+          {canEdit && <EvolutionForm patientId={p.id} />}
+          <section className="space-y-3">
+            <h2 className="section-title">Evoluciones</h2>
+            {evolutions.map((e) => (
+              <article key={e.id} className="card">
+                <p className="muted">{fmt.format(e.signedAt)} · {e.dentist.name}{e.diagnosisCode ? ` · ${e.diagnosisCode}` : ""}{e.procedureCode ? ` · CUPS ${e.procedureCode}` : ""}</p>
+                {e.reason && <p className="font-semibold">{e.reason}</p>}
+                <p className="whitespace-pre-wrap">{e.note}</p>
+              </article>
+            ))}
+            {evolutions.length === 0 && <p className="card text-center text-slate-700">Sin evoluciones</p>}
+          </section>
+        </div>
+      </div>
     </div>
   );
 }

@@ -24,23 +24,23 @@ export default async function PacientesPage({ searchParams }: PageProps<"/pacien
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Pacientes</h1>
-        <Link href="/pacientes/nuevo" className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white">Nuevo</Link>
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="page-title">Pacientes</h1>
+        <Link href="/pacientes/nuevo" className="btn-primary">Nuevo paciente</Link>
       </div>
       <form>
-        <input name="q" defaultValue={term} placeholder="Buscar por nombre o documento" className="w-full rounded-lg border border-slate-300 bg-white px-3 py-3" />
+        <input name="q" defaultValue={term} placeholder="Buscar por nombre o documento" aria-label="Buscar paciente" className="field md:max-w-md" />
       </form>
-      <ul className="divide-y divide-slate-200 rounded-xl bg-white ring-1 ring-slate-200">
+      <ul className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         {patients.map((p) => (
           <li key={p.id}>
-            <Link href={`/pacientes/${p.id}`} className="block px-4 py-3">
-              <p className="font-medium">{p.firstName} {p.lastName}</p>
-              <p className="text-sm text-slate-500">{p.documentType} {p.documentNumber}{p.phone ? ` · ${p.phone}` : ""}</p>
+            <Link href={`/pacientes/${p.id}`} className="card block hover:border-teal-700">
+              <p className="text-lg font-semibold">{p.firstName} {p.lastName}</p>
+              <p className="muted">{p.documentType} {p.documentNumber}{p.phone ? ` · ${p.phone}` : ""}</p>
             </Link>
           </li>
         ))}
-        {patients.length === 0 && <li className="px-4 py-6 text-center text-slate-500">Sin resultados</li>}
+        {patients.length === 0 && <li className="card text-center text-slate-700 md:col-span-2 xl:col-span-3">Sin resultados</li>}
       </ul>
     </div>
   );

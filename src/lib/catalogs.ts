@@ -30,17 +30,18 @@ export const NOTE_TEMPLATES = [
   "Se prescribe analgésico y se cita a control.",
 ];
 
+// Cada estado combina color + abreviatura para no depender solo del color.
 export const CONDITIONS = {
-  HEALTHY: { label: "Sano (borrar)", color: "bg-white" },
-  CARIES: { label: "Caries", color: "bg-red-400" },
-  FILLING: { label: "Obturación", color: "bg-blue-400" },
-  CROWN: { label: "Corona", color: "bg-amber-400" },
-  ROOT_CANAL: { label: "Endodoncia", color: "bg-purple-400" },
-  EXTRACTED: { label: "Extraído", color: "bg-slate-500" },
-  MISSING: { label: "Ausente", color: "bg-slate-300" },
-  IMPLANT: { label: "Implante", color: "bg-teal-400" },
-  SEALANT: { label: "Sellante", color: "bg-green-400" },
-  FRACTURE: { label: "Fractura", color: "bg-orange-400" },
+  HEALTHY: { label: "Sano (borrar)", abbr: "", cls: "bg-white text-slate-900 border-slate-500" },
+  CARIES: { label: "Caries", abbr: "Ca", cls: "bg-red-600 text-white border-red-800" },
+  FILLING: { label: "Obturación", abbr: "Ob", cls: "bg-blue-600 text-white border-blue-800" },
+  CROWN: { label: "Corona", abbr: "Co", cls: "bg-amber-300 text-slate-900 border-amber-700" },
+  ROOT_CANAL: { label: "Endodoncia", abbr: "En", cls: "bg-purple-600 text-white border-purple-800" },
+  EXTRACTED: { label: "Extraído", abbr: "Ex", cls: "bg-slate-700 text-white border-slate-900" },
+  MISSING: { label: "Ausente", abbr: "Au", cls: "bg-slate-200 text-slate-800 border-slate-600 border-dashed" },
+  IMPLANT: { label: "Implante", abbr: "Im", cls: "bg-teal-700 text-white border-teal-900" },
+  SEALANT: { label: "Sellante", abbr: "Se", cls: "bg-green-700 text-white border-green-900" },
+  FRACTURE: { label: "Fractura", abbr: "Fr", cls: "bg-orange-700 text-white border-orange-900" },
 } as const;
 
 export type ConditionKey = keyof typeof CONDITIONS;

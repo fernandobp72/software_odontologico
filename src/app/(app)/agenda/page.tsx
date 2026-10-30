@@ -3,12 +3,12 @@ import { requireUser } from "@/lib/dal";
 import AppointmentForm from "./form";
 import { setStatus } from "./actions";
 
-const STATUS: Record<string, string> = {
-  SCHEDULED: "Programada",
-  CONFIRMED: "Confirmada",
-  ATTENDED: "Atendida",
-  CANCELLED: "Cancelada",
-  NO_SHOW: "No asistió",
+const STATUS: Record<string, { label: string; cls: string }> = {
+  SCHEDULED: { label: "Programada", cls: "bg-slate-200 text-slate-900" },
+  CONFIRMED: { label: "Confirmada", cls: "bg-blue-100 text-blue-900" },
+  ATTENDED: { label: "Atendida", cls: "bg-green-100 text-green-900" },
+  CANCELLED: { label: "Cancelada", cls: "bg-red-100 text-red-900" },
+  NO_SHOW: { label: "No asistió", cls: "bg-amber-100 text-amber-900" },
 };
 
 export default async function AgendaPage() {
@@ -26,27 +26,34 @@ export default async function AgendaPage() {
     db.patient.findMany({ where: { clinicId: user.clinicId }, orderBy: { lastName: "asc" }, take: 500 }),
   ]);
 
-  const fmt = new Intl.DateTimeFormat("es-CO", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "America/Bogota" });
+  const fmt = new Intl.DateTimeFormat("es-CO", { weekday: "long", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "America/Bogota" });
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-semibold">Agenda</h1>
-      <ul className="space-y-2">
-        {appointments.map((a) => (
-          <li key={a.id} className="rounded-xl bg-white p-4 ring-1 ring-slate-200">
-            <p className="text-sm text-slate-500">{fmt.format(a.startsAt)} · {STATUS[a.status]}</p>
-            <p className="font-medium">{a.patient.firstName} {a.patient.lastName}</p>
-            {a.reason && <p className="text-sm text-slate-600">{a.reason}</p>}
-            <div className="mt-2 flex gap-2">
-              <form action={setStatus.bind(null, a.id, "CONFIRMED")}><button className="rounded-lg border px-3 py-2 text-sm">Confirmar</button></form>
-              <form action={setStatus.bind(null, a.id, "ATTENDED")}><button className="rounded-lg border px-3 py-2 text-sm">Atendida</button></form>
-              <form action={setStatus.bind(null, a.id, "CANCELLED")}><button className="rounded-lg border px-3 py-2 text-sm text-red-600">Cancelar</button></form>
-            </div>
-          </li>
-        ))}
-        {appointments.length === 0 && <li className="rounded-xl bg-white p-6 text-center text-slate-500 ring-1 ring-slate-200">No hay citas próximas</li>}
-      </ul>
-      <AppointmentForm patients={patients.map((p) => ({ id: p.id, label: `${p.firstName} ${p.lastName} · ${p.documentNumber}` }))} />
+      <h1 className="page-title">Agenda</h1>
+      <div className="grid gap-6 lg:grid-cols-[1fr_24rem] lg:items-start">
+        <ul className="space-y-3">
+          {appointments.map((a) => (
+            <li key={a.id} className="card">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-sm font-semibold capitalize text-slate-700">{fmt.format(a.startsAt)}</p>
+                <span className={`rounded-full px-3 py-1 text-xs font-semibold ${STATUS[a.status].cls}`}>{STATUS[a.status].label}</span>
+              </div>
+              <p className="mt-1 text-lg font-semibold">{a.patient.firstName} {a.patient.lastName}</p>
+              {a.reason && <p className="muted">{a.reason}</p>}
+              <div className="mt-3 flex flex-wrap gap-2">
+                <form action={setStatus.bind(null, a.id, "CONFIRMED")}><button className="btn-secondary">Confirmar</button></form>
+                <form action={setStatus.bind(null, a.id, "ATTENDED")}><button className="btn-secondary">Atendida</button></form>
+                <form action={setStatus.bind(null, a.id, "CANCELLED")}><button className="btn-danger">Cancelar</button></form>
+              </div>
+            </li>
+          ))}
+          {appointments.length === 0 && <li className="card text-center text-slate-700">No hay citas próximas</li>}
+        </ul>
+        <div className="lg:sticky lg:top-8">
+          <AppointmentForm patients={patients.map((p) => ({ id: p.id, label: `${p.firstName} ${p.lastName} · ${p.documentNumber}` }))} />
+        </div>
+      </div>
     </div>
   );
 }

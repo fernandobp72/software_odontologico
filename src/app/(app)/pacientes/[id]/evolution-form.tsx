@@ -4,8 +4,6 @@ import { useActionState, useEffect, useRef, useState, useSyncExternalStore } fro
 import { CIE10, CUPS, NOTE_TEMPLATES } from "@/lib/catalogs";
 import { signEvolution, type EvolutionState } from "./actions";
 
-const input = "mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-3 text-base";
-
 type SpeechEvent = { results: ArrayLike<ArrayLike<{ transcript: string }>> };
 type Recognizer = { start(): void; stop(): void; lang: string; continuous: boolean; interimResults: boolean; onresult: ((e: SpeechEvent) => void) | null; onend: (() => void) | null };
 type RecognizerCtor = new () => Recognizer;
@@ -58,16 +56,16 @@ export default function EvolutionForm({ patientId }: { patientId: string }) {
   }
 
   return (
-    <form action={action} className="space-y-3 rounded-xl bg-white p-4 ring-1 ring-slate-200">
-      <h2 className="font-medium">Nueva evolución</h2>
+    <form action={action} className="card space-y-4">
+      <h2 className="section-title">Nueva evolución</h2>
       <input type="hidden" name="patientId" value={patientId} />
-      <label className="block text-sm font-medium">Motivo de consulta<input name="reason" className={input} /></label>
+      <label className="label">Motivo de consulta<input name="reason" className="field" /></label>
       <div className="grid grid-cols-2 gap-3">
-        <label className="text-sm font-medium">Diagnóstico (CIE-10)
-          <input name="diagnosisCode" list="cie10" placeholder="K02.1" className={input} />
+        <label className="label">Diagnóstico (CIE-10)
+          <input name="diagnosisCode" list="cie10" placeholder="K02.1" className="field" />
         </label>
-        <label className="text-sm font-medium">Procedimiento (CUPS)
-          <input name="procedureCode" list="cups" inputMode="numeric" placeholder="890303" className={input} />
+        <label className="label">Procedimiento (CUPS)
+          <input name="procedureCode" list="cups" inputMode="numeric" placeholder="890303" className="field" />
         </label>
       </div>
       <datalist id="cie10">{CIE10.map((c) => <option key={c.code} value={c.code}>{c.label}</option>)}</datalist>
@@ -75,29 +73,29 @@ export default function EvolutionForm({ patientId }: { patientId: string }) {
 
       <div>
         <div className="flex items-center justify-between">
-          <label htmlFor="note" className="text-sm font-medium">Evolución</label>
+          <label htmlFor="note" className="label">Evolución</label>
           {voiceOk && (
-            <button type="button" onClick={toggleVoice} className={`rounded-lg px-3 py-2 text-sm ${listening ? "bg-red-600 text-white" : "border border-slate-300"}`}>
+            <button type="button" onClick={toggleVoice} className={listening ? "btn bg-red-700 text-white hover:bg-red-800" : "btn-secondary"}>
               {listening ? "Detener dictado" : "🎤 Dictar"}
             </button>
           )}
         </div>
-        <textarea id="note" name="note" rows={5} value={note} onChange={(e) => setNote(e.target.value)} className={input} />
+        <textarea id="note" name="note" rows={5} value={note} onChange={(e) => setNote(e.target.value)} className="field" />
         <div className="mt-2 flex flex-wrap gap-2">
           {NOTE_TEMPLATES.map((t) => (
-            <button key={t} type="button" onClick={() => setNote((cur) => (cur ? cur + " " : "") + t)} className="rounded-full border border-slate-300 px-3 py-1 text-xs text-slate-700">
+            <button key={t} type="button" onClick={() => setNote((cur) => (cur ? cur + " " : "") + t)} className="min-h-9 rounded-full border border-slate-500 bg-white px-3 py-1 text-sm text-slate-900 hover:bg-slate-100">
               {t.split(" ").slice(0, 4).join(" ")}…
             </button>
           ))}
         </div>
       </div>
 
-      {state?.error && <p role="alert" className="text-sm text-red-600">{state.error}</p>}
-      {state?.ok && <p className="text-sm text-teal-700">Evolución firmada</p>}
-      <button disabled={pending} className="w-full rounded-lg bg-teal-600 py-3 font-medium text-white disabled:opacity-60">
+      {state?.error && <p role="alert" className="error-text">{state.error}</p>}
+      {state?.ok && <p className="ok-text">Evolución firmada</p>}
+      <button disabled={pending} className="btn-primary w-full md:w-auto">
         {pending ? "Firmando…" : "Firmar evolución"}
       </button>
-      <p className="text-xs text-slate-500">Una vez firmada no se puede editar; las correcciones se registran como una nueva evolución.</p>
+      <p className="muted">Una vez firmada no se puede editar; las correcciones se registran como una nueva evolución.</p>
     </form>
   );
 }
