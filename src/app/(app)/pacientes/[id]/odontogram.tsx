@@ -2,7 +2,7 @@
 
 import { useRef, useState, useTransition } from "react";
 import { CONDITIONS, QUADRANTS, SURFACES, type ConditionKey } from "@/lib/catalogs";
-import { applyFindings } from "./actions";
+import { applyFindings, saveInitialSnapshot } from "./actions";
 
 export type Finding = { tooth: number; surface: string | null; condition: ConditionKey };
 type Change = { tooth: number; surface: string | null; condition: ConditionKey };
@@ -31,12 +31,14 @@ function ToothSvg({
   whole,
   onSurface,
   label,
+  pendingSurf,
 }: {
   tooth: number;
   fillOf: (surface: string) => ConditionKey;
   whole?: ConditionKey;
   onSurface?: (surface: string) => void;
   label?: boolean;
+  pendingSurf?: string[];
 }) {
   const crossed = whole === "EXTRACTED" || whole === "MISSING";
   return (
@@ -53,6 +55,14 @@ function ToothSvg({
           onClick={onSurface ? () => onSurface(s) : undefined}
         />
       ))}
+      {pendingSurf?.includes("*") && (
+        <rect x="6" y="6" width="88" height="88" fill="none" stroke="#dc2626" strokeWidth={6} strokeDasharray="10 6" pointerEvents="none" />
+      )}
+      {shapes(tooth)
+        .filter(({ s }) => pendingSurf?.includes(s))
+        .map(({ s, pts }) => (
+          <polygon key={`p${s}`} points={pts} fill="none" stroke="#dc2626" strokeWidth={7} strokeDasharray="8 5" pointerEvents="none" />
+        ))}
       {label &&
         shapes(tooth).map(({ s }) => {
           const pos: Record<string, [number, number]> = { V: [50, 20], L: [50, 86], O: [50, 54] };
@@ -72,16 +82,34 @@ function ToothSvg({
   );
 }
 
-export default function Odontogram({ patientId, findings, canEdit }: { patientId: string; findings: Finding[]; canEdit: boolean }) {
+export default function Odontogram({
+  patientId,
+  findings,
+  canEdit,
+  initial,
+  planned,
+}: {
+  patientId: string;
+  findings: Finding[];
+  canEdit: boolean;
+  initial: Finding[] | null;
+  planned: { tooth: number; surfaces: string }[];
+}) {
   const [state, setState] = useState(() => new Map(findings.map((f) => [key(f.tooth, f.surface), f.condition])));
   const [tool, setTool] = useState<ConditionKey>("CARIES");
   const [tooth, setTooth] = useState<number | null>(null);
+  const [view, setView] = useState<"actual" | "initial">("actual");
+  const [hasInitial, setHasInitial] = useState(!!initial);
+  const initialMap = new Map((initial ?? []).map((f) => [key(f.tooth, f.surface), f.condition]));
+  const viewing = view === "initial" && initial ? initialMap : state;
+  const editable = canEdit && viewing === state;
+  const pendingOf = (t: number) => planned.filter((p) => p.tooth === t).flatMap((p) => (p.surfaces ? p.surfaces.split("") : ["*"]));
   const [undo, setUndo] = useState<Change[][]>([]);
   const [error, setError] = useState<string>();
   const [pending, start] = useTransition();
   const panel = useRef<HTMLDivElement>(null);
 
-  const get = (t: number, s: string | null): ConditionKey => state.get(key(t, s)) ?? "HEALTHY";
+  const get = (t: number, s: string | null): ConditionKey => viewing.get(key(t, s)) ?? "HEALTHY";
   const fillOf = (t: number) => (s: string): ConditionKey => {
     const own = get(t, s);
     return own !== "HEALTHY" ? own : get(t, null);
@@ -143,6 +171,18 @@ export default function Odontogram({ patientId, findings, canEdit }: { patientId
     commit(last, [], false);
   }
 
+  function freezeInitial() {
+    start(async () => {
+      const res = await saveInitialSnapshot(patientId);
+      if (res.error) setError(res.error);
+      else {
+        setError(undefined);
+        setHasInitial(true);
+        setView("initial");
+      }
+    });
+  }
+
   function pick(t: number) {
     setTooth(t);
     requestAnimationFrame(() => panel.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }));
@@ -157,14 +197,29 @@ export default function Odontogram({ patientId, findings, canEdit }: { patientId
     <section className="card space-y-4">
       <div className="flex items-center justify-between gap-2">
         <h2 className="section-title">Odontograma</h2>
-        {canEdit && (
-          <button type="button" className="btn-secondary" onClick={undoLast} disabled={!undo.length || pending}>
-            Deshacer
-          </button>
-        )}
+        <div className="flex flex-wrap gap-2">
+          {(hasInitial || canEdit) && (
+            <div className="flex overflow-hidden rounded-lg border border-slate-500" role="group" aria-label="Versión del odontograma">
+              <button type="button" onClick={() => setView("actual")} aria-pressed={view === "actual"} className={`min-h-11 px-3 text-sm font-semibold ${view === "actual" ? "bg-teal-700 text-white" : "bg-white text-slate-900"}`}>Actual</button>
+              <button type="button" disabled={!initial} onClick={() => setView("initial")} aria-pressed={view === "initial"} className={`min-h-11 border-l border-slate-500 px-3 text-sm font-semibold disabled:opacity-50 ${view === "initial" ? "bg-teal-700 text-white" : "bg-white text-slate-900"}`}>Inicial</button>
+            </div>
+          )}
+          {editable && (
+            <button type="button" className="btn-secondary" onClick={undoLast} disabled={!undo.length || pending}>
+              Deshacer
+            </button>
+          )}
+        </div>
       </div>
+      {canEdit && !hasInitial && (
+        <div className="flex flex-wrap items-center gap-3 rounded-lg border border-slate-300 bg-slate-50 p-3">
+          <p className="muted flex-1">Cuando el estado de la boca esté completo, fíjalo como odontograma inicial. No podrá modificarse después.</p>
+          <button type="button" className="btn-secondary" onClick={freezeInitial} disabled={pending}>Fijar como inicial</button>
+        </div>
+      )}
+      {view === "initial" && initial && <p className="rounded-lg border border-slate-300 bg-slate-100 p-2 text-sm font-semibold text-slate-900">Odontograma inicial (solo lectura)</p>}
 
-      {canEdit && (
+      {editable && (
         <div>
           <p className="label mb-2">1. Elige el estado</p>
           <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Estado a aplicar">
@@ -189,7 +244,7 @@ export default function Odontogram({ patientId, findings, canEdit }: { patientId
 
       <div className="grid gap-4">
         <div className="@container">
-          {canEdit && <p className="label mb-2">2. Toca el diente</p>}
+          {editable && <p className="label mb-2">2. Toca el diente</p>}
           <div className="grid gap-x-6 gap-y-3 @2xl:grid-cols-2">
             {QUADRANTS.map((q, i) => (
               <div key={i} className="grid grid-cols-8 gap-1">
@@ -197,13 +252,13 @@ export default function Odontogram({ patientId, findings, canEdit }: { patientId
                   <button
                     key={t}
                     type="button"
-                    disabled={!canEdit}
+                    disabled={!editable}
                     onClick={() => pick(t)}
                     aria-label={`Diente ${t}`}
                     className={`flex flex-col items-center rounded-md p-0.5 ${tooth === t ? "bg-teal-100 outline-3 outline-teal-700" : ""}`}
                   >
                     <span className="text-xs font-semibold text-slate-900">{t}</span>
-                    <span className="aspect-square w-full"><ToothSvg tooth={t} fillOf={fillOf(t)} whole={wholeOf(t)} /></span>
+                    <span className="aspect-square w-full"><ToothSvg tooth={t} fillOf={fillOf(t)} whole={wholeOf(t)} pendingSurf={pendingOf(t)} /></span>
                     <span className="h-4 text-[11px] font-bold leading-4 text-slate-800">{wholeOf(t) ? CONDITIONS[wholeOf(t)!].abbr : ""}</span>
                   </button>
                 ))}
@@ -213,10 +268,10 @@ export default function Odontogram({ patientId, findings, canEdit }: { patientId
         </div>
 
         <div ref={panel} className="rounded-lg border border-slate-300 bg-slate-50 p-3">
-          {tooth && canEdit ? (
+          {tooth && editable ? (
             <div className="space-y-3 sm:flex sm:items-center sm:gap-6 sm:space-y-0">
               <div className="mx-auto aspect-square w-48 max-w-full shrink-0 sm:mx-0">
-                <ToothSvg tooth={tooth} fillOf={fillOf(tooth)} whole={wholeOf(tooth)} onSurface={(s) => paint(s)} label />
+                <ToothSvg tooth={tooth} fillOf={fillOf(tooth)} whole={wholeOf(tooth)} pendingSurf={pendingOf(tooth)} onSurface={(s) => paint(s)} label />
               </div>
               <div className="space-y-3">
               <p className="font-semibold text-slate-900">Diente {tooth}</p>
@@ -229,13 +284,14 @@ export default function Odontogram({ patientId, findings, canEdit }: { patientId
               </div>
             </div>
           ) : (
-            <p className="muted">{canEdit ? "Toca un diente para marcar sus superficies." : "Solo lectura."}</p>
+            <p className="muted">{editable ? "Toca un diente para marcar sus superficies." : "Solo lectura."}</p>
           )}
           {error && <p role="alert" className="error-text mt-2">{error}</p>}
         </div>
       </div>
 
       <ul className="flex flex-wrap gap-x-4 gap-y-2 text-sm text-slate-800">
+        <li className="flex items-center gap-1.5"><span className="h-4 w-4 rounded-sm border-2 border-dashed border-red-600" />Por hacer (plan)</li>
         {TOOL_ORDER.filter((c) => c !== "HEALTHY").map((c) => (
           <li key={c} className="flex items-center gap-1.5"><span className={`h-4 w-4 rounded-full border-2 ${CONDITIONS[c].cls}`} />{CONDITIONS[c].label} ({CONDITIONS[c].abbr})</li>
         ))}

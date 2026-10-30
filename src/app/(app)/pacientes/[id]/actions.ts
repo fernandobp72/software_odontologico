@@ -32,6 +32,25 @@ export async function applyFindings(input: z.input<typeof findingsSchema>): Prom
   return {};
 }
 
+// Foto fija del estado actual como odontograma inicial. Solo se puede hacer una vez.
+export async function saveInitialSnapshot(patientId: string): Promise<{ error?: string }> {
+  const user = await requireClinician();
+  const patient = await db.patient.findFirst({ where: { id: patientId, clinicId: user.clinicId }, select: { id: true } });
+  if (!patient) return { error: "Paciente no encontrado" };
+  const all = await db.toothFinding.findMany({ where: { patientId }, orderBy: { createdAt: "asc" } });
+  const latest = new Map<string, { tooth: number; surface: string | null; condition: string }>();
+  for (const f of all) latest.set(`${f.tooth}|${f.surface ?? ""}`, { tooth: f.tooth, surface: f.surface, condition: f.condition });
+  const data = [...latest.values()].filter((f) => f.condition !== "HEALTHY");
+  try {
+    const snap = await db.odontogramSnapshot.create({ data: { patientId, authorId: user.id, kind: "INITIAL", data } });
+    await db.auditLog.create({ data: { userId: user.id, action: "SNAPSHOT", entity: "OdontogramSnapshot", entityId: snap.id } });
+  } catch {
+    return { error: "El odontograma inicial ya fue fijado" };
+  }
+  revalidatePath(`/pacientes/${patientId}`);
+  return {};
+}
+
 const evolutionSchema = z.object({
   patientId: z.string().min(1),
   reason: z.string().trim().optional(),

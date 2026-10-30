@@ -9,6 +9,7 @@ export default function PatientTabs({ id }: { id: string }) {
     { href: `/pacientes/${id}`, label: "Resumen" },
     { href: `/pacientes/${id}/historia`, label: "Historia clínica" },
     { href: `/pacientes/${id}/plan`, label: "Diagnósticos y plan" },
+    { href: `/pacientes/${id}/consentimientos`, label: "Consentimientos" },
   ];
   return (
     <nav aria-label="Secciones del paciente" className="flex gap-1 overflow-x-auto border-b border-slate-300">

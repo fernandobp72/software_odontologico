@@ -12,11 +12,13 @@ export default async function PacientePage({ params }: PageProps<"/pacientes/[id
   if (!p) notFound();
 
   const canEdit = user.role !== "RECEPTION";
-  const [allFindings, evolutions, openItemsRaw] = await Promise.all([
+  const [allFindings, evolutions, openItemsRaw, initialSnap] = await Promise.all([
     db.toothFinding.findMany({ where: { patientId: p.id }, orderBy: { createdAt: "asc" } }),
     db.evolution.findMany({ where: { patientId: p.id }, orderBy: { signedAt: "desc" }, include: { dentist: { select: { name: true } } }, take: 50 }),
     db.treatmentItem.findMany({ where: { status: { in: ["PLANNED", "IN_PROGRESS"] }, plan: { patientId: p.id, status: { in: ["DRAFT", "PRESENTED", "ACCEPTED", "IN_PROGRESS"] } } }, orderBy: [{ phase: "asc" }, { createdAt: "asc" }] }),
+    db.odontogramSnapshot.findUnique({ where: { patientId_kind: { patientId: p.id, kind: "INITIAL" } } }),
   ]);
+  const pending = openItemsRaw.filter((i) => i.tooth).map((i) => ({ tooth: i.tooth as number, surfaces: i.surfaces ?? "" }));
   const openItems = openItemsRaw.map((i) => ({ id: i.id, label: `${i.name}${i.tooth ? ` · diente ${i.tooth}` : ""}${i.surfaces ? ` (${i.surfaces})` : ""}` }));
   // El último registro por diente/superficie es el estado actual.
   const latest = new Map<string, { tooth: number; surface: string | null; condition: ConditionKey }>();
@@ -46,7 +48,7 @@ export default async function PacientePage({ params }: PageProps<"/pacientes/[id
           </dl>
         </aside>
         <div className="space-y-6 lg:col-span-2">
-          <Odontogram patientId={p.id} findings={findings} canEdit={canEdit} />
+          <Odontogram patientId={p.id} findings={findings} canEdit={canEdit} initial={initialSnap ? (initialSnap.data as unknown as { tooth: number; surface: string | null; condition: ConditionKey }[]) : null} planned={pending} />
           {canEdit && <EvolutionForm patientId={p.id} openItems={openItems} />}
           <section className="space-y-3">
             <h2 className="section-title">Evoluciones</h2>

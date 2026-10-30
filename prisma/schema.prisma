@@ -67,30 +67,32 @@ model Clinic {
 }
 
 model User {
-  id            String          @id @default(cuid())
-  clinicId      String
-  clinic        Clinic          @relation(fields: [clinicId], references: [id])
-  email         String          @unique
-  passwordHash  String
-  name          String
-  role          Role
+  id                  String               @id @default(cuid())
+  clinicId            String
+  clinic              Clinic               @relation(fields: [clinicId], references: [id])
+  email               String               @unique
+  passwordHash        String
+  name                String
+  role                Role
   // Registro profesional (RETHUS / tarjeta profesional) requerido para firmar evoluciones
-  licenseNumber String?
-  active        Boolean         @default(true)
-  createdAt     DateTime        @default(now())
-  appointments  Appointment[]
-  evolutions    Evolution[]
-  auditLogs     AuditLog[]
-  assessments   Assessment[]
-  diagnoses     Diagnosis[]
-  plans         TreatmentPlan[]
+  licenseNumber       String?
+  active              Boolean              @default(true)
+  createdAt           DateTime             @default(now())
+  appointments        Appointment[]
+  evolutions          Evolution[]
+  auditLogs           AuditLog[]
+  assessments         Assessment[]
+  diagnoses           Diagnosis[]
+  plans               TreatmentPlan[]
+  consents            Consent[]
+  odontogramSnapshots OdontogramSnapshot[]
 }
 
 model Patient {
-  id             String          @id @default(cuid())
+  id             String               @id @default(cuid())
   clinicId       String
-  clinic         Clinic          @relation(fields: [clinicId], references: [id])
-  documentType   String          @default("CC") // CC, TI, CE, RC, PA, PT
+  clinic         Clinic               @relation(fields: [clinicId], references: [id])
+  documentType   String               @default("CC") // CC, TI, CE, RC, PA, PT
   documentNumber String
   firstName      String
   middleName     String?
@@ -112,13 +114,15 @@ model Patient {
   medicalHistory String?
   // Habeas data (Ley 1581 de 2012)
   dataConsentAt  DateTime?
-  createdAt      DateTime        @default(now())
+  createdAt      DateTime             @default(now())
   appointments   Appointment[]
   evolutions     Evolution[]
   toothFindings  ToothFinding[]
   assessments    Assessment[]
   diagnoses      Diagnosis[]
   plans          TreatmentPlan[]
+  consents       Consent[]
+  snapshots      OdontogramSnapshot[]
 
   @@unique([clinicId, documentType, documentNumber])
   @@index([clinicId, lastName])
@@ -252,4 +256,40 @@ model TreatmentItem {
   createdAt     DateTime      @default(now())
 
   @@index([planId, phase])
+}
+
+// Consentimiento informado firmado. Inmutable: guarda el texto exacto que se firmó.
+model Consent {
+  id              String   @id @default(cuid())
+  patientId       String
+  patient         Patient  @relation(fields: [patientId], references: [id])
+  dentistId       String
+  dentist         User     @relation(fields: [dentistId], references: [id])
+  templateId      String
+  templateVersion String
+  title           String
+  body            String
+  procedureNote   String?
+  signerName      String
+  signerDocument  String?
+  signerRelation  String
+  witnessName     String?
+  signature       String // PNG en data URL
+  signedAt        DateTime @default(now())
+
+  @@index([patientId, signedAt])
+}
+
+// Foto fija del odontograma (p. ej. el inicial, que no cambia después).
+model OdontogramSnapshot {
+  id        String   @id @default(cuid())
+  patientId String
+  patient   Patient  @relation(fields: [patientId], references: [id])
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id])
+  kind      String // INITIAL
+  data      Json
+  createdAt DateTime @default(now())
+
+  @@unique([patientId, kind])
 }
