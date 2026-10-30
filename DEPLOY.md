@@ -113,3 +113,9 @@ En la ficha del paciente, al marcar en «Nueva evolución» los procedimientos d
 ## Formulario previo del paciente
 
 En Historia clínica → "Formulario previo del paciente" el profesional crea un enlace (`/formulario/<token>`, vence en 7 días, un solo envío; en la base solo se guarda el hash) y lo manda por WhatsApp. El paciente contesta en lenguaje sencillo (motivo, antecedentes, alergias, medicamentos, hábitos), autoriza el tratamiento de datos (Ley 1581, texto borrador por revisar legalmente) y firma con el dedo. El profesional pulsa "Revisar y cargar en la valoración": las respuestas se mezclan con la valoración vigente (sin borrar lo existente), las corrige y al guardar queda una versión nueva y el formulario marcado como revisado. Lo del paciente nunca entra solo a la historia clínica.
+
+## Comandos de voz (sin IA)
+
+En el odontograma ("Dictar hallazgos") y el periodontograma ("Dictar sondaje") el navegador convierte la voz en texto (Chrome/Edge/Safari) y `src/lib/voice.ts` lo interpreta con reglas y vocabulario fijo; lo que no entiende se muestra como aviso y no se adivina. También hay un campo para escribir el mismo comando (sirve donde no hay reconocimiento de voz).
+- Odontograma: «diente 16 oclusal mesial caries de dentina», «diente 26 mod obturación», «ausentes 18 28 38 48», «diente 46 endodoncia diente 47 corona». Los estados sin superficie (corona, endodoncia, ausente…) afectan todo el diente; las caries y obturaciones exigen la superficie. Cada frase se aplica de una vez y un solo «Deshacer» la revierte.
+- Periodontograma: «diente 18 vestibular 3 2 4 palatino 4 3 3» (los valores van por los 6 sitios, de izquierda a derecha como en el teclado y de a uno, 0 a 9), «sangra» / «placa» (el último sitio), «recesión 1 0 2», «menos 1», «ausente», «movilidad 2», «furca 1», «supuración». Los números de diente se dicen después de la palabra «diente».

@@ -3,6 +3,8 @@
 import { useEffect, useState, useTransition } from "react";
 import { QUADRANTS } from "@/lib/catalogs";
 import { cal, emptyTooth, sitesOf, summarize, type Perio, type PerioTooth, type Site } from "@/lib/perio";
+import { applyPerioVoice } from "@/lib/voice";
+import VoiceButton, { VoiceBox } from "../voice-button";
 import { savePerio } from "./actions";
 
 const UPPER = [...QUADRANTS[0], ...QUADRANTS[1]];
@@ -39,6 +41,7 @@ export default function PerioEditor({ patientId, initial }: { patientId: string;
   const [field, setField] = useState<Field>("pd");
   const [msg, setMsg] = useState<{ ok?: boolean; error?: string }>();
   const [saving, startSave] = useTransition();
+  const [voice, setVoice] = useState<{ text: string; done: string[]; warnings: string[] }>();
 
   const tooth = data[sel.tooth] ?? emptyTooth();
   const summary = summarize(data);
@@ -87,6 +90,16 @@ export default function PerioEditor({ patientId, initial }: { patientId: string;
       else s[k] = true;
     });
 
+  // Voz: «diente 18 vestibular 3 2 4 palatino 4 3 3»; «sangra», «placa», «recesión», «ausente», «movilidad 2».
+  function heard(text: string) {
+    const r = applyPerioVoice(text, data, sel, field, ORDER);
+    setData(r.data);
+    setSel(r.sel);
+    setField(r.field);
+    setMsg(undefined);
+    setVoice({ text, done: r.done, warnings: r.warnings });
+  }
+
   function save() {
     startSave(async () => {
       const res = await savePerio(patientId, data);
@@ -125,7 +138,18 @@ export default function PerioEditor({ patientId, initial }: { patientId: string;
     <div className="space-y-4">
       <section className="card space-y-3">
         <h2 className="section-title">Periodontograma</h2>
-        <p className="muted">Toca un diente y escribe con el teclado: el cursor avanza solo por los 6 sitios y pasa al siguiente diente.</p>
+        <p className="muted">Toca un diente y escribe con el teclado: el cursor avanza solo por los 6 sitios y pasa al siguiente diente. O dicta: «diente 18 vestibular 3 2 4 palatino 4 3 3». Di el diente con la palabra «diente» y los valores de a uno (0 a 9).</p>
+        <div className="flex flex-wrap items-center gap-3">
+          <VoiceButton onPhrase={heard} label="🎤 Dictar sondaje" />
+          <div className="min-w-48 flex-1"><VoiceBox onPhrase={heard} /></div>
+          {voice && (
+            <div className="w-full text-sm text-slate-900" role="status">
+              <p className="muted">Escuché: «{voice.text}»</p>
+              {voice.done.length > 0 && <p className="font-semibold">{voice.done.length} dato(s) registrados</p>}
+              {voice.warnings.map((w) => <p key={w} className="error-text">{w}</p>)}
+            </div>
+          )}
+        </div>
         {arch(UPPER)}
         {arch(LOWER)}
       </section>

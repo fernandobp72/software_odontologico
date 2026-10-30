@@ -2,6 +2,8 @@
 
 import { useRef, useState, useTransition } from "react";
 import { CONDITIONS, QUADRANTS, SURFACES, type ConditionKey } from "@/lib/catalogs";
+import { parseOdontogram } from "@/lib/voice";
+import VoiceButton, { VoiceBox } from "./voice-button";
 import { applyFindings, saveInitialSnapshot } from "./actions";
 
 export type Finding = { tooth: number; surface: string | null; condition: ConditionKey };
@@ -108,14 +110,16 @@ export default function Odontogram({
   const [error, setError] = useState<string>();
   const [pending, start] = useTransition();
   const panel = useRef<HTMLDivElement>(null);
+  const [voice, setVoice] = useState<{ text: string; lines: string[]; warnings: string[] }>();
 
-  const get = (t: number, s: string | null): ConditionKey => viewing.get(key(t, s)) ?? "HEALTHY";
+  const getNow = (t: number, s: string | null): ConditionKey => viewing.get(key(t, s)) ?? "HEALTHY";
+  const get = getNow;
   const fillOf = (t: number) => (s: string): ConditionKey => {
     const own = get(t, s);
     return own !== "HEALTHY" ? own : get(t, null);
   };
 
-  function plan(condition: ConditionKey, t: number, surface: string | null): Change[] {
+  function plan(condition: ConditionKey, t: number, surface: string | null, get: (t: number, s: string | null) => ConditionKey = getNow): Change[] {
     const out: Change[] = [];
     const set = (s: string | null, c: ConditionKey) => get(t, s) !== c && out.push({ tooth: t, surface: s, condition: c });
     const clearAll = () => [null, ...SURFACE_KEYS].forEach((s) => set(s, "HEALTHY"));
@@ -164,6 +168,33 @@ export default function Odontogram({
     commit(changes, changes.map((c) => ({ ...c, condition: get(c.tooth, c.surface) })), true);
   }
 
+  // Voz: cada frase se interpreta por reglas y se aplica de una vez (un solo «Deshacer» la revierte).
+  function heard(text: string) {
+    const { commands, warnings } = parseOdontogram(text, tooth);
+    const sim = new Map(state);
+    const simGet = (t: number, s: string | null): ConditionKey => sim.get(key(t, s)) ?? "HEALTHY";
+    const all: Change[] = [];
+    const lines: string[] = [];
+    for (const c of commands) {
+      const targets = c.surfaces ?? [null];
+      for (const sf of targets) {
+        const ch = plan(c.condition, c.tooth, sf, simGet);
+        ch.forEach((x) => sim.set(key(x.tooth, x.surface), x.condition));
+        all.push(...ch);
+      }
+      lines.push(`${c.tooth}${c.surfaces ? " " + c.surfaces.join("") : ""} · ${CONDITIONS[c.condition].label}`);
+    }
+    if (commands.length) setTooth(commands[commands.length - 1].tooth);
+    if (all.length) {
+      const orig = new Map<string, Change>();
+      all.forEach((x) => { const k = key(x.tooth, x.surface); if (!orig.has(k)) orig.set(k, { ...x, condition: state.get(k) ?? "HEALTHY" }); });
+      const final = new Map<string, Change>();
+      all.forEach((x) => final.set(key(x.tooth, x.surface), x));
+      commit([...final.values()], [...orig.values()], true);
+    }
+    setVoice({ text, lines, warnings });
+  }
+
   function undoLast() {
     const last = undo[undo.length - 1];
     if (!last) return;
@@ -204,6 +235,7 @@ export default function Odontogram({
               <button type="button" disabled={!initial} onClick={() => setView("initial")} aria-pressed={view === "initial"} className={`min-h-11 border-l border-slate-500 px-3 text-sm font-semibold disabled:opacity-50 ${view === "initial" ? "bg-teal-700 text-white" : "bg-white text-slate-900"}`}>Inicial</button>
             </div>
           )}
+          {editable && <VoiceButton onPhrase={heard} label="🎤 Dictar hallazgos" />}
           {editable && (
             <button type="button" className="btn-secondary" onClick={undoLast} disabled={!undo.length || pending}>
               Deshacer
@@ -219,6 +251,18 @@ export default function Odontogram({
       )}
       {view === "initial" && initial && <p className="rounded-lg border border-slate-300 bg-slate-100 p-2 text-sm font-semibold text-slate-900">Odontograma inicial (solo lectura)</p>}
 
+      {editable && (
+        <div className="space-y-2 rounded-lg border border-slate-300 bg-slate-50 p-3 text-sm text-slate-900">
+          <VoiceBox onPhrase={heard} />
+          {voice && (
+            <div role="status">
+              <p className="muted">Escuché: «{voice.text}»</p>
+              {voice.lines.length > 0 && <p className="mt-1 font-semibold">Aplicado: {voice.lines.join(" · ")}</p>}
+              {voice.warnings.map((w) => <p key={w} className="error-text mt-1">{w}</p>)}
+            </div>
+          )}
+        </div>
+      )}
       {editable && (
         <div>
           <p className="label mb-2">1. Elige el estado</p>
@@ -284,7 +328,7 @@ export default function Odontogram({
               </div>
             </div>
           ) : (
-            <p className="muted">{editable ? "Toca un diente para marcar sus superficies." : "Solo lectura."}</p>
+            <p className="muted">{editable ? "Toca un diente para marcar sus superficies, o pulsa «Dictar hallazgos»: «diente 16 oclusal mesial caries de dentina»; «ausentes 18 28 38 48»." : "Solo lectura."}</p>
           )}
           {error && <p role="alert" className="error-text mt-2">{error}</p>}
         </div>
