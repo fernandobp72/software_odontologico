@@ -47,3 +47,16 @@ El envío automático **no se ha probado contra la API real** (faltan credencial
 - **Por sede:** agenda, caja (una caja abierta por sede) y recordatorios. El recibo muestra la sede donde se cobró.
 - Cada persona entra solo a las sedes asignadas en *Equipo*; el administrador entra a todas. Quien tiene más de una ve un selector de sede.
 - Pendiente: reportes consolidados y por sede, y pacientes asignados a una sede de origen.
+
+# Copias de seguridad y restauración
+
+- **Programación:** Coolify → base `odontologico-db` → *Backups*: copia diaria a las 03:00 (hora del servidor), formato `pg_dump -Fc`, conserva las últimas 14 copias (máximo 30 días). Se verificó una ejecución exitosa.
+- **Dónde quedan:** en el mismo servidor (`/data/coolify/backups/databases/...`). Protege de errores y borrados, **no** de perder el servidor. Para eso hay que activar *Save to S3* con un depósito externo.
+- **Restaurar en una base nueva (sin tocar producción):**
+  1. Copia el archivo `.dmp` desde el servidor (o descárgalo desde Coolify).
+  2. `createdb odontologico_restaurada`
+  3. `pg_restore --no-owner -d odontologico_restaurada archivo.dmp`
+  4. Revisa los datos (`select count(*) from "Patient";`).
+- **Restaurar producción:** detén la aplicación en Coolify, restaura en la base y vuelve a iniciarla. Hazlo siempre primero en una base de prueba.
+- Ensayo del procedimiento: se restauró un volcado y coincidieron pacientes y migraciones.
+- Pendiente: hacer un ensayo mensual con una copia real de producción.
