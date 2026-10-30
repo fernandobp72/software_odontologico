@@ -3,14 +3,14 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { requireUser } from "@/lib/dal";
+import { requireBranch, requireUser } from "@/lib/dal";
 
 export type CashState = { error?: string; ok?: boolean; receiptId?: string } | undefined;
 
 async function requireManager() {
-  const user = await requireUser();
+  const { user, branch, branches } = await requireBranch();
   if (user.role === "DENTIST") throw new Error("Solo administración o recepción pueden abrir y cerrar caja");
-  return user;
+  return { ...user, branch, branches };
 }
 
 const money = z.coerce.number().int("Usa un valor entero en pesos").min(0).max(100_000_000);
@@ -19,9 +19,9 @@ export async function openSession(_: CashState, fd: FormData): Promise<CashState
   const user = await requireManager();
   const amount = money.safeParse(fd.get("openingAmount") || 0);
   if (!amount.success) return { error: "Valor inicial inválido" };
-  const open = await db.cashSession.findFirst({ where: { clinicId: user.clinicId, closedAt: null } });
-  if (open) return { error: "Ya hay una caja abierta" };
-  const s = await db.cashSession.create({ data: { clinicId: user.clinicId, openedById: user.id, openingAmount: amount.data } });
+  const open = await db.cashSession.findFirst({ where: { clinicId: user.clinicId, branchId: user.branch.id, closedAt: null } });
+  if (open) return { error: "Ya hay una caja abierta en esta sede" };
+  const s = await db.cashSession.create({ data: { clinicId: user.clinicId, branchId: user.branch.id, openedById: user.id, openingAmount: amount.data } });
   await db.auditLog.create({ data: { userId: user.id, action: "CASH_OPEN", entity: "CashSession", entityId: s.id } });
   revalidatePath("/caja");
   return { ok: true };
@@ -31,7 +31,7 @@ export async function closeSession(sessionId: string, _: CashState, fd: FormData
   const user = await requireManager();
   const counted = money.safeParse(fd.get("countedCash"));
   if (!counted.success) return { error: "Escribe el efectivo contado" };
-  const session = await db.cashSession.findFirst({ where: { id: sessionId, clinicId: user.clinicId, closedAt: null } });
+  const session = await db.cashSession.findFirst({ where: { id: sessionId, clinicId: user.clinicId, branchId: { in: user.branches.map((b) => b.id) }, closedAt: null } });
   if (!session) return { error: "La caja ya está cerrada" };
   const cash = await db.payment.aggregate({ _sum: { amount: true }, where: { sessionId, method: "CASH", voidedAt: null } });
   const expected = session.openingAmount + (cash._sum.amount ?? 0);
@@ -60,15 +60,15 @@ const paymentSchema = z.object({
 });
 
 export async function registerPayment(_: CashState, fd: FormData): Promise<CashState> {
-  const user = await requireUser();
+  const { user, branch } = await requireBranch();
   const parsed = paymentSchema.safeParse(Object.fromEntries(fd));
   if (!parsed.success) return { error: parsed.error.issues[0].message };
   const d = parsed.data;
 
   const patient = await db.patient.findFirst({ where: { id: d.patientId, clinicId: user.clinicId }, select: { id: true } });
   if (!patient) return { error: "Paciente no encontrado" };
-  const session = await db.cashSession.findFirst({ where: { clinicId: user.clinicId, closedAt: null } });
-  if (!session) return { error: "No hay caja abierta. Pide a recepción o administración que la abra." };
+  const session = await db.cashSession.findFirst({ where: { clinicId: user.clinicId, branchId: branch.id, closedAt: null } });
+  if (!session) return { error: `No hay caja abierta en la sede ${branch.name}. Pide a recepción o administración que la abra.` };
 
   // Consecutivo por consultorio; si dos cobros chocan, se reintenta.
   for (let attempt = 0; attempt < 3; attempt++) {

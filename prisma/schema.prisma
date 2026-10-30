@@ -83,6 +83,7 @@ model Clinic {
   payments        Payment[]
   invoices        Invoice[]
   invitations     Invitation[]
+  branches        Branch[]
 }
 
 model User {
@@ -113,6 +114,7 @@ model User {
   invoices            Invoice[]
   invitations         Invitation[]
   passwordResets      PasswordReset[]
+  userBranches        UserBranch[]
 }
 
 model Patient {
@@ -174,10 +176,13 @@ model Appointment {
   reason       String?
   status       AppointmentStatus @default(SCHEDULED)
   confirmToken String?           @unique
+  branchId     String
+  branch       Branch            @relation(fields: [branchId], references: [id])
   reminders    Reminder[]
   createdAt    DateTime          @default(now())
 
   @@index([clinicId, startsAt])
+  @@index([branchId, startsAt])
   @@index([dentistId, startsAt])
 }
 
@@ -348,6 +353,8 @@ model CashSession {
   id            String    @id @default(cuid())
   clinicId      String
   clinic        Clinic    @relation(fields: [clinicId], references: [id])
+  branchId      String
+  branch        Branch    @relation(fields: [branchId], references: [id])
   openedById    String
   openedBy      User      @relation(fields: [openedById], references: [id])
   openedAt      DateTime  @default(now())
@@ -477,6 +484,7 @@ model Invitation {
   email       String
   role        Role
   tokenHash   String    @unique
+  branchIds   String[]
   invitedById String
   invitedBy   User      @relation(fields: [invitedById], references: [id])
   expiresAt   DateTime
@@ -496,4 +504,31 @@ model PasswordReset {
   expiresAt DateTime
   usedAt    DateTime?
   createdAt DateTime  @default(now())
+}
+
+// Sede de un consultorio. Los pacientes son del consultorio; agenda y caja son por sede.
+model Branch {
+  id           String        @id @default(cuid())
+  clinicId     String
+  clinic       Clinic        @relation(fields: [clinicId], references: [id])
+  name         String
+  address      String?
+  phone        String?
+  active       Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  users        UserBranch[]
+  appointments Appointment[]
+  cashSessions CashSession[]
+
+  @@index([clinicId])
+}
+
+// Sedes a las que puede entrar una persona (los administradores entran a todas).
+model UserBranch {
+  userId   String
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  branchId String
+  branch   Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@id([userId, branchId])
 }

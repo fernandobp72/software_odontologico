@@ -39,3 +39,11 @@ El envío automático **no se ha probado contra la API real** (faltan credencial
 - **Equipo:** el administrador de cada consultorio invita por enlace (válido 7 días, un solo uso) y puede generar enlaces para restablecer contraseñas.
 - **Aislamiento:** todas las consultas se filtran por consultorio; un consultorio suspendido solo ve la pantalla de suspensión.
 - **Pendiente antes de vender:** términos y política de datos revisados por un abogado (hoy son un borrador), verificación de correo, cobro de suscripciones y sucursales.
+
+# Sedes
+
+- Cada consultorio tiene al menos una sede ("Sede principal", creada al registrarse o por la migración). El administrador crea más en *Sedes*.
+- **Compartido por todo el consultorio:** pacientes, historia clínica, planes, cuenta del paciente y cuentas de cobro.
+- **Por sede:** agenda, caja (una caja abierta por sede) y recordatorios. El recibo muestra la sede donde se cobró.
+- Cada persona entra solo a las sedes asignadas en *Equipo*; el administrador entra a todas. Quien tiene más de una ve un selector de sede.
+- Pendiente: reportes consolidados y por sede, y pacientes asignados a una sede de origen.

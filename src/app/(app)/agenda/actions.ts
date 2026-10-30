@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { requireUser } from "@/lib/dal";
+import { requireBranch } from "@/lib/dal";
 
 const schema = z.object({
   patientId: z.string().min(1, "Elige un paciente"),
@@ -15,7 +15,7 @@ const schema = z.object({
 export type AppointmentState = { error?: string; ok?: boolean } | undefined;
 
 export async function createAppointment(_: AppointmentState, formData: FormData): Promise<AppointmentState> {
-  const user = await requireUser();
+  const { user, branch } = await requireBranch();
   const parsed = schema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { error: parsed.error.issues[0].message };
 
@@ -36,14 +36,14 @@ export async function createAppointment(_: AppointmentState, formData: FormData)
   if (overlap) return { error: "Ya tienes una cita en ese horario" };
 
   await db.appointment.create({
-    data: { clinicId: user.clinicId, patientId: patient.id, dentistId: user.id, startsAt, endsAt, reason: parsed.data.reason || null },
+    data: { clinicId: user.clinicId, branchId: branch.id, patientId: patient.id, dentistId: user.id, startsAt, endsAt, reason: parsed.data.reason || null },
   });
   revalidatePath("/agenda");
   return { ok: true };
 }
 
 export async function setStatus(id: string, status: "CONFIRMED" | "ATTENDED" | "CANCELLED" | "NO_SHOW") {
-  const user = await requireUser();
-  await db.appointment.updateMany({ where: { id, clinicId: user.clinicId }, data: { status } });
+  const { user, branches } = await requireBranch();
+  await db.appointment.updateMany({ where: { id, clinicId: user.clinicId, branchId: { in: branches.map((b) => b.id) } }, data: { status } });
   revalidatePath("/agenda");
 }

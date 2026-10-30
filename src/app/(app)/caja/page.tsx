@@ -1,20 +1,20 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
-import { requireUser } from "@/lib/dal";
+import { requireBranch } from "@/lib/dal";
 import { METHODS, copFmt, type MethodKey } from "@/lib/cartera";
 import { CloseForm, OpenForm, PaymentForm } from "./forms";
 import { voidPayment } from "./actions";
 
 export default async function CajaPage() {
-  const user = await requireUser();
+  const { user, branch, branches } = await requireBranch();
   const manager = user.role !== "DENTIST";
-  const session = await db.cashSession.findFirst({ where: { clinicId: user.clinicId, closedAt: null }, include: { openedBy: { select: { name: true } } } });
+  const session = await db.cashSession.findFirst({ where: { clinicId: user.clinicId, branchId: branch.id, closedAt: null }, include: { openedBy: { select: { name: true } } } });
   const fmt = new Intl.DateTimeFormat("es-CO", { dateStyle: "medium", timeStyle: "short", timeZone: "America/Bogota" });
 
   const [payments, patients, history] = await Promise.all([
     session ? db.payment.findMany({ where: { sessionId: session.id }, orderBy: { number: "desc" }, include: { patient: { select: { firstName: true, lastName: true } }, receivedBy: { select: { name: true } } } }) : Promise.resolve([]),
     session ? db.patient.findMany({ where: { clinicId: user.clinicId }, orderBy: { lastName: "asc" }, take: 500 }) : Promise.resolve([]),
-    db.cashSession.findMany({ where: { clinicId: user.clinicId, closedAt: { not: null } }, orderBy: { closedAt: "desc" }, take: 8, include: { openedBy: { select: { name: true } } } }),
+    db.cashSession.findMany({ where: { clinicId: user.clinicId, branchId: branch.id, closedAt: { not: null } }, orderBy: { closedAt: "desc" }, take: 8, include: { openedBy: { select: { name: true } } } }),
   ]);
 
   const valid = payments.filter((p) => !p.voidedAt);
@@ -24,7 +24,10 @@ export default async function CajaPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="page-title">Caja</h1>
+      <div>
+        <h1 className="page-title">Caja</h1>
+        {branches.length > 1 && <p className="muted">Sede: {branch.name}. Cada sede tiene su propia caja.</p>}
+      </div>
 
       {!session ? (
         manager ? <OpenForm /> : <p className="card">No hay caja abierta. Pide a recepción o administración que la abra.</p>

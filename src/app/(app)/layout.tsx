@@ -1,4 +1,5 @@
-import { requireUser } from "@/lib/dal";
+import { branchState } from "@/lib/dal";
+import BranchSwitcher from "./branch-switcher";
 import { logout } from "../login/actions";
 import { BottomNav, SideNav } from "./nav";
 
@@ -7,11 +8,12 @@ const daysLeft = (d: Date) => Math.max(0, Math.ceil((d.getTime() - Date.now()) /
 const ROLE: Record<string, string> = { ADMIN: "Administrador", DENTIST: "Odontólogo", RECEPTION: "Recepción" };
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  const user = await requireUser();
+  const { user, branches, branch } = await branchState();
   return (
     <div className="min-h-dvh md:flex">
       <aside className="hidden w-60 shrink-0 flex-col border-r border-slate-300 bg-white p-4 md:flex">
         <p className="mb-6 text-lg font-bold text-teal-800">Odontología</p>
+        {branches.length > 1 && branch && <div className="mb-4"><BranchSwitcher branches={branches} activeId={branch.id} /></div>}
         <SideNav role={user.role} platform={user.isPlatformAdmin} />
         <div className="mt-auto space-y-2 border-t border-slate-300 pt-4">
           <p className="text-sm font-semibold text-slate-900">{user.name}</p>
@@ -33,6 +35,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             Prueba gratuita: {daysLeft(user.clinic.trialEndsAt)} días restantes
           </p>
         )}
+        {branches.length > 1 && branch && <div className="border-b border-slate-300 bg-white px-4 py-2 md:hidden"><BranchSwitcher branches={branches} activeId={branch.id} /></div>}
         <main className="mx-auto w-full max-w-7xl p-4 md:p-8">{children}</main>
       </div>
       <BottomNav />

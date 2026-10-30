@@ -21,10 +21,13 @@ export async function invite(_: TeamState, fd: FormData): Promise<TeamState> {
   const parsed = z.object({ email: z.string().trim().toLowerCase().email("Correo inválido"), role: z.enum(ROLES) }).safeParse(Object.fromEntries(fd));
   if (!parsed.success) return { error: parsed.error.issues[0].message };
   if (await db.user.findUnique({ where: { email: parsed.data.email } })) return { error: "Ese correo ya tiene una cuenta" };
+  const wanted = fd.getAll("branchIds").map(String);
+  const valid = await db.branch.findMany({ where: { clinicId: admin.clinicId, active: true, id: { in: wanted } }, select: { id: true } });
+  if (parsed.data.role !== "ADMIN" && valid.length === 0) return { error: "Elige al menos una sede para esta persona" };
 
   const token = newToken();
   await db.invitation.create({
-    data: { clinicId: admin.clinicId, email: parsed.data.email, role: parsed.data.role, tokenHash: hashToken(token), invitedById: admin.id, expiresAt: new Date(Date.now() + 7 * 86_400_000) },
+    data: { clinicId: admin.clinicId, email: parsed.data.email, role: parsed.data.role, tokenHash: hashToken(token), branchIds: valid.map((b) => b.id), invitedById: admin.id, expiresAt: new Date(Date.now() + 7 * 86_400_000) },
   });
   await db.auditLog.create({ data: { userId: admin.id, action: "INVITE", entity: "Invitation", entityId: parsed.data.email } });
   revalidatePath("/equipo");
@@ -72,4 +75,19 @@ export async function createReset(userId: string): Promise<TeamState> {
   await db.passwordReset.create({ data: { userId, tokenHash: hashToken(token), expiresAt: new Date(Date.now() + 24 * 3_600_000) } });
   await db.auditLog.create({ data: { userId: admin.id, action: "RESET_LINK", entity: "User", entityId: userId } });
   return { ok: true, token, kind: "reset" };
+}
+
+// Sedes a las que puede entrar una persona (el administrador entra a todas, no necesita asignación).
+export async function setUserBranches(userId: string, fd: FormData): Promise<void> {
+  const admin = await requireAdmin();
+  const target = await db.user.findFirst({ where: { id: userId, clinicId: admin.clinicId } });
+  if (!target) return;
+  const wanted = fd.getAll("branchIds").map(String);
+  const valid = await db.branch.findMany({ where: { clinicId: admin.clinicId, id: { in: wanted } }, select: { id: true } });
+  await db.$transaction([
+    db.userBranch.deleteMany({ where: { userId } }),
+    db.userBranch.createMany({ data: valid.map((b) => ({ userId, branchId: b.id })) }),
+  ]);
+  await db.auditLog.create({ data: { userId: admin.id, action: "USER_BRANCHES", entity: "User", entityId: userId } });
+  revalidatePath("/equipo");
 }

@@ -18,7 +18,7 @@ function LinkBox({ path, kind }: { path: string; kind: "invite" | "reset" }) {
   );
 }
 
-export function InviteForm() {
+export function InviteForm({ branches }: { branches: { id: string; name: string }[] }) {
   const [state, action, pending] = useActionState(invite, undefined);
   return (
     <form action={action} className="card space-y-3">
@@ -29,6 +29,16 @@ export function InviteForm() {
           <select name="role" className="field" defaultValue="DENTIST">{Object.entries(ROLE_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select>
         </label>
       </div>
+      <fieldset>
+        <legend className="label">Sedes a las que podrá entrar (el administrador entra a todas)</legend>
+        <div className="mt-2 flex flex-wrap gap-2">
+          {branches.map((b) => (
+            <label key={b.id} className="flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border border-slate-500 bg-white px-3 py-2 text-sm text-slate-900 has-[:checked]:border-teal-700 has-[:checked]:bg-teal-50 has-[:checked]:font-semibold">
+              <input type="checkbox" name="branchIds" value={b.id} defaultChecked={branches.length === 1} className="h-4 w-4 accent-teal-700" />{b.name}
+            </label>
+          ))}
+        </div>
+      </fieldset>
       {state?.error && <p role="alert" className="error-text">{state.error}</p>}
       {state?.ok && state.token && <LinkBox path={`/invitacion/${state.token}`} kind="invite" />}
       <button disabled={pending} className="btn-primary">{pending ? "Creando…" : "Crear invitación"}</button>

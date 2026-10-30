@@ -29,7 +29,7 @@ export async function POST(req: Request) {
       patient: { whatsappOptInAt: { not: null } },
       reminders: { none: { status: "SENT" } },
     },
-    include: { patient: true, clinic: true },
+    include: { patient: true, clinic: true, branch: true },
     take: 100,
   });
 
@@ -39,7 +39,7 @@ export async function POST(req: Request) {
     const to = normalizePhone(a.patient.phone);
     if (!to) continue;
     const token = await ensureToken(a.id, a.confirmToken);
-    const params = reminderParams(a, a.patient.firstName, a.clinic.name, `${root}/confirmar/${token}`);
+    const params = reminderParams(a, a.patient.firstName, a.branch.name === "Sede principal" ? a.clinic.name : `${a.clinic.name} - ${a.branch.name}`, `${root}/confirmar/${token}`);
     const r = await sendCloudTemplate(to, params);
     await db.reminder.create({ data: { appointmentId: a.id, channel: "CLOUD", status: r.ok ? "SENT" : "FAILED", error: r.error ?? null } });
     if (r.ok) sent++;

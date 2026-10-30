@@ -21,7 +21,10 @@ export async function accept(token: string, _: AcceptState, fd: FormData): Promi
     // Marcar como usada primero evita que dos personas usen el mismo enlace a la vez.
     const used = await tx.invitation.updateMany({ where: { id: inv.id, acceptedAt: null }, data: { acceptedAt: new Date() } });
     if (used.count === 0) return null;
-    return tx.user.create({ data: { clinicId: inv.clinicId, email: inv.email, name: parsed.data.name, role: inv.role, passwordHash: await bcrypt.hash(parsed.data.password, 12) } });
+    const created = await tx.user.create({ data: { clinicId: inv.clinicId, email: inv.email, name: parsed.data.name, role: inv.role, passwordHash: await bcrypt.hash(parsed.data.password, 12) } });
+    const branches = await tx.branch.findMany({ where: { clinicId: inv.clinicId, id: { in: inv.branchIds } }, select: { id: true } });
+    await tx.userBranch.createMany({ data: branches.map((b) => ({ userId: created.id, branchId: b.id })) });
+    return created;
   });
   if (!user) return { error: "La invitación ya fue usada" };
   await db.auditLog.create({ data: { userId: user.id, action: "ACCEPT_INVITE", entity: "User", entityId: user.id } });

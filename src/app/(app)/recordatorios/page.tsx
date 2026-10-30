@@ -1,15 +1,17 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
-import { requireUser } from "@/lib/dal";
+import { requireBranch } from "@/lib/dal";
 import { cloudConfigured, normalizePhone, reminderParams, reminderText } from "@/lib/whatsapp";
 import SendButton from "./send-button";
 
+const placeName = (clinic: string, branch: string) => (branch === "Sede principal" ? clinic : `${clinic} - ${branch}`);
+
 export default async function RecordatoriosPage() {
-  const user = await requireUser();
+  const { user, branch } = await requireBranch();
   const now = new Date();
   const appointments = await db.appointment.findMany({
-    where: { clinicId: user.clinicId, status: { in: ["SCHEDULED", "CONFIRMED"] }, startsAt: { gt: now, lte: new Date(now.getTime() + 72 * 3_600_000) } },
-    include: { patient: true, clinic: true, reminders: { orderBy: { createdAt: "desc" } } },
+    where: { clinicId: user.clinicId, branchId: branch.id, status: { in: ["SCHEDULED", "CONFIRMED"] }, startsAt: { gt: now, lte: new Date(now.getTime() + 72 * 3_600_000) } },
+    include: { patient: true, clinic: true, branch: true, reminders: { orderBy: { createdAt: "desc" } } },
     orderBy: { startsAt: "asc" },
   });
   const fmt = new Intl.DateTimeFormat("es-CO", { weekday: "long", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "America/Bogota" });
@@ -33,7 +35,7 @@ export default async function RecordatoriosPage() {
           const optIn = !!a.patient.whatsappOptInAt;
           const sent = a.reminders.find((r) => r.status === "SENT");
           const failed = a.reminders.find((r) => r.status === "FAILED");
-          const text = reminderText(reminderParams(a, a.patient.firstName, a.clinic.name, "__ORIGIN__/confirmar/__TOKEN__"));
+          const text = reminderText(reminderParams(a, a.patient.firstName, placeName(a.clinic.name, a.branch.name), "__ORIGIN__/confirmar/__TOKEN__"));
           return (
             <li key={a.id} className="card space-y-2">
               <div className="flex flex-wrap items-start justify-between gap-2">

@@ -9,7 +9,7 @@ export default async function ReciboPage({ params }: PageProps<"/recibo/[id]">) 
   const { id } = await params;
   const p = await db.payment.findFirst({
     where: { id, clinicId: user.clinicId },
-    include: { patient: true, receivedBy: { select: { name: true } }, clinic: true },
+    include: { patient: true, receivedBy: { select: { name: true } }, clinic: true, session: { select: { branch: { select: { name: true, address: true, phone: true } } } } },
   });
   if (!p) notFound();
   const fmt = new Intl.DateTimeFormat("es-CO", { dateStyle: "long", timeStyle: "short", timeZone: "America/Bogota" });
@@ -19,8 +19,9 @@ export default async function ReciboPage({ params }: PageProps<"/recibo/[id]">) 
       <header className="border-b border-slate-400 pb-3 text-center">
         <h1 className="text-xl font-bold">{p.clinic.name}</h1>
         {p.clinic.nit && <p className="text-sm">NIT {p.clinic.nit}</p>}
-        {p.clinic.address && <p className="text-sm">{p.clinic.address}</p>}
-        {p.clinic.phone && <p className="text-sm">Tel. {p.clinic.phone}</p>}
+        {(p.session.branch.address ?? p.clinic.address) && <p className="text-sm">{p.session.branch.address ?? p.clinic.address}</p>}
+        {(p.session.branch.phone ?? p.clinic.phone) && <p className="text-sm">Tel. {p.session.branch.phone ?? p.clinic.phone}</p>}
+        {p.session.branch.name !== "Sede principal" && <p className="text-sm font-semibold">Sede {p.session.branch.name}</p>}
         <p className="mt-2 text-lg font-semibold">Recibo de caja N.º {p.number}</p>
         {p.voidedAt && <p className="mt-1 text-lg font-bold text-red-700">ANULADO</p>}
       </header>

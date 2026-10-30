@@ -37,7 +37,10 @@ export async function signup(_: SignupState, fd: FormData): Promise<SignupState>
     const clinic = await tx.clinic.create({
       data: { name: d.clinicName, nit: d.nit || null, status: "TRIAL", trialEndsAt: new Date(now.getTime() + 30 * 86_400_000), termsAcceptedAt: now, termsVersion: TERMS_VERSION },
     });
-    return tx.user.create({ data: { clinicId: clinic.id, email: d.email, name: d.name, role: "ADMIN", passwordHash: await bcrypt.hash(d.password, 12) } });
+    const branch = await tx.branch.create({ data: { clinicId: clinic.id, name: "Sede principal" } });
+    const admin = await tx.user.create({ data: { clinicId: clinic.id, email: d.email, name: d.name, role: "ADMIN", passwordHash: await bcrypt.hash(d.password, 12) } });
+    await tx.userBranch.create({ data: { userId: admin.id, branchId: branch.id } });
+    return admin;
   });
   await db.auditLog.create({ data: { userId: user.id, action: "SIGNUP", entity: "Clinic", entityId: user.clinicId } });
   await createSession({ userId: user.id, clinicId: user.clinicId, role: user.role });

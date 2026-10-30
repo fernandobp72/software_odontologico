@@ -1,19 +1,19 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
-import { requireUser } from "@/lib/dal";
+import { requireBranch } from "@/lib/dal";
 import { METHODS, account, copFmt } from "@/lib/cartera";
 import { PaymentForm } from "../../../caja/forms";
 import InvoiceForm from "./invoice-form";
 import { voidInvoice } from "./actions";
 
 export default async function CuentaPage({ params }: PageProps<"/pacientes/[id]/cuenta">) {
-  const user = await requireUser();
+  const { user, branch } = await requireBranch();
   const { id } = await params;
 
   const [items, payments, session, invoices, patient] = await Promise.all([
     db.treatmentItem.findMany({ where: { status: "DONE", plan: { patientId: id, patient: { clinicId: user.clinicId } } }, orderBy: { doneAt: "asc" } }),
     db.payment.findMany({ where: { patientId: id, clinicId: user.clinicId }, orderBy: { receivedAt: "desc" } }),
-    db.cashSession.findFirst({ where: { clinicId: user.clinicId, closedAt: null }, select: { id: true } }),
+    db.cashSession.findFirst({ where: { clinicId: user.clinicId, branchId: branch.id, closedAt: null }, select: { id: true } }),
     db.invoice.findMany({ where: { patientId: id, clinicId: user.clinicId }, orderBy: { number: "desc" }, include: { lines: { select: { itemId: true } } } }),
     db.patient.findFirst({ where: { id, clinicId: user.clinicId }, select: { firstName: true, lastName: true, documentType: true, documentNumber: true } }),
   ]);

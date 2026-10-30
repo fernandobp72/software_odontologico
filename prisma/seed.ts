@@ -13,7 +13,12 @@ async function main() {
     update: {},
     create: { id: "clinica-demo", name: "Consultorio Demo" },
   });
-  await db.user.upsert({
+  const branch = await db.branch.upsert({
+    where: { id: `br_${clinic.id}` },
+    update: {},
+    create: { id: `br_${clinic.id}`, clinicId: clinic.id, name: "Sede principal" },
+  });
+  const demo = await db.user.upsert({
     where: { email },
     // Idempotente: no pisa la contraseña de un usuario existente salvo que SEED_RESET=1.
     update: process.env.SEED_RESET === "1" ? { passwordHash: await bcrypt.hash(password, 12) } : {},
@@ -25,6 +30,7 @@ async function main() {
       passwordHash: await bcrypt.hash(password, 12),
     },
   });
+  await db.userBranch.upsert({ where: { userId_branchId: { userId: demo.id, branchId: branch.id } }, update: {}, create: { userId: demo.id, branchId: branch.id } });
   if (process.env.SEED_PLATFORM_ADMIN === "1") await db.user.update({ where: { email }, data: { isPlatformAdmin: true } });
   console.log(`Usuario listo: ${email} (contraseña tomada de SEED_PASSWORD)`);
 }

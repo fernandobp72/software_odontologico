@@ -1,5 +1,6 @@
 import "server-only";
 import { cache } from "react";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { readSession } from "./session";
 import { db } from "./db";
@@ -37,4 +38,31 @@ export async function requirePlatformAdmin() {
   const user = await requireUser();
   if (!user.isPlatformAdmin) redirect("/agenda");
   return user;
+}
+
+export type BranchInfo = { id: string; name: string; address: string | null; phone: string | null };
+
+// Sedes a las que puede entrar la persona: el administrador entra a todas las activas.
+export async function allowedBranches(user: { id: string; role: string; clinicId: string }): Promise<BranchInfo[]> {
+  return db.branch.findMany({
+    where: { clinicId: user.clinicId, active: true, ...(user.role === "ADMIN" ? {} : { users: { some: { userId: user.id } } }) },
+    orderBy: { createdAt: "asc" },
+    select: { id: true, name: true, address: true, phone: true },
+  });
+}
+
+// Sede activa: la que eligió en el selector (cookie) si todavía tiene acceso; si no, la primera.
+export const branchState = cache(async () => {
+  const user = await requireUser();
+  const branches = await allowedBranches(user);
+  const wanted = (await cookies()).get("branch")?.value;
+  const branch = branches.find((b) => b.id === wanted) ?? branches[0] ?? null;
+  return { user, branches, branch };
+});
+
+// Para pantallas que dependen de la sede (agenda, caja, recordatorios).
+export async function requireBranch() {
+  const { user, branches, branch } = await branchState();
+  if (!branch) redirect("/sin-sede");
+  return { user, branches, branch };
 }

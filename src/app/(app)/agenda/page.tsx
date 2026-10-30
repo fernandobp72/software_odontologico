@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
-import { requireUser } from "@/lib/dal";
+import { requireBranch } from "@/lib/dal";
 import AppointmentForm from "./form";
 import { setStatus } from "./actions";
 
@@ -13,13 +13,13 @@ const STATUS: Record<string, { label: string; cls: string }> = {
 };
 
 export default async function AgendaPage() {
-  const user = await requireUser();
+  const { user, branch, branches } = await requireBranch();
   const from = new Date();
   from.setHours(0, 0, 0, 0);
 
   const [appointments, patients] = await Promise.all([
     db.appointment.findMany({
-      where: { clinicId: user.clinicId, startsAt: { gte: from } },
+      where: { clinicId: user.clinicId, branchId: branch.id, startsAt: { gte: from } },
       include: { patient: true },
       orderBy: { startsAt: "asc" },
       take: 50,
@@ -32,7 +32,10 @@ export default async function AgendaPage() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="page-title">Agenda</h1>
+        <div>
+          <h1 className="page-title">Agenda</h1>
+          {branches.length > 1 && <p className="muted">Sede: {branch.name}</p>}
+        </div>
         <Link href="/recordatorios" className="btn-secondary">Recordatorios por WhatsApp</Link>
       </div>
       <div className="grid gap-6 lg:grid-cols-[1fr_24rem] lg:items-start">

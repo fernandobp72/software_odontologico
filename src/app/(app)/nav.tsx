@@ -10,7 +10,7 @@ const base = [
   { href: "/cartera", label: "Cartera" },
 ];
 
-const admin = [{ href: "/inicio", label: "Inicio" }, { href: "/equipo", label: "Equipo" }, { href: "/configuracion", label: "Consultorio" }];
+const admin = [{ href: "/inicio", label: "Inicio" }, { href: "/equipo", label: "Equipo" }, { href: "/sedes", label: "Sedes" }, { href: "/configuracion", label: "Consultorio" }];
 const linksFor = (role: string, platform: boolean) => [
   ...base,
   { href: "/recordatorios", label: "Recordatorios" },
