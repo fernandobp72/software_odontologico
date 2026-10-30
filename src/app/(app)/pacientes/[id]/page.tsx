@@ -13,14 +13,19 @@ export default async function PacientePage({ params }: PageProps<"/pacientes/[id
   if (!p) notFound();
 
   const canEdit = user.role !== "RECEPTION";
-  const [allFindings, evolutions, openItemsRaw, initialSnap] = await Promise.all([
+  const [allFindings, evolutions, openItemsRaw, initialSnap, activeDx] = await Promise.all([
     db.toothFinding.findMany({ where: { patientId: p.id }, orderBy: { createdAt: "asc" } }),
     db.evolution.findMany({ where: { patientId: p.id }, orderBy: { signedAt: "desc" }, include: { dentist: { select: { name: true } } }, take: 50 }),
     db.treatmentItem.findMany({ where: { status: { in: ["PLANNED", "IN_PROGRESS"] }, plan: { patientId: p.id, status: { in: ["DRAFT", "PRESENTED", "ACCEPTED", "IN_PROGRESS"] } } }, orderBy: [{ phase: "asc" }, { createdAt: "asc" }] }),
     db.odontogramSnapshot.findUnique({ where: { patientId_kind: { patientId: p.id, kind: "INITIAL" } } }),
+    db.diagnosis.findMany({ where: { patientId: p.id, status: "ACTIVE" }, select: { code: true, tooth: true } }),
   ]);
   const pending = openItemsRaw.filter((i) => i.tooth).map((i) => ({ tooth: i.tooth as number, surfaces: i.surfaces ?? "" }));
-  const openItems = openItemsRaw.map((i) => ({ id: i.id, label: `${i.name}${i.tooth ? ` · diente ${i.tooth}` : ""}${i.surfaces ? ` (${i.surfaces})` : ""}` }));
+  const openItems = openItemsRaw.map((i) => ({
+    id: i.id, name: i.name, tooth: i.tooth, surfaces: i.surfaces, material: i.material, procedureCode: i.procedureCode,
+    // Diagnóstico activo del mismo diente (si hay), para completar el código y la redacción.
+    diagnosisCode: (i.tooth ? activeDx.find((d) => d.tooth === i.tooth)?.code : undefined) ?? null,
+  }));
   // El último registro por diente/superficie es el estado actual.
   const latest = new Map<string, { tooth: number; surface: string | null; condition: ConditionKey }>();
   for (const f of allFindings) latest.set(`${f.tooth}|${f.surface ?? ""}`, { tooth: f.tooth, surface: f.surface, condition: f.condition });

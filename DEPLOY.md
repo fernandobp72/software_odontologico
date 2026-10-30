@@ -105,3 +105,7 @@ En *Catálogo* el botón **Cargar tarifas de referencia** completa las tarifas d
 El `Dockerfile` usa tres etapas para que cada despliegue ocupe poco disco en el servidor (que es compartido): `build` compila con todas las dependencias y genera el paquete autónomo de Next (`output: "standalone"`, ~130 MB); `tools` instala aparte `prisma`, `tsx` y `bcryptjs` solo para migrar la base y crear el usuario inicial; `runtime` lleva únicamente el paquete autónomo y esas herramientas (~325 MB, contra ~850 MB antes). Las migraciones se aplican con `prisma migrate deploy` y el servidor arranca con `node server.js`. La configuración de Next está en `next.config.mjs`.
 
 Si el servidor vuelve a quedarse sin espacio, hay que activar el *Docker Cleanup* programado de Coolify (por ejemplo con umbral de disco del 70 %).
+
+# Evolución automática desde lo realizado
+
+En la ficha del paciente, al marcar en «Nueva evolución» los procedimientos del plan realizados hoy, la nota se redacta sola con procedimiento, diente, superficies, material y diagnóstico del diente (`src/lib/evolution-text.ts`), y se completan el diagnóstico CIE-10 y el CUPS. Todo es editable; lo que el profesional escribe o dicta se conserva al marcar o desmarcar. El sistema solo redacta datos que ya conoce: frases como la anestesia o las complicaciones las elige el profesional (botones de frases rápidas). Al firmar, los procedimientos marcados quedan como realizados y enlazados a la evolución.

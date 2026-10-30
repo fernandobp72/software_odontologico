@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { CIE10, CUPS, NOTE_TEMPLATES } from "@/lib/catalogs";
+import { buildEvolutionText, replaceBlock, type DoneItem } from "@/lib/evolution-text";
 import { signEvolution, type EvolutionState } from "./actions";
 
 type SpeechEvent = { resultIndex: number; results: ArrayLike<ArrayLike<{ transcript: string }> & { isFinal: boolean }> };
@@ -15,11 +16,25 @@ const speechCtor = () => {
 };
 const noSubscribe = () => () => {};
 
-export default function EvolutionForm({ patientId, openItems = [] }: { patientId: string; openItems?: { id: string; label: string }[] }) {
+export default function EvolutionForm({ patientId, openItems = [] }: { patientId: string; openItems?: DoneItem[] }) {
   const [note, setNote] = useState("");
+  const [checked, setChecked] = useState<string[]>([]);
+  const [dx, setDx] = useState("");
+  const [proc, setProc] = useState("");
+  const block = useRef(""); // texto que redactó el sistema, para reemplazarlo sin tocar lo que escribas
+  const autoDx = useRef("");
+  const autoProc = useRef("");
   const [state, action, pending] = useActionState(async (prev: EvolutionState, fd: FormData) => {
     const res = await signEvolution(prev, fd);
-    if (res?.ok) setNote("");
+    if (res?.ok) {
+      setNote("");
+      setChecked([]);
+      setDx("");
+      setProc("");
+      block.current = "";
+      autoDx.current = "";
+      autoProc.current = "";
+    }
     return res;
   }, undefined);
   const draftKey = `evolucion-${patientId}`;
@@ -67,6 +82,27 @@ export default function EvolutionForm({ patientId, openItems = [] }: { patientId
     try { r.start(); } catch { setListening(false); wantListening.current = false; }
   }
 
+  // Al marcar lo realizado hoy, la nota y los códigos se completan solos (y se pueden editar).
+  function toggleItem(id: string) {
+    const next = checked.includes(id) ? checked.filter((x) => x !== id) : [...checked, id];
+    setChecked(next);
+    const selected = openItems.filter((i) => next.includes(i.id));
+    const oldBlock = block.current;
+    const newBlock = buildEvolutionText(selected);
+    block.current = newBlock;
+    setNote((cur) => replaceBlock(cur, oldBlock, newBlock));
+
+    const newDx = selected.find((i) => i.diagnosisCode)?.diagnosisCode ?? "";
+    const newProc = selected.find((i) => i.procedureCode)?.procedureCode ?? "";
+    const oldDx = autoDx.current;
+    const oldProc = autoProc.current;
+    autoDx.current = newDx;
+    autoProc.current = newProc;
+    // Solo se reemplaza el código si está vacío o es el que puso el sistema antes.
+    setDx((cur) => (cur === "" || cur === oldDx ? newDx : cur));
+    setProc((cur) => (cur === "" || cur === oldProc ? newProc : cur));
+  }
+
   function toggleVoice() {
     if (listening) {
       wantListening.current = false;
@@ -84,12 +120,26 @@ export default function EvolutionForm({ patientId, openItems = [] }: { patientId
       <h2 className="section-title">Nueva evolución</h2>
       <input type="hidden" name="patientId" value={patientId} />
       <label className="label">Motivo de consulta<input name="reason" className="field" /></label>
+      {openItems.length > 0 && (
+        <fieldset>
+          <legend className="label">Procedimientos del plan realizados hoy</legend>
+          <p className="muted">Márcalos y la nota y los códigos se completan solos; puedes editarlos.</p>
+          <div className="mt-2 space-y-2">
+            {openItems.map((i) => (
+              <label key={i.id} className="flex min-h-11 cursor-pointer items-center gap-3 rounded-lg border border-slate-500 bg-white px-3 py-2 text-sm text-slate-900 has-[:checked]:border-teal-700 has-[:checked]:bg-teal-50">
+                <input type="checkbox" name="doneItems" value={i.id} checked={checked.includes(i.id)} onChange={() => toggleItem(i.id)} className="h-5 w-5 accent-teal-700" />
+                {i.name}{i.tooth ? ` · diente ${i.tooth}` : ""}{i.surfaces ? ` (${i.surfaces})` : ""}{i.material ? ` · ${i.material}` : ""}
+              </label>
+            ))}
+          </div>
+        </fieldset>
+      )}
       <div className="grid grid-cols-2 gap-3">
         <label className="label">Diagnóstico (CIE-10)
-          <input name="diagnosisCode" list="cie10" placeholder="K02.1" className="field" />
+          <input name="diagnosisCode" list="cie10" placeholder="K02.1" value={dx} onChange={(e) => setDx(e.target.value)} className="field" />
         </label>
         <label className="label">Procedimiento (CUPS)
-          <input name="procedureCode" list="cups" inputMode="numeric" placeholder="890303" className="field" />
+          <input name="procedureCode" list="cups" inputMode="numeric" placeholder="890303" value={proc} onChange={(e) => setProc(e.target.value)} className="field" />
         </label>
       </div>
       <datalist id="cie10">{CIE10.map((c) => <option key={c.code} value={c.code}>{c.label}</option>)}</datalist>
@@ -114,19 +164,6 @@ export default function EvolutionForm({ patientId, openItems = [] }: { patientId
         </div>
       </div>
 
-      {openItems.length > 0 && (
-        <fieldset>
-          <legend className="label">Procedimientos del plan realizados hoy</legend>
-          <div className="mt-2 space-y-2">
-            {openItems.map((i) => (
-              <label key={i.id} className="flex min-h-11 cursor-pointer items-center gap-3 rounded-lg border border-slate-500 bg-white px-3 py-2 text-sm text-slate-900 has-[:checked]:border-teal-700 has-[:checked]:bg-teal-50">
-                <input type="checkbox" name="doneItems" value={i.id} className="h-5 w-5 accent-teal-700" />
-                {i.label}
-              </label>
-            ))}
-          </div>
-        </fieldset>
-      )}
       {state?.error && <p role="alert" className="error-text">{state.error}</p>}
       {state?.ok && <p className="ok-text">Evolución firmada</p>}
       <button disabled={pending} className="btn-primary w-full md:w-auto">
