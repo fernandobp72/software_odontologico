@@ -99,6 +99,7 @@ model User {
   perioExams          PerioExam[]
   cashSessions        CashSession[]
   payments            Payment[]
+  clinicalImages      ClinicalImage[]
 }
 
 model Patient {
@@ -140,6 +141,7 @@ model Patient {
   snapshots       OdontogramSnapshot[]
   perioExams      PerioExam[]
   payments        Payment[]
+  clinicalImages  ClinicalImage[]
 
   @@unique([clinicId, documentType, documentNumber])
   @@index([clinicId, lastName])
@@ -384,4 +386,33 @@ model Reminder {
   createdAt     DateTime    @default(now())
 
   @@index([appointmentId])
+}
+
+// Radiografía, fotografía o documento clínico. Se guarda en la base de datos para que quede
+// dentro de las copias de seguridad; los archivos no se borran, solo se anulan con motivo.
+model ClinicalImage {
+  id              String    @id @default(cuid())
+  patientId       String
+  patient         Patient   @relation(fields: [patientId], references: [id])
+  uploadedById    String
+  uploadedBy      User      @relation(fields: [uploadedById], references: [id])
+  kind            String
+  tooth           Int?
+  takenAt         DateTime
+  note            String?
+  fileName        String
+  mimeType        String
+  size            Int
+  width           Int?
+  height          Int?
+  data            Bytes
+  thumb           Bytes?
+  interpretation  String?
+  interpretedById String?
+  interpretedAt   DateTime?
+  voidedAt        DateTime?
+  voidReason      String?
+  createdAt       DateTime  @default(now())
+
+  @@index([patientId, takenAt])
 }

@@ -22,3 +22,11 @@ export async function requireClinician() {
   if (user.role === "RECEPTION") throw new Error("No autorizado para modificar la historia clínica");
   return user;
 }
+
+// Variante sin redirección para route handlers: devuelve null si no hay sesión válida.
+export async function currentUser() {
+  const session = await readSession();
+  if (!session) return null;
+  const user = await db.user.findUnique({ where: { id: session.userId }, select: { id: true, name: true, role: true, clinicId: true, active: true } });
+  return user?.active ? user : null;
+}

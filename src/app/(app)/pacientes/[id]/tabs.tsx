@@ -10,13 +10,14 @@ export default function PatientTabs({ id }: { id: string }) {
     { href: `/pacientes/${id}/historia`, label: "Historia clínica" },
     { href: `/pacientes/${id}/periodontograma`, label: "Periodontograma" },
     { href: `/pacientes/${id}/plan`, label: "Diagnósticos y plan" },
+    { href: `/pacientes/${id}/imagenes`, label: "Imágenes" },
     { href: `/pacientes/${id}/consentimientos`, label: "Consentimientos" },
     { href: `/pacientes/${id}/cuenta`, label: "Cuenta" },
   ];
   return (
     <nav aria-label="Secciones del paciente" className="flex gap-1 overflow-x-auto border-b border-slate-300">
       {tabs.map((t) => {
-        const active = path === t.href;
+        const active = path === t.href || (t.href !== `/pacientes/${id}` && path.startsWith(t.href + "/"));
         return (
           <Link
             key={t.href}
