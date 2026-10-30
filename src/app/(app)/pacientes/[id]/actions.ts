@@ -6,27 +6,24 @@ import { db } from "@/lib/db";
 import { requireClinician } from "@/lib/dal";
 import { CONDITIONS, SURFACES, VALID_TEETH } from "@/lib/catalogs";
 
-const findingSchema = z.object({
-  patientId: z.string().min(1),
+const changeSchema = z.object({
   tooth: z.number().int().refine((t) => VALID_TEETH.has(t), "Diente inválido"),
-  surfaces: z.array(z.enum(SURFACES.map((s) => s.key) as [string, ...string[]])),
+  surface: z.enum(SURFACES.map((s) => s.key) as [string, ...string[]]).nullable(),
   condition: z.enum(Object.keys(CONDITIONS) as [keyof typeof CONDITIONS, ...(keyof typeof CONDITIONS)[]]),
 });
+const findingsSchema = z.object({ patientId: z.string().min(1), changes: z.array(changeSchema).min(1).max(12) });
 
-export async function saveFinding(input: z.input<typeof findingSchema>): Promise<{ error?: string }> {
+// El odontograma es historial: borrar o deshacer también se registra (condición HEALTHY / valor previo).
+export async function applyFindings(input: z.input<typeof findingsSchema>): Promise<{ error?: string }> {
   const user = await requireClinician();
-  const parsed = findingSchema.safeParse(input);
+  const parsed = findingsSchema.safeParse(input);
   if (!parsed.success) return { error: parsed.error.issues[0].message };
-  const { patientId, tooth, surfaces, condition } = parsed.data;
+  const { patientId, changes } = parsed.data;
 
   const patient = await db.patient.findFirst({ where: { id: patientId, clinicId: user.clinicId } });
   if (!patient) return { error: "Paciente no encontrado" };
 
-  // Solo estos estados afectan todo el diente; el resto se marca por superficie.
-  const targets: (string | null)[] = surfaces.length ? surfaces : [null];
-  await db.toothFinding.createMany({
-    data: targets.map((surface) => ({ patientId, tooth, surface, condition })),
-  });
+  await db.toothFinding.createMany({ data: changes.map((c) => ({ patientId, ...c })) });
   await db.auditLog.create({
     data: { userId: user.id, action: "ODONTOGRAM", entity: "Patient", entityId: patientId },
   });

@@ -1,91 +1,242 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { CONDITIONS, QUADRANTS, SURFACES, type ConditionKey } from "@/lib/catalogs";
-import { saveFinding } from "./actions";
+import { applyFindings } from "./actions";
 
 export type Finding = { tooth: number; surface: string | null; condition: ConditionKey };
+type Change = { tooth: number; surface: string | null; condition: ConditionKey };
+
+const SURFACE_KEYS = SURFACES.map((s) => s.key);
+const key = (tooth: number, surface: string | null) => `${tooth}|${surface ?? ""}`;
+const TOOL_ORDER = Object.keys(CONDITIONS) as ConditionKey[];
+
+// Polígonos de las 5 superficies en un viewBox 100x100. M/D se intercambian según el cuadrante.
+function shapes(tooth: number) {
+  const mesialRight = [1, 4].includes(Math.floor(tooth / 10));
+  const left = mesialRight ? "D" : "M";
+  const right = mesialRight ? "M" : "D";
+  return [
+    { s: "V", pts: "2,2 98,2 70,30 30,30" },
+    { s: "L", pts: "30,70 70,70 98,98 2,98" },
+    { s: left, pts: "2,2 30,30 30,70 2,98" },
+    { s: right, pts: "98,2 98,98 70,70 70,30" },
+    { s: "O", pts: "30,30 70,30 70,70 30,70" },
+  ];
+}
+
+function ToothSvg({
+  tooth,
+  fillOf,
+  whole,
+  onSurface,
+  label,
+}: {
+  tooth: number;
+  fillOf: (surface: string) => ConditionKey;
+  whole?: ConditionKey;
+  onSurface?: (surface: string) => void;
+  label?: boolean;
+}) {
+  const crossed = whole === "EXTRACTED" || whole === "MISSING";
+  return (
+    <svg viewBox="0 0 100 100" className="h-full w-full" role="img" aria-label={`Diente ${tooth}`}>
+      {shapes(tooth).map(({ s, pts }) => (
+        <polygon
+          key={s}
+          points={pts}
+          fill={CONDITIONS[fillOf(s)].fill}
+          stroke="#475569"
+          strokeWidth={3}
+          strokeLinejoin="round"
+          className={onSurface ? "cursor-pointer" : undefined}
+          onClick={onSurface ? () => onSurface(s) : undefined}
+        />
+      ))}
+      {label &&
+        shapes(tooth).map(({ s }) => {
+          const pos: Record<string, [number, number]> = { V: [50, 20], L: [50, 86], O: [50, 54] };
+          const sh = shapes(tooth);
+          pos[sh[2].s] = [14, 54];
+          pos[sh[3].s] = [86, 54];
+          const [x, y] = pos[s];
+          const dark = ["CARIES", "FILLING", "SEALANT", "FRACTURE", "ROOT_CANAL", "IMPLANT", "EXTRACTED"].includes(fillOf(s));
+          return (
+            <text key={`t${s}`} x={x} y={y} textAnchor="middle" fontSize="13" fontWeight="700" fill={dark ? "#fff" : "#0f172a"} pointerEvents="none">
+              {s}
+            </text>
+          );
+        })}
+      {crossed && <path d="M6 6L94 94M94 6L6 94" stroke={whole === "EXTRACTED" ? "#fff" : "#475569"} strokeWidth={6} pointerEvents="none" />}
+    </svg>
+  );
+}
 
 export default function Odontogram({ patientId, findings, canEdit }: { patientId: string; findings: Finding[]; canEdit: boolean }) {
+  const [state, setState] = useState(() => new Map(findings.map((f) => [key(f.tooth, f.surface), f.condition])));
+  const [tool, setTool] = useState<ConditionKey>("CARIES");
   const [tooth, setTooth] = useState<number | null>(null);
-  const [surfaces, setSurfaces] = useState<string[]>([]);
+  const [undo, setUndo] = useState<Change[][]>([]);
   const [error, setError] = useState<string>();
   const [pending, start] = useTransition();
+  const panel = useRef<HTMLDivElement>(null);
 
-  function apply(condition: ConditionKey) {
-    if (!tooth) return;
+  const get = (t: number, s: string | null): ConditionKey => state.get(key(t, s)) ?? "HEALTHY";
+  const fillOf = (t: number) => (s: string): ConditionKey => {
+    const own = get(t, s);
+    return own !== "HEALTHY" ? own : get(t, null);
+  };
+
+  function plan(condition: ConditionKey, t: number, surface: string | null): Change[] {
+    const out: Change[] = [];
+    const set = (s: string | null, c: ConditionKey) => get(t, s) !== c && out.push({ tooth: t, surface: s, condition: c });
+    const clearAll = () => [null, ...SURFACE_KEYS].forEach((s) => set(s, "HEALTHY"));
+
+    if (condition === "HEALTHY") {
+      if (surface === null) clearAll();
+      else {
+        set(surface, "HEALTHY");
+        // Si el diente tenía un estado de diente completo, se quita para poder borrar la superficie.
+        if (get(t, null) !== "HEALTHY") {
+          set(null, "HEALTHY");
+          SURFACE_KEYS.filter((k) => k !== surface && get(t, k) === "HEALTHY").forEach((k) => out.push({ tooth: t, surface: k, condition: get(t, null) }));
+        }
+      }
+    } else if (CONDITIONS[condition].scope === "tooth") {
+      SURFACE_KEYS.forEach((s) => set(s, "HEALTHY"));
+      set(null, condition);
+    } else {
+      if (get(t, null) !== "HEALTHY" && CONDITIONS[get(t, null)].scope === "tooth") set(null, "HEALTHY");
+      (surface === null ? SURFACE_KEYS : [surface]).forEach((s) => set(s, condition));
+    }
+    return out;
+  }
+
+  function commit(changes: Change[], reverse: Change[], pushUndo: boolean) {
+    if (!changes.length) return;
+    const before = state;
+    setState((cur) => {
+      const next = new Map(cur);
+      changes.forEach((c) => next.set(key(c.tooth, c.surface), c.condition));
+      return next;
+    });
+    if (pushUndo) setUndo((u) => [...u, reverse].slice(-30));
     start(async () => {
-      const res = await saveFinding({ patientId, tooth, surfaces, condition });
-      if (res.error) return setError(res.error);
-      setError(undefined);
-      setTooth(null);
-      setSurfaces([]);
+      const res = await applyFindings({ patientId, changes });
+      if (res.error) {
+        setState(before);
+        setError(res.error);
+      } else setError(undefined);
     });
   }
 
-  const wholeTooth = (t: number) => findings.find((f) => f.tooth === t && f.surface === null);
-  const surfaceCount = (t: number) => findings.filter((f) => f.tooth === t && f.surface !== null).length;
+  function paint(surface: string | null) {
+    if (!tooth) return;
+    const changes = plan(tool, tooth, surface);
+    commit(changes, changes.map((c) => ({ ...c, condition: get(c.tooth, c.surface) })), true);
+  }
+
+  function undoLast() {
+    const last = undo[undo.length - 1];
+    if (!last) return;
+    setUndo((u) => u.slice(0, -1));
+    commit(last, [], false);
+  }
+
+  function pick(t: number) {
+    setTooth(t);
+    requestAnimationFrame(() => panel.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }));
+  }
+
+  const wholeOf = (t: number) => {
+    const w = get(t, null);
+    return w === "HEALTHY" ? undefined : w;
+  };
 
   return (
     <section className="card space-y-4">
-      <h2 className="section-title">Odontograma</h2>
-      <div className="grid gap-4 md:grid-cols-2">
-        {QUADRANTS.map((q, i) => (
-          <div key={i} className="grid grid-cols-8 gap-1">
-            {q.map((t) => {
-              const whole = wholeTooth(t);
-              const count = surfaceCount(t);
-              return (
-                <button
-                  key={t}
-                  type="button"
-                  disabled={!canEdit}
-                  onClick={() => { setTooth(t); setSurfaces([]); }}
-                  aria-label={`Diente ${t}`}
-                  className={`relative flex min-h-12 flex-col items-center justify-center rounded-lg border-2 text-sm font-semibold leading-tight ${
-                    whole ? CONDITIONS[whole.condition].cls : "border-slate-500 bg-white text-slate-900"
-                  } ${tooth === t ? "outline-4 outline-offset-1 outline-teal-600" : ""}`}
-                >
-                  {t}
-                  {whole && <span className="text-[11px] font-bold">{CONDITIONS[whole.condition].abbr}</span>}
-                  {count > 0 && <span className="absolute -right-1.5 -top-1.5 rounded-full bg-slate-900 px-1.5 text-[11px] font-bold text-white">{count}</span>}
-                </button>
-              );
-            })}
-          </div>
-        ))}
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="section-title">Odontograma</h2>
+        {canEdit && (
+          <button type="button" className="btn-secondary" onClick={undoLast} disabled={!undo.length || pending}>
+            Deshacer
+          </button>
+        )}
       </div>
 
-      {tooth && (
-        <div className="space-y-3 rounded-lg border border-slate-300 bg-slate-100 p-3">
-          <p className="font-semibold text-slate-900">Diente {tooth}</p>
-          <div className="flex flex-wrap gap-2">
-            {SURFACES.map((s) => (
+      {canEdit && (
+        <div>
+          <p className="label mb-2">1. Elige el estado</p>
+          <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Estado a aplicar">
+            {TOOL_ORDER.map((c) => (
               <button
-                key={s.key}
+                key={c}
                 type="button"
-                onClick={() => setSurfaces((cur) => (cur.includes(s.key) ? cur.filter((x) => x !== s.key) : [...cur, s.key]))}
-                className={`min-h-11 rounded-lg border-2 px-3 py-2 text-sm font-semibold ${surfaces.includes(s.key) ? "border-teal-700 bg-teal-700 text-white" : "border-slate-500 bg-white text-slate-900"}`}
+                role="radio"
+                aria-checked={tool === c}
+                onClick={() => setTool(c)}
+                className={`flex min-h-11 items-center gap-2 rounded-lg border-2 px-3 py-2 text-sm font-semibold text-slate-900 ${
+                  tool === c ? "border-teal-700 bg-teal-50 ring-2 ring-teal-700" : "border-slate-400 bg-white hover:bg-slate-100"
+                }`}
               >
-                {s.label}
-              </button>
-            ))}
-          </div>
-          <p className="muted">{surfaces.length ? "Se aplicará a las superficies elegidas" : "Sin superficie: se aplicará a todo el diente"}</p>
-          <div className="grid grid-cols-2 gap-2">
-            {(Object.keys(CONDITIONS) as ConditionKey[]).map((c) => (
-              <button key={c} type="button" disabled={pending} onClick={() => apply(c)} className="flex min-h-11 items-center gap-2 rounded-lg border border-slate-500 bg-white px-3 py-2 text-left text-sm font-medium text-slate-900 hover:bg-slate-100 disabled:opacity-60">
-                <span className={`h-5 w-5 shrink-0 rounded-full border-2 ${CONDITIONS[c].cls}`} />
+                <span className={`h-4 w-4 rounded-full border-2 ${CONDITIONS[c].cls}`} />
                 {CONDITIONS[c].label}
               </button>
             ))}
           </div>
-          {error && <p role="alert" className="error-text">{error}</p>}
         </div>
       )}
 
+      <div className="grid gap-4">
+        <div className="@container">
+          {canEdit && <p className="label mb-2">2. Toca el diente</p>}
+          <div className="grid gap-x-6 gap-y-3 @2xl:grid-cols-2">
+            {QUADRANTS.map((q, i) => (
+              <div key={i} className="grid grid-cols-8 gap-1">
+                {q.map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    disabled={!canEdit}
+                    onClick={() => pick(t)}
+                    aria-label={`Diente ${t}`}
+                    className={`flex flex-col items-center rounded-md p-0.5 ${tooth === t ? "bg-teal-100 outline-3 outline-teal-700" : ""}`}
+                  >
+                    <span className="text-xs font-semibold text-slate-900">{t}</span>
+                    <span className="aspect-square w-full"><ToothSvg tooth={t} fillOf={fillOf(t)} whole={wholeOf(t)} /></span>
+                    <span className="h-4 text-[11px] font-bold leading-4 text-slate-800">{wholeOf(t) ? CONDITIONS[wholeOf(t)!].abbr : ""}</span>
+                  </button>
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div ref={panel} className="rounded-lg border border-slate-300 bg-slate-50 p-3">
+          {tooth && canEdit ? (
+            <div className="space-y-3 sm:flex sm:items-center sm:gap-6 sm:space-y-0">
+              <div className="mx-auto aspect-square w-48 max-w-full shrink-0 sm:mx-0">
+                <ToothSvg tooth={tooth} fillOf={fillOf(tooth)} whole={wholeOf(tooth)} onSurface={(s) => paint(s)} label />
+              </div>
+              <div className="space-y-3">
+              <p className="font-semibold text-slate-900">Diente {tooth}</p>
+              <p className="muted">
+                V vestibular · L lingual/palatino · M mesial · D distal · O oclusal. Toca una superficie para aplicar «{CONDITIONS[tool].label}».
+              </p>
+              <button type="button" className="btn-secondary w-full" onClick={() => paint(null)}>
+                {CONDITIONS[tool].scope === "tooth" ? `Aplicar ${CONDITIONS[tool].label.toLowerCase()} al diente` : `${CONDITIONS[tool].label} en todo el diente`}
+              </button>
+              </div>
+            </div>
+          ) : (
+            <p className="muted">{canEdit ? "Toca un diente para marcar sus superficies." : "Solo lectura."}</p>
+          )}
+          {error && <p role="alert" className="error-text mt-2">{error}</p>}
+        </div>
+      </div>
+
       <ul className="flex flex-wrap gap-x-4 gap-y-2 text-sm text-slate-800">
-        {(Object.keys(CONDITIONS) as ConditionKey[]).filter((c) => c !== "HEALTHY").map((c) => (
+        {TOOL_ORDER.filter((c) => c !== "HEALTHY").map((c) => (
           <li key={c} className="flex items-center gap-1.5"><span className={`h-4 w-4 rounded-full border-2 ${CONDITIONS[c].cls}`} />{CONDITIONS[c].label} ({CONDITIONS[c].abbr})</li>
         ))}
       </ul>

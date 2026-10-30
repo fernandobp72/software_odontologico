@@ -31,17 +31,18 @@ export const NOTE_TEMPLATES = [
 ];
 
 // Cada estado combina color + abreviatura para no depender solo del color.
+// scope: "surface" se aplica por superficie; "tooth" afecta todo el diente.
 export const CONDITIONS = {
-  HEALTHY: { label: "Sano (borrar)", abbr: "", cls: "bg-white text-slate-900 border-slate-500" },
-  CARIES: { label: "Caries", abbr: "Ca", cls: "bg-red-600 text-white border-red-800" },
-  FILLING: { label: "Obturación", abbr: "Ob", cls: "bg-blue-600 text-white border-blue-800" },
-  CROWN: { label: "Corona", abbr: "Co", cls: "bg-amber-300 text-slate-900 border-amber-700" },
-  ROOT_CANAL: { label: "Endodoncia", abbr: "En", cls: "bg-purple-600 text-white border-purple-800" },
-  EXTRACTED: { label: "Extraído", abbr: "Ex", cls: "bg-slate-700 text-white border-slate-900" },
-  MISSING: { label: "Ausente", abbr: "Au", cls: "bg-slate-200 text-slate-800 border-slate-600 border-dashed" },
-  IMPLANT: { label: "Implante", abbr: "Im", cls: "bg-teal-700 text-white border-teal-900" },
-  SEALANT: { label: "Sellante", abbr: "Se", cls: "bg-green-700 text-white border-green-900" },
-  FRACTURE: { label: "Fractura", abbr: "Fr", cls: "bg-orange-700 text-white border-orange-900" },
+  HEALTHY: { label: "Borrar", abbr: "", scope: "surface", fill: "#ffffff", cls: "bg-white text-slate-900 border-slate-500" },
+  CARIES: { label: "Caries", abbr: "Ca", scope: "surface", fill: "#dc2626", cls: "bg-red-600 text-white border-red-800" },
+  FILLING: { label: "Obturación", abbr: "Ob", scope: "surface", fill: "#2563eb", cls: "bg-blue-600 text-white border-blue-800" },
+  SEALANT: { label: "Sellante", abbr: "Se", scope: "surface", fill: "#15803d", cls: "bg-green-700 text-white border-green-900" },
+  FRACTURE: { label: "Fractura", abbr: "Fr", scope: "surface", fill: "#c2410c", cls: "bg-orange-700 text-white border-orange-900" },
+  CROWN: { label: "Corona", abbr: "Co", scope: "tooth", fill: "#fcd34d", cls: "bg-amber-300 text-slate-900 border-amber-700" },
+  ROOT_CANAL: { label: "Endodoncia", abbr: "En", scope: "tooth", fill: "#9333ea", cls: "bg-purple-600 text-white border-purple-800" },
+  IMPLANT: { label: "Implante", abbr: "Im", scope: "tooth", fill: "#0f766e", cls: "bg-teal-700 text-white border-teal-900" },
+  EXTRACTED: { label: "Extraído", abbr: "Ex", scope: "tooth", fill: "#334155", cls: "bg-slate-700 text-white border-slate-900" },
+  MISSING: { label: "Ausente", abbr: "Au", scope: "tooth", fill: "#e2e8f0", cls: "bg-slate-200 text-slate-800 border-slate-600 border-dashed" },
 } as const;
 
 export type ConditionKey = keyof typeof CONDITIONS;
