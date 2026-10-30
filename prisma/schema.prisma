@@ -7,6 +7,14 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum PayMethod {
+  CASH
+  CARD
+  TRANSFER
+  WALLET
+  OTHER
+}
+
 enum Role {
   ADMIN
   DENTIST
@@ -64,6 +72,8 @@ model Clinic {
   users        User[]
   patients     Patient[]
   appointments Appointment[]
+  cashSessions CashSession[]
+  payments     Payment[]
 }
 
 model User {
@@ -87,6 +97,8 @@ model User {
   consents            Consent[]
   odontogramSnapshots OdontogramSnapshot[]
   perioExams          PerioExam[]
+  cashSessions        CashSession[]
+  payments            Payment[]
 }
 
 model Patient {
@@ -125,6 +137,7 @@ model Patient {
   consents       Consent[]
   snapshots      OdontogramSnapshot[]
   perioExams     PerioExam[]
+  payments       Payment[]
 
   @@unique([clinicId, documentType, documentNumber])
   @@index([clinicId, lastName])
@@ -308,4 +321,50 @@ model PerioExam {
   createdAt DateTime @default(now())
 
   @@index([patientId, createdAt])
+}
+
+// Sesión de caja: una abierta a la vez por consultorio.
+model CashSession {
+  id            String    @id @default(cuid())
+  clinicId      String
+  clinic        Clinic    @relation(fields: [clinicId], references: [id])
+  openedById    String
+  openedBy      User      @relation(fields: [openedById], references: [id])
+  openedAt      DateTime  @default(now())
+  openingAmount Int       @default(0)
+  closedAt      DateTime?
+  closedById    String?
+  countedCash   Int?
+  expectedCash  Int?
+  difference    Int?
+  note          String?
+  payments      Payment[]
+
+  @@index([clinicId, openedAt])
+}
+
+// Pago recibido. Inmutable: los errores se corrigen anulando con motivo.
+model Payment {
+  id           String      @id @default(cuid())
+  clinicId     String
+  clinic       Clinic      @relation(fields: [clinicId], references: [id])
+  number       Int // consecutivo del recibo por consultorio
+  patientId    String
+  patient      Patient     @relation(fields: [patientId], references: [id])
+  sessionId    String
+  session      CashSession @relation(fields: [sessionId], references: [id])
+  amount       Int // COP
+  method       PayMethod
+  reference    String?
+  note         String?
+  receivedById String
+  receivedBy   User        @relation(fields: [receivedById], references: [id])
+  receivedAt   DateTime    @default(now())
+  voidedAt     DateTime?
+  voidedById   String?
+  voidReason   String?
+
+  @@unique([clinicId, number])
+  @@index([patientId])
+  @@index([sessionId])
 }

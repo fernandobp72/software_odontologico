@@ -11,6 +11,7 @@ export default function PatientTabs({ id }: { id: string }) {
     { href: `/pacientes/${id}/periodontograma`, label: "Periodontograma" },
     { href: `/pacientes/${id}/plan`, label: "Diagnósticos y plan" },
     { href: `/pacientes/${id}/consentimientos`, label: "Consentimientos" },
+    { href: `/pacientes/${id}/cuenta`, label: "Cuenta" },
   ];
   return (
     <nav aria-label="Secciones del paciente" className="flex gap-1 overflow-x-auto border-b border-slate-300">

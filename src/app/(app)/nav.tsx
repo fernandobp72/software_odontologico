@@ -6,6 +6,8 @@ import { usePathname } from "next/navigation";
 const links = [
   { href: "/agenda", label: "Agenda" },
   { href: "/pacientes", label: "Pacientes" },
+  { href: "/caja", label: "Caja" },
+  { href: "/cartera", label: "Cartera" },
 ];
 
 export function SideNav() {
