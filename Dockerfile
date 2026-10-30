@@ -3,7 +3,7 @@ RUN apt-get update -y && apt-get install -y --no-install-recommends openssl ca-c
 WORKDIR /app
 
 COPY package.json package-lock.json ./
-RUN npm ci
+RUN npm ci --no-audit --no-fund --loglevel=http
 
 COPY . .
 RUN npx prisma generate && npm run build
