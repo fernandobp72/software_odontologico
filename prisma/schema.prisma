@@ -65,18 +65,24 @@ enum DiagnosisStatus {
 }
 
 model Clinic {
-  id           String        @id @default(cuid())
-  name         String
-  nit          String?
-  address      String?
-  phone        String?
-  createdAt    DateTime      @default(now())
-  users        User[]
-  patients     Patient[]
-  appointments Appointment[]
-  cashSessions CashSession[]
-  payments     Payment[]
-  invoices     Invoice[]
+  id              String        @id @default(cuid())
+  name            String
+  nit             String?
+  address         String?
+  phone           String?
+  // ACTIVE | TRIAL | SUSPENDED. Lo cambia el dueño de la plataforma.
+  status          String        @default("ACTIVE")
+  trialEndsAt     DateTime?
+  termsAcceptedAt DateTime?
+  termsVersion    String?
+  createdAt       DateTime      @default(now())
+  users           User[]
+  patients        Patient[]
+  appointments    Appointment[]
+  cashSessions    CashSession[]
+  payments        Payment[]
+  invoices        Invoice[]
+  invitations     Invitation[]
 }
 
 model User {
@@ -90,6 +96,7 @@ model User {
   // Registro profesional (RETHUS / tarjeta profesional) requerido para firmar evoluciones
   licenseNumber       String?
   active              Boolean              @default(true)
+  isPlatformAdmin     Boolean              @default(false)
   createdAt           DateTime             @default(now())
   appointments        Appointment[]
   evolutions          Evolution[]
@@ -104,6 +111,8 @@ model User {
   payments            Payment[]
   clinicalImages      ClinicalImage[]
   invoices            Invoice[]
+  invitations         Invitation[]
+  passwordResets      PasswordReset[]
 }
 
 model Patient {
@@ -458,4 +467,33 @@ model InvoiceLine {
   procedureCode String?
   quantity      Int
   unitPrice     Int
+}
+
+// Invitación para unirse a un consultorio. Se guarda solo el hash del enlace.
+model Invitation {
+  id          String    @id @default(cuid())
+  clinicId    String
+  clinic      Clinic    @relation(fields: [clinicId], references: [id])
+  email       String
+  role        Role
+  tokenHash   String    @unique
+  invitedById String
+  invitedBy   User      @relation(fields: [invitedById], references: [id])
+  expiresAt   DateTime
+  acceptedAt  DateTime?
+  revokedAt   DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([clinicId])
+}
+
+// Enlace de un solo uso para definir una contraseña nueva.
+model PasswordReset {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id])
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
 }

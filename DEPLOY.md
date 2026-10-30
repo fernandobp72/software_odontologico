@@ -31,3 +31,11 @@
    `curl -s -X POST -H "Authorization: Bearer $CRON_SECRET" $APP_URL/api/cron/reminders`
 
 El envío automático **no se ha probado contra la API real** (faltan credenciales); verifica con una cita de prueba antes de activarlo.
+
+# Varios consultorios (SaaS)
+
+- **Registro abierto:** `/registro` crea un consultorio nuevo (30 días de prueba) con su administrador. Para cerrarlo define `ALLOW_SIGNUP=false`.
+- **Dueño de la plataforma:** define `SEED_PLATFORM_ADMIN=1` junto con `SEED_EMAIL` y `SEED_PASSWORD`; esa cuenta ve el menú *Plataforma* (consultorios, estado, suspender, dar prueba). Solo ve cuentas y conteos, nunca datos clínicos.
+- **Equipo:** el administrador de cada consultorio invita por enlace (válido 7 días, un solo uso) y puede generar enlaces para restablecer contraseñas.
+- **Aislamiento:** todas las consultas se filtran por consultorio; un consultorio suspendido solo ve la pantalla de suspensión.
+- **Pendiente antes de vender:** términos y política de datos revisados por un abogado (hoy son un borrador), verificación de correo, cobro de suscripciones y sucursales.

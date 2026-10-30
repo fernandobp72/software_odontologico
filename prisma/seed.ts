@@ -25,6 +25,7 @@ async function main() {
       passwordHash: await bcrypt.hash(password, 12),
     },
   });
+  if (process.env.SEED_PLATFORM_ADMIN === "1") await db.user.update({ where: { email }, data: { isPlatformAdmin: true } });
   console.log(`Usuario listo: ${email} (contraseña tomada de SEED_PASSWORD)`);
 }
 

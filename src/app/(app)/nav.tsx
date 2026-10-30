@@ -10,11 +10,18 @@ const base = [
   { href: "/cartera", label: "Cartera" },
 ];
 
-const linksFor = (role: string) => (role === "ADMIN" ? [...base, { href: "/configuracion", label: "Consultorio" }] : base);
+const admin = [{ href: "/inicio", label: "Inicio" }, { href: "/equipo", label: "Equipo" }, { href: "/configuracion", label: "Consultorio" }];
+const linksFor = (role: string, platform: boolean) => [
+  ...base,
+  { href: "/recordatorios", label: "Recordatorios" },
+  ...(role === "ADMIN" ? admin : []),
+  ...(platform ? [{ href: "/plataforma", label: "Plataforma" }] : []),
+  { href: "/perfil", label: "Mi cuenta" },
+];
 
-export function SideNav({ role }: { role: string }) {
+export function SideNav({ role, platform }: { role: string; platform: boolean }) {
   const path = usePathname();
-  const links = linksFor(role);
+  const links = linksFor(role, platform);
   return (
     <nav aria-label="Principal" className="flex flex-col gap-1">
       {links.map((l) => {
@@ -34,9 +41,9 @@ export function SideNav({ role }: { role: string }) {
   );
 }
 
-export function BottomNav({ role }: { role: string }) {
+export function BottomNav() {
   const path = usePathname();
-  const links = linksFor(role);
+  const links = [...base, { href: "/mas", label: "Más" }];
   return (
     <nav aria-label="Principal" className="fixed inset-x-0 bottom-0 z-20 flex border-t border-slate-300 bg-white md:hidden">
       {links.map((l) => {
