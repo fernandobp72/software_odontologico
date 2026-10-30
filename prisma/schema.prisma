@@ -86,6 +86,7 @@ model User {
   plans               TreatmentPlan[]
   consents            Consent[]
   odontogramSnapshots OdontogramSnapshot[]
+  perioExams          PerioExam[]
 }
 
 model Patient {
@@ -123,6 +124,7 @@ model Patient {
   plans          TreatmentPlan[]
   consents       Consent[]
   snapshots      OdontogramSnapshot[]
+  perioExams     PerioExam[]
 
   @@unique([clinicId, documentType, documentNumber])
   @@index([clinicId, lastName])
@@ -292,4 +294,18 @@ model OdontogramSnapshot {
   createdAt DateTime @default(now())
 
   @@unique([patientId, kind])
+}
+
+// Periodontograma. Solo se agregan versiones; la última es la vigente.
+model PerioExam {
+  id        String   @id @default(cuid())
+  patientId String
+  patient   Patient  @relation(fields: [patientId], references: [id])
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id])
+  data      Json // por diente: sitios con sondaje, margen, sangrado, placa; movilidad, furca
+  summary   Json
+  createdAt DateTime @default(now())
+
+  @@index([patientId, createdAt])
 }

@@ -8,6 +8,7 @@ export default function PatientTabs({ id }: { id: string }) {
   const tabs = [
     { href: `/pacientes/${id}`, label: "Resumen" },
     { href: `/pacientes/${id}/historia`, label: "Historia clínica" },
+    { href: `/pacientes/${id}/periodontograma`, label: "Periodontograma" },
     { href: `/pacientes/${id}/plan`, label: "Diagnósticos y plan" },
     { href: `/pacientes/${id}/consentimientos`, label: "Consentimientos" },
   ];
