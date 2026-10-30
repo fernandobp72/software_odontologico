@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/dal";
 import type { ConditionKey } from "@/lib/catalogs";
+import { setWhatsappOptIn } from "../../recordatorios/actions";
 import Odontogram from "./odontogram";
 import EvolutionForm from "./evolution-form";
 
@@ -46,6 +47,15 @@ export default async function PacientePage({ params }: PageProps<"/pacientes/[id
               </div>
             ))}
           </dl>
+          <div className="card mt-3 flex items-center justify-between gap-3">
+            <div>
+              <p className="muted">Recordatorios por WhatsApp</p>
+              <p className="text-sm font-semibold text-slate-900">{p.whatsappOptInAt ? "Autorizado" : "No autorizado"}</p>
+            </div>
+            <form action={setWhatsappOptIn.bind(null, p.id, !p.whatsappOptInAt)}>
+              <button className="btn-secondary min-h-10">{p.whatsappOptInAt ? "Retirar" : "Registrar autorización"}</button>
+            </form>
+          </div>
         </aside>
         <div className="space-y-6 lg:col-span-2">
           <Odontogram patientId={p.id} findings={findings} canEdit={canEdit} initial={initialSnap ? (initialSnap.data as unknown as { tooth: number; surface: string | null; condition: ConditionKey }[]) : null} planned={pending} />

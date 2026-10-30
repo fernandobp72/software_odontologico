@@ -10,3 +10,24 @@
 6. Primer usuario (una sola vez), desde la terminal de la app en Coolify:
    `SEED_EMAIL=tu@correo.com SEED_NAME="Tu Nombre" SEED_PASSWORD='<contraseña>' npx prisma db seed`
 7. En el celular abre el dominio y usa "Agregar a pantalla de inicio" para instalarla como app.
+
+# Recordatorios por WhatsApp
+
+**Modo manual (funciona sin configurar nada).** En *Agenda → Recordatorios por WhatsApp* se listan las citas de las próximas 72 horas. Cada botón abre WhatsApp con el mensaje ya escrito. Solo se ofrece a pacientes que autorizaron recordatorios (Ley 1581 de 2012). El mensaje no incluye datos de salud y trae un enlace público para que el paciente confirme o cancele (`/confirmar/<token>`).
+
+**Modo automático (API de WhatsApp Cloud de Meta).** Requiere una cuenta de WhatsApp Business, un número y una plantilla aprobada. Los pasos de Meta los hace el titular de la cuenta.
+
+1. En Meta crea una plantilla de categoría *Utilidad*, idioma español, con este cuerpo (cinco variables):
+   `Hola {{1}}, te recordamos tu cita en {{2}} el {{3}} a las {{4}}. Confirma o cancela aquí: {{5}}`
+2. Variables de entorno de la aplicación en Coolify:
+   - `WHATSAPP_TOKEN` token permanente de la API
+   - `WHATSAPP_PHONE_ID` identificador del número
+   - `WHATSAPP_TEMPLATE` nombre de la plantilla (por defecto `recordatorio_cita`)
+   - `WHATSAPP_TEMPLATE_LANG` código de idioma de la plantilla (por defecto `es`)
+   - `APP_URL` dirección pública con HTTPS, sin barra final (ej. `https://odontologico.fjclouds.com`)
+   - `CRON_SECRET` una clave larga (`openssl rand -base64 32`)
+   - `REMINDER_HOURS_BEFORE` horas de anticipación (por defecto 24)
+3. En Coolify crea una *Scheduled Task* cada 30 minutos con:
+   `curl -s -X POST -H "Authorization: Bearer $CRON_SECRET" $APP_URL/api/cron/reminders`
+
+El envío automático **no se ha probado contra la API real** (faltan credenciales); verifica con una cita de prueba antes de activarlo.

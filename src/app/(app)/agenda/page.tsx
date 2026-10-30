@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/dal";
 import AppointmentForm from "./form";
@@ -30,13 +31,16 @@ export default async function AgendaPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="page-title">Agenda</h1>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="page-title">Agenda</h1>
+        <Link href="/recordatorios" className="btn-secondary">Recordatorios por WhatsApp</Link>
+      </div>
       <div className="grid gap-6 lg:grid-cols-[1fr_24rem] lg:items-start">
         <ul className="space-y-3">
           {appointments.map((a) => (
             <li key={a.id} className="card">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="text-sm font-semibold capitalize text-slate-700">{fmt.format(a.startsAt)}</p>
+                <p className="text-sm font-semibold first-letter:uppercase text-slate-700">{fmt.format(a.startsAt)}</p>
                 <span className={`rounded-full px-3 py-1 text-xs font-semibold ${STATUS[a.status].cls}`}>{STATUS[a.status].label}</span>
               </div>
               <p className="mt-1 text-lg font-semibold">{a.patient.firstName} {a.patient.lastName}</p>

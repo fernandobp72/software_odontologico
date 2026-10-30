@@ -102,60 +102,64 @@ model User {
 }
 
 model Patient {
-  id             String               @id @default(cuid())
-  clinicId       String
-  clinic         Clinic               @relation(fields: [clinicId], references: [id])
-  documentType   String               @default("CC") // CC, TI, CE, RC, PA, PT
-  documentNumber String
-  firstName      String
-  middleName     String?
-  lastName       String
-  secondLastName String?
-  birthDate      DateTime?
-  sex            String?
-  phone          String?
-  email          String?
-  address        String?
-  city           String?
-  eps            String?
-  regime         String? // CONTRIBUTIVO, SUBSIDIADO, PARTICULAR
-  occupation     String?
-  companionName  String?
-  companionPhone String?
-  companionKin   String?
-  allergies      String?
-  medicalHistory String?
+  id              String               @id @default(cuid())
+  clinicId        String
+  clinic          Clinic               @relation(fields: [clinicId], references: [id])
+  documentType    String               @default("CC") // CC, TI, CE, RC, PA, PT
+  documentNumber  String
+  firstName       String
+  middleName      String?
+  lastName        String
+  secondLastName  String?
+  birthDate       DateTime?
+  sex             String?
+  phone           String?
+  email           String?
+  address         String?
+  city            String?
+  eps             String?
+  regime          String? // CONTRIBUTIVO, SUBSIDIADO, PARTICULAR
+  occupation      String?
+  companionName   String?
+  companionPhone  String?
+  companionKin    String?
+  allergies       String?
+  medicalHistory  String?
   // Habeas data (Ley 1581 de 2012)
-  dataConsentAt  DateTime?
-  createdAt      DateTime             @default(now())
-  appointments   Appointment[]
-  evolutions     Evolution[]
-  toothFindings  ToothFinding[]
-  assessments    Assessment[]
-  diagnoses      Diagnosis[]
-  plans          TreatmentPlan[]
-  consents       Consent[]
-  snapshots      OdontogramSnapshot[]
-  perioExams     PerioExam[]
-  payments       Payment[]
+  dataConsentAt   DateTime?
+  // Autorización expresa para recordatorios por WhatsApp (Ley 1581 de 2012)
+  whatsappOptInAt DateTime?
+  createdAt       DateTime             @default(now())
+  appointments    Appointment[]
+  evolutions      Evolution[]
+  toothFindings   ToothFinding[]
+  assessments     Assessment[]
+  diagnoses       Diagnosis[]
+  plans           TreatmentPlan[]
+  consents        Consent[]
+  snapshots       OdontogramSnapshot[]
+  perioExams      PerioExam[]
+  payments        Payment[]
 
   @@unique([clinicId, documentType, documentNumber])
   @@index([clinicId, lastName])
 }
 
 model Appointment {
-  id        String            @id @default(cuid())
-  clinicId  String
-  clinic    Clinic            @relation(fields: [clinicId], references: [id])
-  patientId String
-  patient   Patient           @relation(fields: [patientId], references: [id])
-  dentistId String
-  dentist   User              @relation(fields: [dentistId], references: [id])
-  startsAt  DateTime
-  endsAt    DateTime
-  reason    String?
-  status    AppointmentStatus @default(SCHEDULED)
-  createdAt DateTime          @default(now())
+  id           String            @id @default(cuid())
+  clinicId     String
+  clinic       Clinic            @relation(fields: [clinicId], references: [id])
+  patientId    String
+  patient      Patient           @relation(fields: [patientId], references: [id])
+  dentistId    String
+  dentist      User              @relation(fields: [dentistId], references: [id])
+  startsAt     DateTime
+  endsAt       DateTime
+  reason       String?
+  status       AppointmentStatus @default(SCHEDULED)
+  confirmToken String?           @unique
+  reminders    Reminder[]
+  createdAt    DateTime          @default(now())
 
   @@index([clinicId, startsAt])
   @@index([dentistId, startsAt])
@@ -367,4 +371,17 @@ model Payment {
   @@unique([clinicId, number])
   @@index([patientId])
   @@index([sessionId])
+}
+
+// Intento de recordatorio por WhatsApp. channel: MANUAL (enlace wa.me) o CLOUD (API de Meta).
+model Reminder {
+  id            String      @id @default(cuid())
+  appointmentId String
+  appointment   Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  channel       String
+  status        String // SENT | FAILED
+  error         String?
+  createdAt     DateTime    @default(now())
+
+  @@index([appointmentId])
 }

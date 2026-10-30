@@ -15,6 +15,7 @@ const schema = z.object({
   eps: z.string().trim().optional(),
   allergies: z.string().trim().optional(),
   consent: z.literal("on", { message: "Se requiere la autorización de tratamiento de datos" }),
+  whatsapp: z.literal("on").optional(),
 });
 
 export type PatientState = { error?: string } | undefined;
@@ -23,7 +24,7 @@ export async function createPatient(_: PatientState, formData: FormData): Promis
   const user = await requireUser();
   const parsed = schema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { error: parsed.error.issues[0].message };
-  const { consent, ...data } = parsed.data;
+  const { consent, whatsapp, ...data } = parsed.data;
   void consent;
 
   const exists = await db.patient.findUnique({
@@ -38,7 +39,7 @@ export async function createPatient(_: PatientState, formData: FormData): Promis
   if (exists) return { error: "Ya existe un paciente con ese documento" };
 
   const patient = await db.patient.create({
-    data: { ...data, email: data.email || null, clinicId: user.clinicId, dataConsentAt: new Date() },
+    data: { ...data, email: data.email || null, clinicId: user.clinicId, dataConsentAt: new Date(), whatsappOptInAt: whatsapp ? new Date() : null },
   });
   await db.auditLog.create({
     data: { userId: user.id, action: "CREATE", entity: "Patient", entityId: patient.id },
