@@ -15,7 +15,8 @@ async function main() {
   });
   await db.user.upsert({
     where: { email },
-    update: { passwordHash: await bcrypt.hash(password, 12) },
+    // Idempotente: no pisa la contraseña de un usuario existente salvo que SEED_RESET=1.
+    update: process.env.SEED_RESET === "1" ? { passwordHash: await bcrypt.hash(password, 12) } : {},
     create: {
       clinicId: clinic.id,
       email,
