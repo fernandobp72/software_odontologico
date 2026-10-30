@@ -60,3 +60,23 @@ El envío automático **no se ha probado contra la API real** (faltan credencial
 - **Restaurar producción:** detén la aplicación en Coolify, restaura en la base y vuelve a iniciarla. Hazlo siempre primero en una base de prueba.
 - Ensayo del procedimiento: se restauró un volcado y coincidieron pacientes y migraciones.
 - Pendiente: hacer un ensayo mensual con una copia real de producción.
+
+# Diagnósticos y plan automáticos desde los hallazgos
+
+Al abrir *Diagnósticos y plan* por primera vez en un paciente que ya tiene hallazgos, el sistema genera solo los diagnósticos y un plan **borrador** a partir del odontograma y del último periodontograma. Todo queda marcado como «Sugerido» y se puede modificar, eliminar o complementar. Si luego aparecen hallazgos nuevos, una tarjeta ofrece agregarlos; lo que el odontólogo editó no se toca y lo que eliminó no vuelve.
+
+Reglas actuales (`src/lib/suggest.ts`) — **deben ser revisadas por un odontólogo antes de usarse con pacientes**:
+
+| Hallazgo | Diagnóstico | Procedimiento sugerido |
+|---|---|---|
+| Caries en superficies | K02.1 (ajustar a K02.0 si es solo esmalte) | Obturación en resina, una por superficie (fase 2) |
+| Fractura | S02.5 | Obturación en resina (fase 1, urgencia) |
+| Diente ausente | K08.1 | — |
+| Endodoncia | — | Corona definitiva (fase 3) |
+| Sondaje ≥ 4 mm en 4 o más sitios y NIC ≥ 3 mm | K05.3 | Detartraje subgingival por cuadrante, supragingival, educación en higiene y reevaluación (fases 2 y 4) |
+| Sangrado al sondaje ≥ 10 % sin pérdida de inserción | K05.1 | Detartraje supragingival y educación en higiene |
+| Recesión ≥ 3 mm en un diente | K06.0 | — |
+
+- Las sugerencias nuevas van siempre a un plan en borrador: nunca cambian un presupuesto ya presentado o aceptado.
+- El valor unitario se toma del último precio usado en el consultorio para el mismo procedimiento (si no hay, queda en 0).
+- Solo se eliminan procedimientos pendientes; lo realizado se conserva en la historia. Un plan se elimina solo si no se aceptó ni tiene procedimientos realizados.

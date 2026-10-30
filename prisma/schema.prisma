@@ -118,46 +118,49 @@ model User {
 }
 
 model Patient {
-  id              String               @id @default(cuid())
-  clinicId        String
-  clinic          Clinic               @relation(fields: [clinicId], references: [id])
-  documentType    String               @default("CC") // CC, TI, CE, RC, PA, PT
-  documentNumber  String
-  firstName       String
-  middleName      String?
-  lastName        String
-  secondLastName  String?
-  birthDate       DateTime?
-  sex             String?
-  phone           String?
-  email           String?
-  address         String?
-  city            String?
-  eps             String?
-  regime          String? // CONTRIBUTIVO, SUBSIDIADO, PARTICULAR
-  occupation      String?
-  companionName   String?
-  companionPhone  String?
-  companionKin    String?
-  allergies       String?
-  medicalHistory  String?
+  id                   String                @id @default(cuid())
+  clinicId             String
+  clinic               Clinic                @relation(fields: [clinicId], references: [id])
+  documentType         String                @default("CC") // CC, TI, CE, RC, PA, PT
+  documentNumber       String
+  firstName            String
+  middleName           String?
+  lastName             String
+  secondLastName       String?
+  birthDate            DateTime?
+  sex                  String?
+  phone                String?
+  email                String?
+  address              String?
+  city                 String?
+  eps                  String?
+  regime               String? // CONTRIBUTIVO, SUBSIDIADO, PARTICULAR
+  occupation           String?
+  companionName        String?
+  companionPhone       String?
+  companionKin         String?
+  allergies            String?
+  medicalHistory       String?
   // Habeas data (Ley 1581 de 2012)
-  dataConsentAt   DateTime?
+  dataConsentAt        DateTime?
   // Autorización expresa para recordatorios por WhatsApp (Ley 1581 de 2012)
-  whatsappOptInAt DateTime?
-  createdAt       DateTime             @default(now())
-  appointments    Appointment[]
-  evolutions      Evolution[]
-  toothFindings   ToothFinding[]
-  assessments     Assessment[]
-  diagnoses       Diagnosis[]
-  plans           TreatmentPlan[]
-  consents        Consent[]
-  snapshots       OdontogramSnapshot[]
-  perioExams      PerioExam[]
-  payments        Payment[]
-  clinicalImages  ClinicalImage[]
-  invoices        Invoice[]
+  whatsappOptInAt      DateTime?
+  // Cuándo se generaron automáticamente los diagnósticos y el plan a partir de los hallazgos
+  autoPlanAt           DateTime?
+  createdAt            DateTime              @default(now())
+  appointments         Appointment[]
+  evolutions           Evolution[]
+  toothFindings        ToothFinding[]
+  assessments          Assessment[]
+  diagnoses            Diagnosis[]
+  plans                TreatmentPlan[]
+  consents             Consent[]
+  snapshots            OdontogramSnapshot[]
+  perioExams           PerioExam[]
+  payments             Payment[]
+  clinicalImages       ClinicalImage[]
+  invoices             Invoice[]
+  dismissedSuggestions DismissedSuggestion[]
 
   @@unique([clinicId, documentType, documentNumber])
   @@index([clinicId, lastName])
@@ -254,6 +257,9 @@ model Diagnosis {
   code        String // CIE-10
   description String
   tooth       Int?
+  // Si lo propuso el sistema a partir de un hallazgo: clave estable para no duplicar
+  sourceKey   String?
+  note        String?
   status      DiagnosisStatus @default(ACTIVE)
   resolvedAt  DateTime?
   createdAt   DateTime        @default(now())
@@ -293,6 +299,7 @@ model TreatmentItem {
   doneById      String?
   evolutionId   String?
   notes         String?
+  sourceKey     String?
   createdAt     DateTime      @default(now())
 
   @@index([planId, phase])
@@ -531,4 +538,15 @@ model UserBranch {
   branch   Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
 
   @@id([userId, branchId])
+}
+
+// Sugerencias que el odontólogo eliminó: la sincronización automática no las vuelve a agregar.
+model DismissedSuggestion {
+  id        String   @id @default(cuid())
+  patientId String
+  patient   Patient  @relation(fields: [patientId], references: [id])
+  key       String
+  createdAt DateTime @default(now())
+
+  @@unique([patientId, key])
 }
