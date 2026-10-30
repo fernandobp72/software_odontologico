@@ -4,7 +4,7 @@ import { useActionState, useEffect, useRef, useState, useSyncExternalStore } fro
 import { CIE10, CUPS, NOTE_TEMPLATES } from "@/lib/catalogs";
 import { signEvolution, type EvolutionState } from "./actions";
 
-type SpeechEvent = { results: ArrayLike<ArrayLike<{ transcript: string }>> };
+type SpeechEvent = { resultIndex: number; results: ArrayLike<ArrayLike<{ transcript: string }> & { isFinal: boolean }> };
 type Recognizer = { start(): void; stop(): void; lang: string; continuous: boolean; interimResults: boolean; onresult: ((e: SpeechEvent) => void) | null; onend: (() => void) | null };
 type RecognizerCtor = new () => Recognizer;
 type SpeechWindow = { SpeechRecognition?: RecognizerCtor; webkitSpeechRecognition?: RecognizerCtor };
@@ -26,6 +26,8 @@ export default function EvolutionForm({ patientId }: { patientId: string }) {
   const [listening, setListening] = useState(false);
   const voiceOk = useSyncExternalStore(noSubscribe, () => !!speechCtor(), () => false);
   const rec = useRef<Recognizer | null>(null);
+  const wantListening = useRef(false);
+  const lastHeard = useRef("");
 
   useEffect(() => {
     // Recupera el borrador guardado en este dispositivo.
@@ -37,22 +39,44 @@ export default function EvolutionForm({ patientId }: { patientId: string }) {
     try { if (note) localStorage.setItem(draftKey, note); else localStorage.removeItem(draftKey); } catch {}
   }, [note, draftKey]);
 
-  function toggleVoice() {
-    if (listening) return rec.current?.stop();
+  // Chrome en Android repite los resultados en modo continuo, así que se usa una
+  // frase por sesión (continuous=false), solo resultados finales, y se reinicia al terminar.
+  function startRecognizer() {
     const Ctor = speechCtor();
     if (!Ctor) return;
     const r = new Ctor();
+    lastHeard.current = ""; // el filtro de duplicados es solo por sesión
     r.lang = "es-CO";
-    r.continuous = true;
+    r.continuous = false;
     r.interimResults = false;
     r.onresult = (e) => {
-      const last = e.results[e.results.length - 1][0].transcript;
-      setNote((cur) => (cur ? cur + " " : "") + last.trim());
+      let text = "";
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        if (e.results[i].isFinal) text += e.results[i][0].transcript + " ";
+      }
+      text = text.trim();
+      if (!text || text === lastHeard.current) return;
+      lastHeard.current = text;
+      setNote((cur) => (cur ? cur + " " : "") + text);
     };
-    r.onend = () => setListening(false);
+    r.onend = () => {
+      if (wantListening.current) startRecognizer();
+      else setListening(false);
+    };
     rec.current = r;
-    r.start();
+    try { r.start(); } catch { setListening(false); wantListening.current = false; }
+  }
+
+  function toggleVoice() {
+    if (listening) {
+      wantListening.current = false;
+      rec.current?.stop();
+      setListening(false);
+      return;
+    }
+    wantListening.current = true;
     setListening(true);
+    startRecognizer();
   }
 
   return (
