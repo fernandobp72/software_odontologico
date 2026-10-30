@@ -99,3 +99,9 @@ Reglas actuales (`src/lib/suggest.ts`), revisadas con el criterio del usuario �
 ## Tarifas de referencia
 
 En *Catálogo* el botón **Cargar tarifas de referencia** completa las tarifas de unos 30 procedimientos con precios típicos de odontología privada en Colombia (octubre de 2026). Solo toca lo que está en 0: nunca cambia una tarifa que el consultorio ya definió. La tabla está en `src/lib/reference-prices.ts`; parte sale de sitios comparadores de precios (sin fuente oficial) y parte son estimaciones, así que cada consultorio debe ajustarlas a su ciudad y mercado (hay un botón para subir o bajar todo un porcentaje). Los materiales sin precio propio (p. ej. disilicato de litio) usan la tarifa base de la corona.
+
+# Imagen de Docker liviana
+
+El `Dockerfile` usa tres etapas para que cada despliegue ocupe poco disco en el servidor (que es compartido): `build` compila con todas las dependencias y genera el paquete autónomo de Next (`output: "standalone"`, ~130 MB); `tools` instala aparte `prisma`, `tsx` y `bcryptjs` solo para migrar la base y crear el usuario inicial; `runtime` lleva únicamente el paquete autónomo y esas herramientas (~325 MB, contra ~850 MB antes). Las migraciones se aplican con `prisma migrate deploy` y el servidor arranca con `node server.js`. La configuración de Next está en `next.config.mjs`.
+
+Si el servidor vuelve a quedarse sin espacio, hay que activar el *Docker Cleanup* programado de Coolify (por ejemplo con umbral de disco del 70 %).
