@@ -5,6 +5,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { requireClinician } from "@/lib/dal";
 import { CONDITIONS, SURFACES, VALID_TEETH } from "@/lib/catalogs";
+import { syncPlan } from "@/lib/plan";
 
 const changeSchema = z.object({
   tooth: z.number().int().refine((t) => VALID_TEETH.has(t), "Diente inválido"),
@@ -50,19 +51,39 @@ export async function signEvolution(_: EvolutionState, formData: FormData): Prom
   const patient = await db.patient.findFirst({ where: { id: d.patientId, clinicId: user.clinicId } });
   if (!patient) return { error: "Paciente no encontrado" };
 
-  const evolution = await db.evolution.create({
-    data: {
-      patientId: patient.id,
-      dentistId: user.id,
-      reason: d.reason || null,
-      diagnosisCode: d.diagnosisCode || null,
-      procedureCode: d.procedureCode || null,
-      note: d.note,
-    },
+  // Los ítems del plan marcados se cierran junto con la evolución, en una sola transacción.
+  const itemIds = formData.getAll("doneItems").map(String);
+  const items = itemIds.length
+    ? await db.treatmentItem.findMany({
+        where: { id: { in: itemIds }, status: { in: ["PLANNED", "IN_PROGRESS"] }, plan: { patientId: patient.id } },
+        select: { id: true, planId: true },
+      })
+    : [];
+
+  const evolution = await db.$transaction(async (tx) => {
+    const ev = await tx.evolution.create({
+      data: {
+        patientId: patient.id,
+        dentistId: user.id,
+        reason: d.reason || null,
+        diagnosisCode: d.diagnosisCode || null,
+        procedureCode: d.procedureCode || null,
+        note: d.note,
+      },
+    });
+    if (items.length) {
+      await tx.treatmentItem.updateMany({
+        where: { id: { in: items.map((i) => i.id) } },
+        data: { status: "DONE", doneAt: new Date(), doneById: user.id, evolutionId: ev.id },
+      });
+    }
+    return ev;
   });
+  for (const planId of new Set(items.map((i) => i.planId))) await syncPlan(planId);
   await db.auditLog.create({
     data: { userId: user.id, action: "SIGN", entity: "Evolution", entityId: evolution.id },
   });
   revalidatePath(`/pacientes/${patient.id}`);
+  revalidatePath(`/pacientes/${patient.id}/plan`);
   return { ok: true };
 }

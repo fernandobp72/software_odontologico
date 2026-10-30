@@ -15,7 +15,7 @@ const speechCtor = () => {
 };
 const noSubscribe = () => () => {};
 
-export default function EvolutionForm({ patientId }: { patientId: string }) {
+export default function EvolutionForm({ patientId, openItems = [] }: { patientId: string; openItems?: { id: string; label: string }[] }) {
   const [note, setNote] = useState("");
   const [state, action, pending] = useActionState(async (prev: EvolutionState, fd: FormData) => {
     const res = await signEvolution(prev, fd);
@@ -114,6 +114,19 @@ export default function EvolutionForm({ patientId }: { patientId: string }) {
         </div>
       </div>
 
+      {openItems.length > 0 && (
+        <fieldset>
+          <legend className="label">Procedimientos del plan realizados hoy</legend>
+          <div className="mt-2 space-y-2">
+            {openItems.map((i) => (
+              <label key={i.id} className="flex min-h-11 cursor-pointer items-center gap-3 rounded-lg border border-slate-500 bg-white px-3 py-2 text-sm text-slate-900 has-[:checked]:border-teal-700 has-[:checked]:bg-teal-50">
+                <input type="checkbox" name="doneItems" value={i.id} className="h-5 w-5 accent-teal-700" />
+                {i.label}
+              </label>
+            ))}
+          </div>
+        </fieldset>
+      )}
       {state?.error && <p role="alert" className="error-text">{state.error}</p>}
       {state?.ok && <p className="ok-text">Evolución firmada</p>}
       <button disabled={pending} className="btn-primary w-full md:w-auto">

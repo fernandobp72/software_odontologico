@@ -35,6 +35,27 @@ enum ToothCondition {
   FRACTURE
 }
 
+enum PlanStatus {
+  DRAFT
+  PRESENTED
+  ACCEPTED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum ItemStatus {
+  PLANNED
+  IN_PROGRESS
+  DONE
+  CANCELLED
+}
+
+enum DiagnosisStatus {
+  ACTIVE
+  RESOLVED
+}
+
 model Clinic {
   id           String        @id @default(cuid())
   name         String
@@ -46,27 +67,30 @@ model Clinic {
 }
 
 model User {
-  id           String        @id @default(cuid())
-  clinicId     String
-  clinic       Clinic        @relation(fields: [clinicId], references: [id])
-  email        String        @unique
-  passwordHash String
-  name         String
-  role         Role
+  id            String          @id @default(cuid())
+  clinicId      String
+  clinic        Clinic          @relation(fields: [clinicId], references: [id])
+  email         String          @unique
+  passwordHash  String
+  name          String
+  role          Role
   // Registro profesional (RETHUS / tarjeta profesional) requerido para firmar evoluciones
   licenseNumber String?
-  active       Boolean       @default(true)
-  createdAt    DateTime      @default(now())
-  appointments Appointment[]
-  evolutions   Evolution[]
-  auditLogs    AuditLog[]
+  active        Boolean         @default(true)
+  createdAt     DateTime        @default(now())
+  appointments  Appointment[]
+  evolutions    Evolution[]
+  auditLogs     AuditLog[]
+  assessments   Assessment[]
+  diagnoses     Diagnosis[]
+  plans         TreatmentPlan[]
 }
 
 model Patient {
-  id             String        @id @default(cuid())
+  id             String          @id @default(cuid())
   clinicId       String
-  clinic         Clinic        @relation(fields: [clinicId], references: [id])
-  documentType   String        @default("CC") // CC, TI, CE, RC, PA, PT
+  clinic         Clinic          @relation(fields: [clinicId], references: [id])
+  documentType   String          @default("CC") // CC, TI, CE, RC, PA, PT
   documentNumber String
   firstName      String
   middleName     String?
@@ -88,28 +112,31 @@ model Patient {
   medicalHistory String?
   // Habeas data (Ley 1581 de 2012)
   dataConsentAt  DateTime?
-  createdAt      DateTime      @default(now())
+  createdAt      DateTime        @default(now())
   appointments   Appointment[]
   evolutions     Evolution[]
   toothFindings  ToothFinding[]
+  assessments    Assessment[]
+  diagnoses      Diagnosis[]
+  plans          TreatmentPlan[]
 
   @@unique([clinicId, documentType, documentNumber])
   @@index([clinicId, lastName])
 }
 
 model Appointment {
-  id          String            @id @default(cuid())
-  clinicId    String
-  clinic      Clinic            @relation(fields: [clinicId], references: [id])
-  patientId   String
-  patient     Patient           @relation(fields: [patientId], references: [id])
-  dentistId   String
-  dentist     User              @relation(fields: [dentistId], references: [id])
-  startsAt    DateTime
-  endsAt      DateTime
-  reason      String?
-  status      AppointmentStatus @default(SCHEDULED)
-  createdAt   DateTime          @default(now())
+  id        String            @id @default(cuid())
+  clinicId  String
+  clinic    Clinic            @relation(fields: [clinicId], references: [id])
+  patientId String
+  patient   Patient           @relation(fields: [patientId], references: [id])
+  dentistId String
+  dentist   User              @relation(fields: [dentistId], references: [id])
+  startsAt  DateTime
+  endsAt    DateTime
+  reason    String?
+  status    AppointmentStatus @default(SCHEDULED)
+  createdAt DateTime          @default(now())
 
   @@index([clinicId, startsAt])
   @@index([dentistId, startsAt])
@@ -118,20 +145,20 @@ model Appointment {
 // Evolución clínica. Una vez firmada es inmutable (Res. 1995/1999): las correcciones
 // se registran como una nueva evolución que referencia a la anterior.
 model Evolution {
-  id          String     @id @default(cuid())
-  patientId   String
-  patient     Patient    @relation(fields: [patientId], references: [id])
-  dentistId   String
-  dentist     User       @relation(fields: [dentistId], references: [id])
-  reason      String? // motivo de consulta
+  id            String      @id @default(cuid())
+  patientId     String
+  patient       Patient     @relation(fields: [patientId], references: [id])
+  dentistId     String
+  dentist       User        @relation(fields: [dentistId], references: [id])
+  reason        String? // motivo de consulta
   diagnosisCode String? // CIE-10
   procedureCode String? // CUPS
-  note        String // descripción del procedimiento / evolución
-  signedAt    DateTime   @default(now())
-  correctsId  String?
-  corrects    Evolution? @relation("Correction", fields: [correctsId], references: [id])
-  corrections Evolution[] @relation("Correction")
-  createdAt   DateTime   @default(now())
+  note          String // descripción del procedimiento / evolución
+  signedAt      DateTime    @default(now())
+  correctsId    String?
+  corrects      Evolution?  @relation("Correction", fields: [correctsId], references: [id])
+  corrections   Evolution[] @relation("Correction")
+  createdAt     DateTime    @default(now())
 
   @@index([patientId, signedAt])
 }
@@ -159,4 +186,70 @@ model AuditLog {
   createdAt DateTime @default(now())
 
   @@index([entity, entityId])
+}
+
+// Valoración clínica (anamnesis + examen). Solo se agregan versiones; la última es la vigente.
+model Assessment {
+  id        String   @id @default(cuid())
+  patientId String
+  patient   Patient  @relation(fields: [patientId], references: [id])
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id])
+  data      Json
+  createdAt DateTime @default(now())
+
+  @@index([patientId, createdAt])
+}
+
+model Diagnosis {
+  id          String          @id @default(cuid())
+  patientId   String
+  patient     Patient         @relation(fields: [patientId], references: [id])
+  dentistId   String
+  dentist     User            @relation(fields: [dentistId], references: [id])
+  code        String // CIE-10
+  description String
+  tooth       Int?
+  status      DiagnosisStatus @default(ACTIVE)
+  resolvedAt  DateTime?
+  createdAt   DateTime        @default(now())
+
+  @@index([patientId, status])
+}
+
+model TreatmentPlan {
+  id          String          @id @default(cuid())
+  patientId   String
+  patient     Patient         @relation(fields: [patientId], references: [id])
+  dentistId   String
+  dentist     User            @relation(fields: [dentistId], references: [id])
+  title       String
+  status      PlanStatus      @default(DRAFT)
+  presentedAt DateTime?
+  acceptedAt  DateTime?
+  createdAt   DateTime        @default(now())
+  items       TreatmentItem[]
+
+  @@index([patientId, status])
+}
+
+model TreatmentItem {
+  id            String        @id @default(cuid())
+  planId        String
+  plan          TreatmentPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  phase         Int // 1 urgencia, 2 control de la enfermedad, 3 rehabilitación, 4 mantenimiento
+  tooth         Int?
+  surfaces      String?
+  procedureCode String? // CUPS, solo si está verificado
+  name          String
+  quantity      Int           @default(1)
+  unitPrice     Int           @default(0) // COP
+  status        ItemStatus    @default(PLANNED)
+  doneAt        DateTime?
+  doneById      String?
+  evolutionId   String?
+  notes         String?
+  createdAt     DateTime      @default(now())
+
+  @@index([planId, phase])
 }
