@@ -41,6 +41,9 @@ enum ToothCondition {
   IMPLANT
   SEALANT
   FRACTURE
+  CARIES_ENAMEL
+  IMPACTED
+  PARTIAL
 }
 
 enum PlanStatus {
@@ -300,6 +303,7 @@ model TreatmentItem {
   evolutionId   String?
   notes         String?
   sourceKey     String?
+  material      String?
   createdAt     DateTime      @default(now())
 
   @@index([planId, phase])

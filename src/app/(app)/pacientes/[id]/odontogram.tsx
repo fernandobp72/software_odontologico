@@ -70,7 +70,7 @@ function ToothSvg({
           pos[sh[2].s] = [14, 54];
           pos[sh[3].s] = [86, 54];
           const [x, y] = pos[s];
-          const dark = ["CARIES", "FILLING", "SEALANT", "FRACTURE", "ROOT_CANAL", "IMPLANT", "EXTRACTED"].includes(fillOf(s));
+          const dark = ["CARIES", "FILLING", "SEALANT", "FRACTURE", "ROOT_CANAL", "IMPLANT", "EXTRACTED", "IMPACTED"].includes(fillOf(s));
           return (
             <text key={`t${s}`} x={x} y={y} textAnchor="middle" fontSize="13" fontWeight="700" fill={dark ? "#fff" : "#0f172a"} pointerEvents="none">
               {s}

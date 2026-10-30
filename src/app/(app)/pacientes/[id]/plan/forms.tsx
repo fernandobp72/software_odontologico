@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { CIE10, PHASES, PROCEDURES, SURFACES, QUADRANTS } from "@/lib/catalogs";
+import { CIE10, MATERIALS, PHASES, PROCEDURES, RESTORATION_OPTIONS, SURFACES, QUADRANTS } from "@/lib/catalogs";
 import { addDiagnosis, addItem, createPlan, generateFromFindings, updateDiagnosis, updateItem } from "./actions";
 
 const TEETH = QUADRANTS.flat().sort((a, b) => a - b);
@@ -82,6 +82,14 @@ export function ItemForm({ patientId, planId }: { patientId: string; planId: str
           </div>
         </fieldset>
       )}
+      {MATERIALS[procId] && (
+        <label className="label">Material
+          <select name="material" key={procId} className="field" defaultValue={MATERIALS[procId].default ?? ""}>
+            {!MATERIALS[procId].default && <option value="">—</option>}
+            {MATERIALS[procId].options.map((m) => <option key={m}>{m}</option>)}
+          </select>
+        </label>
+      )}
       <label className="label">Notas<input name="notes" className="field" /></label>
       {state?.error && <p role="alert" className="error-text">{state.error}</p>}
       <button disabled={pending} className="btn-primary">{pending ? "Agregando…" : "Agregar al plan"}</button>
@@ -143,11 +151,26 @@ export function DiagnosisEditForm({ d }: { d: { id: string; code: string; tooth:
   );
 }
 
-export function ItemEditForm({ item }: { item: { id: string; name: string; phase: number; tooth: number | null; surfaces: string | null; quantity: number; unitPrice: number; notes: string | null } }) {
+export function ItemEditForm({ item }: { item: { id: string; name: string; phase: number; tooth: number | null; surfaces: string | null; quantity: number; unitPrice: number; notes: string | null; material: string | null; pending?: boolean } }) {
   const [state, action, pending] = useActionState(updateItem.bind(null, item.id), undefined);
+  const [proc, setProc] = useState("");
+  const mats = MATERIALS[proc];
   return (
     <form action={action} className="space-y-3">
       <label className="label">Procedimiento<input name="name" defaultValue={item.name} required className="field" /></label>
+      <label className="label">{item.pending ? "Elegir la restauración definitiva" : "Cambiar por otro procedimiento del catálogo"}
+        <select name="procedure" value={proc} onChange={(e) => setProc(e.target.value)} className="field">
+          <option value="">{item.pending ? "— Elige una opción —" : "— Mantener el actual —"}</option>
+          {(item.pending ? PROCEDURES.filter((p) => RESTORATION_OPTIONS.includes(p.id)) : PROCEDURES.filter((p) => p.id !== "otro")).map((p) => <option key={p.id} value={p.id}>{p.name}{p.cups ? ` · ${p.cups}` : ""}</option>)}
+        </select>
+      </label>
+      {mats ? (
+        <label className="label">Material
+          <select name="material" key={proc} className="field" defaultValue={mats.default ?? ""}>{!mats.default && <option value="">—</option>}{mats.options.map((m) => <option key={m}>{m}</option>)}</select>
+        </label>
+      ) : (
+        <label className="label">Material (opcional)<input name="material" defaultValue={item.material ?? ""} maxLength={60} className="field" /></label>
+      )}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <label className="label">Fase
           <select name="phase" className="field" defaultValue={item.phase}>{PHASES.map((p) => <option key={p.n} value={p.n}>{p.n}. {p.label}</option>)}</select>

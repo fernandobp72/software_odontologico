@@ -41,7 +41,7 @@ export async function createInvoice(patientId: string, _: InvoiceState, fd: Form
           clinicId: user.clinicId, number: (last._max.number ?? 0) + 1, patientId, total,
           customerName: parsed.data.customerName, customerDocument: parsed.data.customerDocument || null,
           note: parsed.data.note || null, createdById: user.id,
-          lines: { create: free.map((i) => ({ itemId: i.id, description: i.name, tooth: i.tooth, procedureCode: i.procedureCode, quantity: i.quantity, unitPrice: i.unitPrice })) },
+          lines: { create: free.map((i) => ({ itemId: i.id, description: i.material ? `${i.name} (${i.material})` : i.name, tooth: i.tooth, procedureCode: i.procedureCode, quantity: i.quantity, unitPrice: i.unitPrice })) },
         },
       });
       await db.auditLog.create({ data: { userId: user.id, action: "INVOICE", entity: "Invoice", entityId: inv.id } });

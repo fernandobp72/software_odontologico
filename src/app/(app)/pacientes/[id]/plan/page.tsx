@@ -120,7 +120,7 @@ export default async function PlanPage({ params }: PageProps<"/pacientes/[id]/pl
                         <li key={i.id} className="rounded-lg border border-slate-300 p-3">
                           <div className="flex flex-wrap items-start justify-between gap-2">
                             <div>
-                              <p className="font-semibold text-slate-900">{i.name}{i.tooth ? ` · diente ${i.tooth}` : ""}{i.surfaces ? ` (${i.surfaces})` : ""}{i.quantity > 1 ? ` ×${i.quantity}` : ""}{i.sourceKey && <span className="ml-2 rounded-full bg-teal-100 px-2 py-0.5 text-xs font-semibold text-teal-900">Sugerido</span>}</p>
+                              <p className="font-semibold text-slate-900">{i.name}{i.material ? ` · ${i.material}` : ""}{i.tooth ? ` · diente ${i.tooth}` : ""}{i.surfaces ? ` (${i.surfaces})` : ""}{i.quantity > 1 ? ` ×${i.quantity}` : ""}{i.sourceKey && <span className="ml-2 rounded-full bg-teal-100 px-2 py-0.5 text-xs font-semibold text-teal-900">Sugerido</span>}</p>
                               <p className="muted">{i.procedureCode ? `CUPS ${i.procedureCode} · ` : ""}{cop.format(i.unitPrice * i.quantity)}{i.doneAt ? ` · realizado ${fmt.format(i.doneAt)}` : ""}</p>
                               {i.notes && <p className="muted">{i.notes}</p>}
                             </div>
@@ -137,7 +137,7 @@ export default async function PlanPage({ params }: PageProps<"/pacientes/[id]/pl
                             <details className="mt-2">
                               <summary className="cursor-pointer text-sm font-semibold text-teal-800">Modificar o eliminar</summary>
                               <div className="mt-3 space-y-3">
-                                <ItemEditForm item={{ id: i.id, name: i.name, phase: i.phase, tooth: i.tooth, surfaces: i.surfaces, quantity: i.quantity, unitPrice: i.unitPrice, notes: i.notes }} />
+                                <ItemEditForm item={{ id: i.id, name: i.name, phase: i.phase, tooth: i.tooth, surfaces: i.surfaces, quantity: i.quantity, unitPrice: i.unitPrice, notes: i.notes, material: i.material, pending: i.name === "Restauración definitiva (por definir)" }} />
                                 <form action={deleteItem.bind(null, i.id)}><button className="btn-danger min-h-10">Eliminar procedimiento</button></form>
                               </div>
                             </details>

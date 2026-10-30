@@ -62,6 +62,7 @@ export const PROCEDURES: { id: string; name: string; cups: string | null; scope:
   { id: "obt-amalgama", name: "Obturación con amalgama (por superficie)", cups: "232101", scope: "surface", group: "Operatoria" },
   { id: "obt-resina", name: "Obturación con resina de fotocurado (por superficie)", cups: "232102", scope: "surface", group: "Operatoria" },
   { id: "obt-ionomero", name: "Obturación con ionómero de vidrio (por superficie)", cups: "232103", scope: "surface", group: "Operatoria" },
+  { id: "restauracion-por-definir", name: "Restauración definitiva (por definir)", cups: null, scope: "tooth", group: "Operatoria" },
   { id: "obt-temporal", name: "Obturación temporal", cups: "232200", scope: "tooth", group: "Operatoria" },
   { id: "pulpotomia", name: "Pulpotomía", cups: "237100", scope: "tooth", group: "Endodoncia" },
   { id: "recub-directo", name: "Recubrimiento pulpar directo", cups: "237503", scope: "tooth", group: "Endodoncia" },
@@ -104,6 +105,21 @@ export const PROCEDURES: { id: string; name: string; cups: string | null; scope:
 // Mantenemos esta lista para el autocompletado de la evolución.
 export const CUPS = PROCEDURES.filter((p) => p.cups).map((p) => ({ code: p.cups as string, label: p.name }));
 
+// Materiales por procedimiento. "default" es el que se propone al crear el ítem; el odontólogo puede cambiarlo.
+export const MATERIALS: Record<string, { options: string[]; default?: string }> = {
+  "corona-definitiva": { options: ["Zirconio", "Disilicato de litio (e.max)", "Metal-cerámica", "Resina", "Metal"], default: "Zirconio" },
+  "protesis-fija": { options: ["Zirconio", "Metal-cerámica", "Disilicato de litio (e.max)", "Acrílico"], default: "Zirconio" },
+  "restauracion-por-definir": { options: ["Resina compuesta", "Zirconio", "Disilicato de litio (e.max)", "Porcelana (carilla)", "Metal-cerámica"] },
+  perno: { options: ["Fibra de vidrio", "Metal colado"], default: "Fibra de vidrio" },
+  munon: { options: ["Resina", "Ionómero de vidrio"], default: "Resina" },
+  "removible-1": { options: ["Acrílico", "Flexible", "Metal"], default: "Acrílico" },
+  "removible-2": { options: ["Metal", "Flexible"], default: "Metal" },
+  implante: { options: ["Titanio", "Zirconio"], default: "Titanio" },
+};
+
+// Opciones para decidir una "restauración por definir" (lista de procedimientos disponibles).
+export const RESTORATION_OPTIONS = ["obt-resina", "corona-definitiva", "protesis-fija", "munon", "perno"];
+
 export const PHASES = [
   { n: 1, label: "Urgencia" },
   { n: 2, label: "Control de la enfermedad" },
@@ -122,13 +138,16 @@ export const NOTE_TEMPLATES = [
 // scope: "surface" se aplica por superficie; "tooth" afecta todo el diente.
 export const CONDITIONS = {
   HEALTHY: { label: "Borrar", abbr: "", scope: "surface", fill: "#ffffff", cls: "bg-white text-slate-900 border-slate-500" },
-  CARIES: { label: "Caries", abbr: "Ca", scope: "surface", fill: "#dc2626", cls: "bg-red-600 text-white border-red-800" },
+  CARIES_ENAMEL: { label: "Caries de esmalte", abbr: "CE", scope: "surface", fill: "#fca5a5", cls: "bg-red-200 text-slate-900 border-red-700" },
+  CARIES: { label: "Caries de dentina", abbr: "CD", scope: "surface", fill: "#dc2626", cls: "bg-red-600 text-white border-red-800" },
   FILLING: { label: "Obturación", abbr: "Ob", scope: "surface", fill: "#2563eb", cls: "bg-blue-600 text-white border-blue-800" },
   SEALANT: { label: "Sellante", abbr: "Se", scope: "surface", fill: "#15803d", cls: "bg-green-700 text-white border-green-900" },
   FRACTURE: { label: "Fractura", abbr: "Fr", scope: "surface", fill: "#c2410c", cls: "bg-orange-700 text-white border-orange-900" },
   CROWN: { label: "Corona", abbr: "Co", scope: "tooth", fill: "#fcd34d", cls: "bg-amber-300 text-slate-900 border-amber-700" },
   ROOT_CANAL: { label: "Endodoncia", abbr: "En", scope: "tooth", fill: "#9333ea", cls: "bg-purple-600 text-white border-purple-800" },
   IMPLANT: { label: "Implante", abbr: "Im", scope: "tooth", fill: "#0f766e", cls: "bg-teal-700 text-white border-teal-900" },
+  IMPACTED: { label: "Retenido / impactado", abbr: "Re", scope: "tooth", fill: "#4f46e5", cls: "bg-indigo-600 text-white border-indigo-800" },
+  PARTIAL: { label: "Parcialmente erupcionado", abbr: "PE", scope: "tooth", fill: "#bef264", cls: "bg-lime-300 text-slate-900 border-lime-700" },
   EXTRACTED: { label: "Extraído", abbr: "Ex", scope: "tooth", fill: "#334155", cls: "bg-slate-700 text-white border-slate-900" },
   MISSING: { label: "Ausente", abbr: "Au", scope: "tooth", fill: "#e2e8f0", cls: "bg-slate-200 text-slate-800 border-slate-600 border-dashed" },
 } as const;

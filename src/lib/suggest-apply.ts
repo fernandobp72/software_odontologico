@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { CIE10, PROCEDURES } from "./catalogs";
+import { CIE10, MATERIALS, PROCEDURES } from "./catalogs";
 import { suggestAll, type FindingLite, type Suggestions } from "./suggest";
 import type { Perio } from "./perio";
 
@@ -57,6 +57,7 @@ export async function applySuggestions(opts: { patientId: string; clinicId: stri
     itemRows.push({
       planId: planId as string, phase: s.phase, tooth: s.tooth, surfaces: s.surfaces || null, procedureCode: proc.cups, name: proc.name,
       quantity: s.quantity, unitPrice: await lastPrice(opts.clinicId, proc.cups, proc.name), notes: s.note, sourceKey: s.key,
+      material: s.material ?? MATERIALS[proc.id]?.default ?? null,
     });
   }
 

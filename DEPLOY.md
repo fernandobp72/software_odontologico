@@ -65,18 +65,24 @@ El envío automático **no se ha probado contra la API real** (faltan credencial
 
 Al abrir *Diagnósticos y plan* por primera vez en un paciente que ya tiene hallazgos, el sistema genera solo los diagnósticos y un plan **borrador** a partir del odontograma y del último periodontograma. Todo queda marcado como «Sugerido» y se puede modificar, eliminar o complementar. Si luego aparecen hallazgos nuevos, una tarjeta ofrece agregarlos; lo que el odontólogo editó no se toca y lo que eliminó no vuelve.
 
-Reglas actuales (`src/lib/suggest.ts`) — **deben ser revisadas por un odontólogo antes de usarse con pacientes**:
+Reglas actuales (`src/lib/suggest.ts`), revisadas con el criterio del usuario — **deben ser validadas por un odontólogo antes de usarse con pacientes**:
 
 | Hallazgo | Diagnóstico | Procedimiento sugerido |
 |---|---|---|
-| Caries en superficies | K02.1 (ajustar a K02.0 si es solo esmalte) | Obturación en resina, una por superficie (fase 2) |
+| Caries de **esmalte** | K02.0 | Flúor en gel y control a los 3–6 meses (no restauración) |
+| Caries de **dentina** | K02.1 | Obturación en resina, una por superficie (fase 2) |
 | Fractura | S02.5 | Obturación en resina (fase 1, urgencia) |
-| Diente ausente | K08.1 | — |
-| Endodoncia | — | Corona definitiva (fase 3) |
-| Sondaje ≥ 4 mm en 4 o más sitios y NIC ≥ 3 mm | K05.3 | Detartraje subgingival por cuadrante, supragingival, educación en higiene y reevaluación (fases 2 y 4) |
-| Sangrado al sondaje ≥ 10 % sin pérdida de inserción | K05.1 | Detartraje supragingival y educación en higiene |
+| Diente ausente (excepto terceros molares) | K08.1 | — |
+| Retenido / impactado | K01.1 | Exodoncia de diente incluido: valorar con panorámica si hay síntomas o afecta al vecino |
+| Parcialmente erupcionado | K00.6 | Solo si hay caries distal en el segundo molar vecino: exodoncia quirúrgica |
+| Endodoncia en premolar o molar | — | Corona definitiva, material **zirconio** por defecto (fase 3) |
+| Endodoncia en diente anterior | — | «Restauración definitiva (por definir)»: el odontólogo elige resina, corona, etc. |
+| Pérdida de inserción (NIC ≥ 3 mm con sondaje ≥ 4 mm) en 2 o más dientes (criterio 2017) | K05.3 | Detartraje subgingival por cuadrante, supragingival, educación en higiene y reevaluación |
+| Sangrado ≥ 10 % sin pérdida de inserción en 2 dientes | K05.1 | Detartraje supragingival y educación en higiene |
 | Recesión ≥ 3 mm en un diente | K06.0 | — |
 
+- Los procedimientos con material (corona, prótesis, perno, muñón, implante) permiten elegirlo; el material sale en la cuenta de cobro.
+- Pendiente: catálogo propio de cada consultorio con los procedimientos y materiales que ofrece y sus tarifas.
 - Las sugerencias nuevas van siempre a un plan en borrador: nunca cambian un presupuesto ya presentado o aceptado.
 - El valor unitario se toma del último precio usado en el consultorio para el mismo procedimiento (si no hay, queda en 0).
 - Solo se eliminan procedimientos pendientes; lo realizado se conserva en la historia. Un plan se elimina solo si no se aceptó ni tiene procedimientos realizados.
