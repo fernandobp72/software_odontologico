@@ -1,7 +1,7 @@
 import { requireUser } from "@/lib/dal";
 import { getCatalog } from "@/lib/catalog";
 import { copFmt } from "@/lib/cartera";
-import { AdjustForm, CreateProcedureForm, ProcedureEditor } from "./forms";
+import { AdjustForm, CreateProcedureForm, ProcedureEditor, ReferencePricesForm } from "./forms";
 
 export default async function CatalogoPage() {
   const user = await requireUser();
@@ -17,6 +17,7 @@ export default async function CatalogoPage() {
         <p className="muted max-w-2xl">Define qué procedimientos ofrece tu consultorio, con qué materiales y a qué tarifa. Lo que desactives deja de ofrecerse al armar un plan; las tarifas se usan solas en los planes y en las sugerencias automáticas.</p>
         {priced > 0 && <p className="mt-2 text-sm font-semibold text-amber-900">{priced} procedimientos activos todavía no tienen tarifa.</p>}
       </div>
+      {priced > 0 && <ReferencePricesForm />}
       <div className="grid gap-6 xl:grid-cols-2 xl:items-start">
         <AdjustForm groups={groups} />
         <CreateProcedureForm groups={["Consultas", "Prevención", "Operatoria", "Endodoncia", "Cirugía", "Periodoncia", "Rehabilitación", "Estética", "Ortodoncia", "Ayudas diagnósticas", "Otros"]} />

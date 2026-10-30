@@ -95,3 +95,7 @@ Reglas actuales (`src/lib/suggest.ts`), revisadas con el criterio del usuario �
   - Las sugerencias automáticas toman el precio y el material por defecto del catálogo del consultorio; si un procedimiento sugerido está desactivado, se agrega igual con un aviso.
   - Al definir una «restauración por definir» (dientes anteriores con endodoncia) se ofrecen únicamente las restauraciones activas del consultorio.
 - **Pendiente:** tarifas por convenio/EPS y por sede; importar tarifas desde una hoja de cálculo.
+
+## Tarifas de referencia
+
+En *Catálogo* el botón **Cargar tarifas de referencia** completa las tarifas de unos 30 procedimientos con precios típicos de odontología privada en Colombia (octubre de 2026). Solo toca lo que está en 0: nunca cambia una tarifa que el consultorio ya definió. La tabla está en `src/lib/reference-prices.ts`; parte sale de sitios comparadores de precios (sin fuente oficial) y parte son estimaciones, así que cada consultorio debe ajustarlas a su ciudad y mercado (hay un botón para subir o bajar todo un porcentaje). Los materiales sin precio propio (p. ej. disilicato de litio) usan la tarifa base de la corona.

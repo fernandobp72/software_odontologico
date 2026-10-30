@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from "react";
 import type { CatalogEntry, CatalogMaterial } from "@/lib/catalog";
-import { adjustPrices, createProcedure, saveProcedure } from "./actions";
+import { adjustPrices, createProcedure, loadReferencePrices, saveProcedure } from "./actions";
 
 export function ProcedureEditor({ e }: { e: CatalogEntry }) {
   const [state, action, pending] = useActionState(saveProcedure.bind(null, e.id), undefined);
@@ -77,3 +77,16 @@ export function AdjustForm({ groups }: { groups: string[] }) {
   );
 }
 
+
+export function ReferencePricesForm() {
+  const [state, action, pending] = useActionState(loadReferencePrices, undefined);
+  return (
+    <form action={action} className="card space-y-3 border-teal-700">
+      <h2 className="section-title">Tarifas de referencia del mercado</h2>
+      <p className="muted">Carga precios típicos de odontología privada en Colombia en los procedimientos que aún tienen tarifa 0. No cambia las tarifas que ya definiste. Son un punto de partida (parte sale de sitios comparadores y parte son estimaciones): ajústalas a tu ciudad y a tu mercado.</p>
+      {state?.error && <p role="alert" className="error-text">{state.error}</p>}
+      {state?.ok && <p className="ok-text">{state.count ? `Se cargaron ${state.count} tarifas. Revísalas abajo y ajústalas.` : "No había tarifas en 0 para completar."}</p>}
+      <button disabled={pending} className="btn-primary">{pending ? "Cargando…" : "Cargar tarifas de referencia"}</button>
+    </form>
+  );
+}

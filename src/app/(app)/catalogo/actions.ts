@@ -5,6 +5,7 @@ import { randomBytes } from "node:crypto";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/dal";
+import { applyReferencePrices } from "@/lib/reference-prices";
 
 export type CatalogState = { error?: string; ok?: boolean } | undefined;
 
@@ -75,4 +76,17 @@ export async function adjustPrices(_: CatalogState, fd: FormData): Promise<Catal
   await db.auditLog.create({ data: { userId: admin.id, action: `CATALOG_ADJUST ${pct.data}%`, entity: "Clinic", entityId: admin.clinicId } });
   revalidatePath("/catalogo");
   return { ok: true };
+}
+
+export type ReferenceState = { error?: string; ok?: boolean; count?: number } | undefined;
+
+// Carga las tarifas de referencia del mercado solo donde la tarifa está en 0.
+export async function loadReferencePrices(prev: ReferenceState, fd: FormData): Promise<ReferenceState> {
+  void prev;
+  void fd;
+  const admin = await requireAdmin();
+  const r = await applyReferencePrices(admin.clinicId);
+  await db.auditLog.create({ data: { userId: admin.id, action: `CATALOG_REFERENCE ${r.procedures}+${r.materials}`, entity: "Clinic", entityId: admin.clinicId } });
+  revalidatePath("/catalogo");
+  return { ok: true, count: r.procedures + r.materials };
 }
