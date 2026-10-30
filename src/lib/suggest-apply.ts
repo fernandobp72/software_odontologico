@@ -1,5 +1,6 @@
 import { db } from "./db";
-import { CIE10, MATERIALS, PROCEDURES } from "./catalogs";
+import { CIE10 } from "./catalogs";
+import { defaultMaterial, getCatalog, priceFor } from "./catalog";
 import { suggestAll, type FindingLite, type Suggestions } from "./suggest";
 import type { Perio } from "./perio";
 
@@ -50,14 +51,18 @@ export async function applySuggestions(opts: { patientId: string; clinicId: stri
     planId = draft?.id ?? (await db.treatmentPlan.create({ data: { patientId: opts.patientId, dentistId: opts.userId, title: "Plan sugerido por los hallazgos" } })).id;
   }
 
+  const catalog = await getCatalog(opts.clinicId);
   const itemRows = [];
   for (const s of pending.items) {
-    const proc = PROCEDURES.find((p) => p.id === s.procId);
-    if (!proc) continue;
+    const entry = catalog.find((c) => c.procId === s.procId);
+    if (!entry) continue;
+    // Material: el propuesto por la regla si el consultorio lo tiene; si no, el que tenga por defecto.
+    const material = (s.material && entry.materials.find((m) => m.name.toLowerCase() === s.material!.toLowerCase())?.name) || defaultMaterial(entry);
+    const fromCatalog = priceFor(entry, material);
     itemRows.push({
-      planId: planId as string, phase: s.phase, tooth: s.tooth, surfaces: s.surfaces || null, procedureCode: proc.cups, name: proc.name,
-      quantity: s.quantity, unitPrice: await lastPrice(opts.clinicId, proc.cups, proc.name), notes: s.note, sourceKey: s.key,
-      material: s.material ?? MATERIALS[proc.id]?.default ?? null,
+      planId: planId as string, phase: s.phase, tooth: s.tooth, surfaces: s.surfaces || null, procedureCode: entry.cups, name: entry.name,
+      quantity: s.quantity, unitPrice: fromCatalog || (await lastPrice(opts.clinicId, entry.cups, entry.name)),
+      notes: entry.active ? s.note : `${s.note} Este procedimiento no está activo en tu catálogo.`, sourceKey: s.key, material,
     });
   }
 

@@ -6,7 +6,10 @@ import { db } from "@/lib/db";
 import { requireClinician } from "@/lib/dal";
 import { syncPlan } from "@/lib/plan";
 import { applySuggestions } from "@/lib/suggest-apply";
-import { CIE10, MATERIALS, PROCEDURES, VALID_TEETH, SURFACES } from "@/lib/catalogs";
+import { CIE10, VALID_TEETH, SURFACES } from "@/lib/catalogs";
+import { defaultMaterial, type CatalogMaterial } from "@/lib/catalog";
+
+const toMaterials = (v: unknown): CatalogMaterial[] => (Array.isArray(v) ? (v as CatalogMaterial[]).filter((m) => m && typeof m.name === "string") : []);
 
 export type FormState = { error?: string; ok?: boolean } | undefined;
 
@@ -76,17 +79,17 @@ export async function addItem(patientId: string, _: FormState, fd: FormData): Pr
   const plan = await db.treatmentPlan.findFirst({ where: { id: d.planId, patientId, patient: { clinicId: user.clinicId } } });
   if (!plan) return { error: "Plan no encontrado" };
   if (plan.status === "COMPLETED" || plan.status === "CANCELLED") return { error: "El plan está cerrado" };
-  const proc = PROCEDURES.find((p) => p.id === d.procedure);
-  if (!proc) return { error: "Procedimiento inválido" };
-  const name = proc.id === "otro" ? d.customName : proc.name;
+  const entry = await db.clinicProcedure.findFirst({ where: { clinicId: user.clinicId, procId: d.procedure, active: true } });
+  if (!entry) return { error: "Ese procedimiento no está activo en el catálogo del consultorio" };
+  const name = entry.procId === "otro" ? d.customName : entry.name;
   if (!name) return { error: "Describe el procedimiento" };
   const surfaces = fd.getAll("surfaces").map(String).filter((s) => SURFACES.some((x) => x.key === s)).join("") || null;
-  const matOpts = MATERIALS[proc.id]?.options ?? [];
+  const mats = toMaterials(entry.materials);
   const wanted = String(fd.get("material") ?? "");
-  const material = matOpts.includes(wanted) ? wanted : MATERIALS[proc.id]?.default ?? null;
+  const material = mats.some((m) => m.name === wanted) ? wanted : defaultMaterial({ materials: mats });
 
   const item = await db.treatmentItem.create({
-    data: { planId: plan.id, phase: d.phase, tooth: d.tooth, surfaces, procedureCode: proc.cups, name, material, quantity: d.quantity, unitPrice: d.unitPrice, notes: d.notes || null },
+    data: { planId: plan.id, phase: d.phase, tooth: d.tooth, surfaces, procedureCode: entry.cups, name, material, quantity: d.quantity, unitPrice: d.unitPrice, notes: d.notes || null },
   });
   await audit(user.id, "CREATE", "TreatmentItem", item.id);
   revalidatePath(`/pacientes/${patientId}/plan`);
@@ -174,14 +177,15 @@ export async function updateItem(id: string, _: FormState, fd: FormData): Promis
   if (!item) return { error: "Procedimiento no encontrado" };
   if (item.status === "DONE" || item.status === "CANCELLED") return { error: "Un procedimiento realizado o cancelado ya no se edita" };
   const surfaces = fd.getAll("surfaces").map(String).filter((s) => SURFACES.some((x) => x.key === s)).join("") || null;
-  // Si eligió otro procedimiento del catálogo (p. ej. al definir una restauración), cambia nombre y código.
-  const proc = PROCEDURES.find((p) => p.id === String(fd.get("procedure") ?? "") && p.id !== "otro");
-  const matOpts = MATERIALS[proc?.id ?? ""]?.options ?? [];
-  const wanted = String(fd.get("material") ?? "");
-  const material = proc ? (matOpts.includes(wanted) ? wanted : MATERIALS[proc.id]?.default ?? null) : String(fd.get("material") ?? "").trim().slice(0, 60) || null;
+  // Si eligió otro procedimiento del catálogo del consultorio (p. ej. al definir una restauración), cambia nombre y código.
+  const chosen = String(fd.get("procedure") ?? "");
+  const entry = chosen && chosen !== "otro" ? await db.clinicProcedure.findFirst({ where: { clinicId: user.clinicId, procId: chosen, active: true } }) : null;
+  const wanted = String(fd.get("material") ?? "").trim().slice(0, 60);
+  const mats = entry ? toMaterials(entry.materials) : [];
+  const material = entry ? (mats.some((m) => m.name === wanted) ? wanted : defaultMaterial({ materials: mats })) : wanted || null;
   await db.treatmentItem.update({
     where: { id },
-    data: { ...parsed.data, ...(proc ? { name: proc.name, procedureCode: proc.cups } : {}), material, surfaces, notes: parsed.data.notes || null },
+    data: { ...parsed.data, ...(entry ? { name: entry.name, procedureCode: entry.cups } : {}), material, surfaces, notes: parsed.data.notes || null },
   });
   await audit(user.id, "UPDATE", "TreatmentItem", id);
   revalidatePath(`/pacientes/${item.plan.patientId}/plan`);

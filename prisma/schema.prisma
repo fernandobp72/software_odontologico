@@ -68,25 +68,26 @@ enum DiagnosisStatus {
 }
 
 model Clinic {
-  id              String        @id @default(cuid())
-  name            String
-  nit             String?
-  address         String?
-  phone           String?
+  id               String            @id @default(cuid())
+  name             String
+  nit              String?
+  address          String?
+  phone            String?
   // ACTIVE | TRIAL | SUSPENDED. Lo cambia el dueño de la plataforma.
-  status          String        @default("ACTIVE")
-  trialEndsAt     DateTime?
-  termsAcceptedAt DateTime?
-  termsVersion    String?
-  createdAt       DateTime      @default(now())
-  users           User[]
-  patients        Patient[]
-  appointments    Appointment[]
-  cashSessions    CashSession[]
-  payments        Payment[]
-  invoices        Invoice[]
-  invitations     Invitation[]
-  branches        Branch[]
+  status           String            @default("ACTIVE")
+  trialEndsAt      DateTime?
+  termsAcceptedAt  DateTime?
+  termsVersion     String?
+  createdAt        DateTime          @default(now())
+  users            User[]
+  patients         Patient[]
+  appointments     Appointment[]
+  cashSessions     CashSession[]
+  payments         Payment[]
+  invoices         Invoice[]
+  invitations      Invitation[]
+  branches         Branch[]
+  clinicProcedures ClinicProcedure[]
 }
 
 model User {
@@ -553,4 +554,23 @@ model DismissedSuggestion {
   createdAt DateTime @default(now())
 
   @@unique([patientId, key])
+}
+
+// Catálogo de cada consultorio: qué procedimientos ofrece, con qué materiales y a qué tarifa.
+model ClinicProcedure {
+  id        String   @id @default(cuid())
+  clinicId  String
+  clinic    Clinic   @relation(fields: [clinicId], references: [id])
+  procId    String // id del catálogo base o "custom-..." si lo creó el consultorio
+  name      String
+  cups      String?
+  group     String
+  scope     String // mouth | quadrant | tooth | surface
+  active    Boolean  @default(true)
+  price     Int      @default(0) // COP, tarifa base
+  // [{ name, price, isDefault }]: si el material tiene precio, reemplaza a la tarifa base
+  materials Json     @default("[]")
+  createdAt DateTime @default(now())
+
+  @@unique([clinicId, procId])
 }

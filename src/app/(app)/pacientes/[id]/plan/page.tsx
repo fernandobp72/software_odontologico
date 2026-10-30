@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { requireUser } from "@/lib/dal";
 import { CIE10, PHASES, PROCEDURES } from "@/lib/catalogs";
 import { pendingSuggestions } from "@/lib/suggest-apply";
+import { getCatalog } from "@/lib/catalog";
 import { deleteDiagnosis, deleteItem, deletePlan, resolveDiagnosis, setItemStatus, setPlanStatus } from "./actions";
 import { AutoGenerate, DiagnosisEditForm, DiagnosisForm, ItemEditForm, ItemForm, PlanForm, SuggestionCard } from "./forms";
 
@@ -19,11 +20,12 @@ export default async function PlanPage({ params }: PageProps<"/pacientes/[id]/pl
   const { id } = await params;
   if (user.role === "RECEPTION") return <p className="card">Sin acceso a la historia clínica.</p>;
 
-  const [diagnoses, plans, patient, pending] = await Promise.all([
+  const [diagnoses, plans, patient, pending, catalog] = await Promise.all([
     db.diagnosis.findMany({ where: { patientId: id, patient: { clinicId: user.clinicId } }, orderBy: [{ status: "asc" }, { createdAt: "desc" }] }),
     db.treatmentPlan.findMany({ where: { patientId: id, patient: { clinicId: user.clinicId } }, orderBy: { createdAt: "desc" }, include: { items: { orderBy: [{ phase: "asc" }, { createdAt: "asc" }] } } }),
     db.patient.findFirst({ where: { id, clinicId: user.clinicId }, select: { autoPlanAt: true } }),
     pendingSuggestions(id),
+    getCatalog(user.clinicId, { onlyActive: true }),
   ]);
   const pendingCount = pending.diagnoses.length + pending.items.length;
   const autoNeeded = !patient?.autoPlanAt && pendingCount > 0;
@@ -137,7 +139,7 @@ export default async function PlanPage({ params }: PageProps<"/pacientes/[id]/pl
                             <details className="mt-2">
                               <summary className="cursor-pointer text-sm font-semibold text-teal-800">Modificar o eliminar</summary>
                               <div className="mt-3 space-y-3">
-                                <ItemEditForm item={{ id: i.id, name: i.name, phase: i.phase, tooth: i.tooth, surfaces: i.surfaces, quantity: i.quantity, unitPrice: i.unitPrice, notes: i.notes, material: i.material, pending: i.name === "Restauración definitiva (por definir)" }} />
+                                <ItemEditForm catalog={catalog} item={{ id: i.id, name: i.name, phase: i.phase, tooth: i.tooth, surfaces: i.surfaces, quantity: i.quantity, unitPrice: i.unitPrice, notes: i.notes, material: i.material, pending: i.name === "Restauración definitiva (por definir)" }} />
                                 <form action={deleteItem.bind(null, i.id)}><button className="btn-danger min-h-10">Eliminar procedimiento</button></form>
                               </div>
                             </details>
@@ -149,7 +151,7 @@ export default async function PlanPage({ params }: PageProps<"/pacientes/[id]/pl
                 );
               })}
               {plan.items.length === 0 && <p className="muted">Aún no hay procedimientos en este plan.</p>}
-              {!closed && <ItemForm patientId={id} planId={plan.id} />}
+              {!closed && <ItemForm patientId={id} planId={plan.id} catalog={catalog} />}
             </article>
           );
         })}

@@ -2,7 +2,8 @@
 
 import { useActionState, useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { CIE10, MATERIALS, PHASES, PROCEDURES, RESTORATION_OPTIONS, SURFACES, QUADRANTS } from "@/lib/catalogs";
+import { CIE10, PHASES, SURFACES, QUADRANTS } from "@/lib/catalogs";
+import { defaultMaterial, priceFor, type CatalogEntry } from "@/lib/catalog";
 import { addDiagnosis, addItem, createPlan, generateFromFindings, updateDiagnosis, updateItem } from "./actions";
 
 const TEETH = QUADRANTS.flat().sort((a, b) => a - b);
@@ -39,38 +40,64 @@ export function PlanForm({ patientId }: { patientId: string }) {
   );
 }
 
-export function ItemForm({ patientId, planId }: { patientId: string; planId: string }) {
+export function ItemForm({ patientId, planId, catalog }: { patientId: string; planId: string; catalog: CatalogEntry[] }) {
   const [state, action, pending] = useActionState(addItem.bind(null, patientId), undefined);
-  const [procId, setProcId] = useState(PROCEDURES[0].id);
-  const proc = PROCEDURES.find((p) => p.id === procId)!;
-  const groups = [...new Set(PROCEDURES.map((p) => p.group))];
+  const first = catalog[0];
+  const [procId, setProcId] = useState(first?.procId ?? "");
+  const [material, setMaterial] = useState(first ? defaultMaterial(first) ?? "" : "");
+  const [price, setPrice] = useState(first ? priceFor(first, defaultMaterial(first)) : 0);
+  const entry = catalog.find((c) => c.procId === procId) ?? first;
+  const groups = [...new Set(catalog.map((c) => c.group))];
+
+  const pickProcedure = (id: string) => {
+    const e = catalog.find((c) => c.procId === id);
+    setProcId(id);
+    if (!e) return;
+    const m = defaultMaterial(e) ?? "";
+    setMaterial(m);
+    setPrice(priceFor(e, m));
+  };
+  const pickMaterial = (m: string) => {
+    setMaterial(m);
+    if (entry) setPrice(priceFor(entry, m));
+  };
+
+  if (!entry) return <p className="rounded-lg border border-slate-300 bg-slate-50 p-3 text-slate-900">El catálogo no tiene procedimientos activos. El administrador puede activarlos en «Catálogo y tarifas».</p>;
   return (
     <form action={action} className="space-y-3 rounded-lg border border-slate-300 bg-slate-50 p-3">
       <input type="hidden" name="planId" value={planId} />
       <p className="font-semibold text-slate-900">Agregar procedimiento</p>
       <label className="label">Procedimiento
-        <select name="procedure" value={procId} onChange={(e) => setProcId(e.target.value)} className="field">
+        <select name="procedure" value={procId} onChange={(e) => pickProcedure(e.target.value)} className="field">
           {groups.map((g) => (
             <optgroup key={g} label={g}>
-              {PROCEDURES.filter((p) => p.group === g).map((p) => <option key={p.id} value={p.id}>{p.name}{p.cups ? ` · ${p.cups}` : ""}</option>)}
+              {catalog.filter((p) => p.group === g).map((p) => <option key={p.procId} value={p.procId}>{p.name}{p.cups ? ` · ${p.cups}` : ""}</option>)}
             </optgroup>
           ))}
         </select>
       </label>
       {procId === "otro" && <label className="label">Descripción<input name="customName" className="field" /></label>}
+      {entry.materials.length > 0 && (
+        <label className="label">Material
+          <select name="material" value={material} onChange={(e) => pickMaterial(e.target.value)} className="field">
+            {!entry.materials.some((m) => m.isDefault) && <option value="">—</option>}
+            {entry.materials.map((m) => <option key={m.name} value={m.name}>{m.name}</option>)}
+          </select>
+        </label>
+      )}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <label className="label">Fase
           <select name="phase" className="field" defaultValue={2}>{PHASES.map((p) => <option key={p.n} value={p.n}>{p.n}. {p.label}</option>)}</select>
         </label>
-        {(proc.scope === "tooth" || proc.scope === "surface") && (
+        {(entry.scope === "tooth" || entry.scope === "surface") && (
           <label className="label">Diente
             <select name="tooth" className="field" defaultValue=""><option value="">—</option>{TEETH.map((t) => <option key={t}>{t}</option>)}</select>
           </label>
         )}
         <label className="label">Cantidad<input name="quantity" type="number" min={1} defaultValue={1} className="field" /></label>
-        <label className="label">Valor unitario (COP)<input name="unitPrice" type="number" min={0} step={1000} defaultValue={0} inputMode="numeric" className="field" /></label>
+        <label className="label">Valor unitario (COP)<input name="unitPrice" type="number" min={0} step={1000} value={price} onChange={(e) => setPrice(Number(e.target.value) || 0)} inputMode="numeric" className="field" /></label>
       </div>
-      {proc.scope === "surface" && (
+      {entry.scope === "surface" && (
         <fieldset>
           <legend className="label">Superficies</legend>
           <div className="mt-2 flex flex-wrap gap-2">
@@ -81,14 +108,6 @@ export function ItemForm({ patientId, planId }: { patientId: string; planId: str
             ))}
           </div>
         </fieldset>
-      )}
-      {MATERIALS[procId] && (
-        <label className="label">Material
-          <select name="material" key={procId} className="field" defaultValue={MATERIALS[procId].default ?? ""}>
-            {!MATERIALS[procId].default && <option value="">—</option>}
-            {MATERIALS[procId].options.map((m) => <option key={m}>{m}</option>)}
-          </select>
-        </label>
       )}
       <label className="label">Notas<input name="notes" className="field" /></label>
       {state?.error && <p role="alert" className="error-text">{state.error}</p>}
@@ -151,25 +170,46 @@ export function DiagnosisEditForm({ d }: { d: { id: string; code: string; tooth:
   );
 }
 
-export function ItemEditForm({ item }: { item: { id: string; name: string; phase: number; tooth: number | null; surfaces: string | null; quantity: number; unitPrice: number; notes: string | null; material: string | null; pending?: boolean } }) {
+export function ItemEditForm({ item, catalog }: { item: { id: string; name: string; phase: number; tooth: number | null; surfaces: string | null; quantity: number; unitPrice: number; notes: string | null; material: string | null; pending?: boolean }; catalog: CatalogEntry[] }) {
   const [state, action, pending] = useActionState(updateItem.bind(null, item.id), undefined);
   const [proc, setProc] = useState("");
-  const mats = MATERIALS[proc];
+  const [material, setMaterial] = useState(item.material ?? "");
+  const [price, setPrice] = useState(item.unitPrice);
+  const entry = catalog.find((c) => c.procId === proc);
+  // Al definir una restauración se ofrecen solo las opciones que el consultorio tiene activas.
+  const options = item.pending ? catalog.filter((c) => ["Operatoria", "Rehabilitación", "Estética"].includes(c.group) && c.procId !== "restauracion-por-definir") : catalog.filter((c) => c.procId !== "otro");
+
+  const pickProcedure = (id: string) => {
+    setProc(id);
+    const e = catalog.find((c) => c.procId === id);
+    if (!e) return;
+    const m = defaultMaterial(e) ?? "";
+    setMaterial(m);
+    setPrice(priceFor(e, m));
+  };
+  const pickMaterial = (m: string) => {
+    setMaterial(m);
+    if (entry) setPrice(priceFor(entry, m));
+  };
+
   return (
     <form action={action} className="space-y-3">
       <label className="label">Procedimiento<input name="name" defaultValue={item.name} required className="field" /></label>
-      <label className="label">{item.pending ? "Elegir la restauración definitiva" : "Cambiar por otro procedimiento del catálogo"}
-        <select name="procedure" value={proc} onChange={(e) => setProc(e.target.value)} className="field">
+      <label className="label">{item.pending ? "Elegir la restauración definitiva (opciones de tu consultorio)" : "Cambiar por otro procedimiento del catálogo"}
+        <select name="procedure" value={proc} onChange={(e) => pickProcedure(e.target.value)} className="field">
           <option value="">{item.pending ? "— Elige una opción —" : "— Mantener el actual —"}</option>
-          {(item.pending ? PROCEDURES.filter((p) => RESTORATION_OPTIONS.includes(p.id)) : PROCEDURES.filter((p) => p.id !== "otro")).map((p) => <option key={p.id} value={p.id}>{p.name}{p.cups ? ` · ${p.cups}` : ""}</option>)}
+          {options.map((p) => <option key={p.procId} value={p.procId}>{p.name}{p.cups ? ` · ${p.cups}` : ""}</option>)}
         </select>
       </label>
-      {mats ? (
+      {entry && entry.materials.length > 0 ? (
         <label className="label">Material
-          <select name="material" key={proc} className="field" defaultValue={mats.default ?? ""}>{!mats.default && <option value="">—</option>}{mats.options.map((m) => <option key={m}>{m}</option>)}</select>
+          <select name="material" value={material} onChange={(e) => pickMaterial(e.target.value)} className="field">
+            {!entry.materials.some((m) => m.isDefault) && <option value="">—</option>}
+            {entry.materials.map((m) => <option key={m.name} value={m.name}>{m.name}</option>)}
+          </select>
         </label>
       ) : (
-        <label className="label">Material (opcional)<input name="material" defaultValue={item.material ?? ""} maxLength={60} className="field" /></label>
+        <label className="label">Material (opcional)<input name="material" value={material} onChange={(e) => setMaterial(e.target.value)} maxLength={60} className="field" /></label>
       )}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <label className="label">Fase
@@ -179,7 +219,7 @@ export function ItemEditForm({ item }: { item: { id: string; name: string; phase
           <select name="tooth" className="field" defaultValue={item.tooth ?? ""}><option value="">—</option>{TEETH.map((t) => <option key={t}>{t}</option>)}</select>
         </label>
         <label className="label">Cantidad<input name="quantity" type="number" min={1} defaultValue={item.quantity} className="field" /></label>
-        <label className="label">Valor unitario (COP)<input name="unitPrice" type="number" min={0} step={1000} defaultValue={item.unitPrice} inputMode="numeric" className="field" /></label>
+        <label className="label">Valor unitario (COP)<input name="unitPrice" type="number" min={0} step={1000} value={price} onChange={(e) => setPrice(Number(e.target.value) || 0)} inputMode="numeric" className="field" /></label>
       </div>
       <fieldset>
         <legend className="label">Superficies</legend>

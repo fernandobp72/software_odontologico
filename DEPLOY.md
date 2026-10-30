@@ -82,7 +82,16 @@ Reglas actuales (`src/lib/suggest.ts`), revisadas con el criterio del usuario �
 | Recesión ≥ 3 mm en un diente | K06.0 | — |
 
 - Los procedimientos con material (corona, prótesis, perno, muñón, implante) permiten elegirlo; el material sale en la cuenta de cobro.
-- Pendiente: catálogo propio de cada consultorio con los procedimientos y materiales que ofrece y sus tarifas.
 - Las sugerencias nuevas van siempre a un plan en borrador: nunca cambian un presupuesto ya presentado o aceptado.
 - El valor unitario se toma del último precio usado en el consultorio para el mismo procedimiento (si no hay, queda en 0).
 - Solo se eliminan procedimientos pendientes; lo realizado se conserva en la historia. Un plan se elimina solo si no se aceptó ni tiene procedimientos realizados.
+
+# Catálogo y tarifas por consultorio
+
+- **Dónde:** menú *Catálogo* (solo administrador). Cada consultorio recibe el catálogo base (unos 50 procedimientos con CUPS) la primera vez que se necesita, todo activo y con tarifa 0.
+- **Qué define cada consultorio:** si ofrece el procedimiento, su tarifa base y sus materiales (cada uno con su precio y uno por defecto). Si un material tiene precio, reemplaza a la tarifa base. También puede crear procedimientos propios y subir o bajar todas las tarifas un porcentaje (por grupo o en total).
+- **Dónde se usa:**
+  - Al agregar un procedimiento al plan solo aparecen los activos, y el valor se rellena solo según procedimiento y material (editable).
+  - Las sugerencias automáticas toman el precio y el material por defecto del catálogo del consultorio; si un procedimiento sugerido está desactivado, se agrega igual con un aviso.
+  - Al definir una «restauración por definir» (dientes anteriores con endodoncia) se ofrecen únicamente las restauraciones activas del consultorio.
+- **Pendiente:** tarifas por convenio/EPS y por sede; importar tarifas desde una hoja de cálculo.

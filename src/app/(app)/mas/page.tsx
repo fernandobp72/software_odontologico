@@ -5,7 +5,7 @@ import { logout } from "../../login/actions";
 export default async function MasPage() {
   const user = await requireUser();
   const items = [
-    ...(user.role === "ADMIN" ? [["/inicio", "Inicio guiado"], ["/equipo", "Equipo"], ["/sedes", "Sedes"], ["/configuracion", "Consultorio"]] : []),
+    ...(user.role === "ADMIN" ? [["/inicio", "Inicio guiado"], ["/equipo", "Equipo"], ["/sedes", "Sedes"], ["/catalogo", "Catálogo y tarifas"], ["/configuracion", "Consultorio"]] : []),
     ...(user.isPlatformAdmin ? [["/plataforma", "Plataforma"]] : []),
     ["/recordatorios", "Recordatorios"],
     ["/perfil", "Mi cuenta"],
