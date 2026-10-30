@@ -1,0 +1,162 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  DENTIST
+  RECEPTION
+}
+
+enum AppointmentStatus {
+  SCHEDULED
+  CONFIRMED
+  ATTENDED
+  CANCELLED
+  NO_SHOW
+}
+
+// Estado de una superficie/diente en el odontograma (FDI)
+enum ToothCondition {
+  HEALTHY
+  CARIES
+  FILLING
+  CROWN
+  ROOT_CANAL
+  EXTRACTED
+  MISSING
+  IMPLANT
+  SEALANT
+  FRACTURE
+}
+
+model Clinic {
+  id           String        @id @default(cuid())
+  name         String
+  nit          String?
+  createdAt    DateTime      @default(now())
+  users        User[]
+  patients     Patient[]
+  appointments Appointment[]
+}
+
+model User {
+  id           String        @id @default(cuid())
+  clinicId     String
+  clinic       Clinic        @relation(fields: [clinicId], references: [id])
+  email        String        @unique
+  passwordHash String
+  name         String
+  role         Role
+  // Registro profesional (RETHUS / tarjeta profesional) requerido para firmar evoluciones
+  licenseNumber String?
+  active       Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  appointments Appointment[]
+  evolutions   Evolution[]
+  auditLogs    AuditLog[]
+}
+
+model Patient {
+  id             String        @id @default(cuid())
+  clinicId       String
+  clinic         Clinic        @relation(fields: [clinicId], references: [id])
+  documentType   String        @default("CC") // CC, TI, CE, RC, PA, PT
+  documentNumber String
+  firstName      String
+  middleName     String?
+  lastName       String
+  secondLastName String?
+  birthDate      DateTime?
+  sex            String?
+  phone          String?
+  email          String?
+  address        String?
+  city           String?
+  eps            String?
+  regime         String? // CONTRIBUTIVO, SUBSIDIADO, PARTICULAR
+  occupation     String?
+  companionName  String?
+  companionPhone String?
+  companionKin   String?
+  allergies      String?
+  medicalHistory String?
+  // Habeas data (Ley 1581 de 2012)
+  dataConsentAt  DateTime?
+  createdAt      DateTime      @default(now())
+  appointments   Appointment[]
+  evolutions     Evolution[]
+  toothFindings  ToothFinding[]
+
+  @@unique([clinicId, documentType, documentNumber])
+  @@index([clinicId, lastName])
+}
+
+model Appointment {
+  id          String            @id @default(cuid())
+  clinicId    String
+  clinic      Clinic            @relation(fields: [clinicId], references: [id])
+  patientId   String
+  patient     Patient           @relation(fields: [patientId], references: [id])
+  dentistId   String
+  dentist     User              @relation(fields: [dentistId], references: [id])
+  startsAt    DateTime
+  endsAt      DateTime
+  reason      String?
+  status      AppointmentStatus @default(SCHEDULED)
+  createdAt   DateTime          @default(now())
+
+  @@index([clinicId, startsAt])
+  @@index([dentistId, startsAt])
+}
+
+// Evolución clínica. Una vez firmada es inmutable (Res. 1995/1999): las correcciones
+// se registran como una nueva evolución que referencia a la anterior.
+model Evolution {
+  id          String     @id @default(cuid())
+  patientId   String
+  patient     Patient    @relation(fields: [patientId], references: [id])
+  dentistId   String
+  dentist     User       @relation(fields: [dentistId], references: [id])
+  reason      String? // motivo de consulta
+  diagnosisCode String? // CIE-10
+  procedureCode String? // CUPS
+  note        String // descripción del procedimiento / evolución
+  signedAt    DateTime   @default(now())
+  correctsId  String?
+  corrects    Evolution? @relation("Correction", fields: [correctsId], references: [id])
+  corrections Evolution[] @relation("Correction")
+  createdAt   DateTime   @default(now())
+
+  @@index([patientId, signedAt])
+}
+
+model ToothFinding {
+  id        String         @id @default(cuid())
+  patientId String
+  patient   Patient        @relation(fields: [patientId], references: [id])
+  tooth     Int // numeración FDI: 11-18, 21-28, 31-38, 41-48 (51-85 temporales)
+  surface   String? // M, D, O, V, L o null = diente completo
+  condition ToothCondition
+  note      String?
+  createdAt DateTime       @default(now())
+
+  @@index([patientId, tooth])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  action    String
+  entity    String
+  entityId  String?
+  createdAt DateTime @default(now())
+
+  @@index([entity, entityId])
+}
