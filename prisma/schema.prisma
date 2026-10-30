@@ -165,6 +165,7 @@ model Patient {
   clinicalImages       ClinicalImage[]
   invoices             Invoice[]
   dismissedSuggestions DismissedSuggestion[]
+  intakeForms          IntakeForm[]
 
   @@unique([clinicId, documentType, documentNumber])
   @@index([clinicId, lastName])
@@ -573,4 +574,27 @@ model ClinicProcedure {
   createdAt DateTime @default(now())
 
   @@unique([clinicId, procId])
+}
+
+// Formulario previo: el paciente llena su anamnesis desde un enlace antes de la cita.
+// Solo se guarda el hash del token; el profesional revisa y lo pasa a la valoración.
+model IntakeForm {
+  id           String    @id @default(cuid())
+  clinicId     String
+  patientId    String
+  patient      Patient   @relation(fields: [patientId], references: [id])
+  createdById  String
+  tokenHash    String    @unique
+  expiresAt    DateTime
+  submittedAt  DateTime?
+  data         Json?
+  signerName   String?
+  signature    String?
+  reviewedAt   DateTime?
+  reviewedById String?
+  revokedAt    DateTime?
+  createdAt    DateTime  @default(now())
+
+  @@index([patientId, createdAt])
+  @@index([clinicId, submittedAt])
 }

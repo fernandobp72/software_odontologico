@@ -39,12 +39,13 @@ function Input({ f, value }: { f: Field; value: string | string[] | undefined })
   );
 }
 
-export default function AssessmentForm({ patientId, initial }: { patientId: string; initial: AssessmentData | null }) {
+export default function AssessmentForm({ patientId, initial, intakeId }: { patientId: string; initial: AssessmentData | null; intakeId?: string }) {
   const [state, action, pending] = useActionState(saveAssessment.bind(null, patientId), undefined);
   return (
     <form action={action} className="space-y-3">
+      {intakeId && <input type="hidden" name="intakeId" value={intakeId} />}
       {ASSESSMENT_SECTIONS.map((section, i) => (
-        <details key={section.id} open={i === 0} className="card group p-0">
+        <details key={section.id} open={i === 0 || !!intakeId} className="card group p-0">
           <summary className="cursor-pointer list-none px-4 py-4 text-lg font-semibold text-slate-900 marker:hidden">
             {section.title}
             <span className="float-right text-slate-600 group-open:rotate-180">⌄</span>

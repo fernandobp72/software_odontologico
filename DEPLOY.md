@@ -109,3 +109,7 @@ Si el servidor vuelve a quedarse sin espacio, hay que activar el *Docker Cleanup
 # Evolución automática desde lo realizado
 
 En la ficha del paciente, al marcar en «Nueva evolución» los procedimientos del plan realizados hoy, la nota se redacta sola con procedimiento, diente, superficies, material y diagnóstico del diente (`src/lib/evolution-text.ts`), y se completan el diagnóstico CIE-10 y el CUPS. Todo es editable; lo que el profesional escribe o dicta se conserva al marcar o desmarcar. El sistema solo redacta datos que ya conoce: frases como la anestesia o las complicaciones las elige el profesional (botones de frases rápidas). Al firmar, los procedimientos marcados quedan como realizados y enlazados a la evolución.
+
+## Formulario previo del paciente
+
+En Historia clínica → "Formulario previo del paciente" el profesional crea un enlace (`/formulario/<token>`, vence en 7 días, un solo envío; en la base solo se guarda el hash) y lo manda por WhatsApp. El paciente contesta en lenguaje sencillo (motivo, antecedentes, alergias, medicamentos, hábitos), autoriza el tratamiento de datos (Ley 1581, texto borrador por revisar legalmente) y firma con el dedo. El profesional pulsa "Revisar y cargar en la valoración": las respuestas se mezclan con la valoración vigente (sin borrar lo existente), las corrige y al guardar queda una versión nueva y el formulario marcado como revisado. Lo del paciente nunca entra solo a la historia clínica.
