@@ -51,7 +51,7 @@ El envío automático **no se ha probado contra la API real** (faltan credencial
 # Copias de seguridad y restauración
 
 - **Programación:** Coolify → base `odontologico-db` → *Backups*: copia diaria a las 03:00 (hora del servidor), formato `pg_dump -Fc`, conserva las últimas 14 copias (máximo 30 días). Se verificó una ejecución exitosa.
-- **Dónde quedan:** en el mismo servidor (`/data/coolify/backups/databases/...`). Protege de errores y borrados, **no** de perder el servidor. Para eso hay que activar *Save to S3* con un depósito externo.
+- **Dónde quedan:** en el servidor (`/data/coolify/backups/databases/...`) y, además, en el depósito S3 externo de Oracle (`oracle free`, depósito `storage-personal`), con la misma retención (14 copias / 30 días). Se verificó listando el depósito: el archivo llegó con el mismo tamaño. Si se pierde el servidor, las copias siguen en Oracle.
 - **Restaurar en una base nueva (sin tocar producción):**
   1. Copia el archivo `.dmp` desde el servidor (o descárgalo desde Coolify).
   2. `createdb odontologico_restaurada`
