@@ -22,7 +22,7 @@ export default function Viewer({ src, alt, isPdf }: { src: string; alt: string; 
         </div>
         <label className="label min-w-32 flex-1">Brillo<input type="range" min={40} max={200} value={brightness} onChange={(e) => setBrightness(+e.target.value)} className="mt-2 w-full accent-teal-700" /></label>
         <label className="label min-w-32 flex-1">Contraste<input type="range" min={40} max={250} value={contrast} onChange={(e) => setContrast(+e.target.value)} className="mt-2 w-full accent-teal-700" /></label>
-        <button type="button" aria-pressed={invert} onClick={() => setInvert((v) => !v)} className={invert ? "btn bg-teal-700 text-white" : "btn-secondary"}>Invertir</button>
+        <button type="button" aria-pressed={invert} onClick={() => setInvert((v) => !v)} className={invert ? "btn bg-teal-100 text-teal-900" : "btn-secondary"}>Invertir</button>
         <button type="button" className="btn-secondary" onClick={reset}>Restablecer</button>
       </div>
       <div className="max-h-[75vh] overflow-auto rounded-lg bg-slate-900">

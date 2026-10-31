@@ -23,7 +23,7 @@ export default function PatientTabs({ id }: { id: string }) {
             key={t.href}
             href={t.href}
             aria-current={active ? "page" : undefined}
-            className={`-mb-px whitespace-nowrap border-b-4 px-4 py-3 text-sm font-semibold ${active ? "border-teal-700 text-teal-800" : "border-transparent text-slate-700 hover:text-slate-900"}`}
+            className={`-mb-px whitespace-nowrap border-b-4 px-4 py-3 text-sm font-semibold ${active ? "border-orange-500 text-teal-800" : "border-transparent text-slate-700 hover:text-slate-900"}`}
           >
             {t.label}
           </Link>

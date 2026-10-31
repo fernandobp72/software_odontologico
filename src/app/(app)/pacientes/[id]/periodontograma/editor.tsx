@@ -159,7 +159,7 @@ export default function PerioEditor({ patientId, initial }: { patientId: string;
           <h3 className="section-title">Diente {sel.tooth}</h3>
           <div className="flex overflow-hidden rounded-lg border border-slate-500" role="group" aria-label="Dato a registrar">
             {([["pd", "Sondaje (mm)"], ["gm", "Recesión (mm)"]] as const).map(([k, label], i) => (
-              <button key={k} type="button" aria-pressed={field === k} onClick={() => setField(k)} className={`min-h-11 px-3 text-sm font-semibold ${i ? "border-l border-slate-500" : ""} ${field === k ? "bg-teal-700 text-white" : "bg-white text-slate-900"}`}>{label}</button>
+              <button key={k} type="button" aria-pressed={field === k} onClick={() => setField(k)} className={`min-h-11 px-3 text-sm font-semibold ${i ? "border-l border-slate-500" : ""} ${field === k ? "bg-teal-100 text-teal-900" : "bg-white text-slate-900"}`}>{label}</button>
             ))}
           </div>
         </div>

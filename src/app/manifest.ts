@@ -6,7 +6,7 @@ export default function manifest(): MetadataRoute.Manifest {
     short_name: "Odontología",
     start_url: "/agenda",
     display: "standalone",
-    background_color: "#f8fafc",
-    theme_color: "#0d9488",
+    background_color: "#f3f6f3",
+    theme_color: "#2a7a4b",
   };
 }

@@ -236,8 +236,8 @@ export default function Odontogram({
         <div className="flex flex-wrap gap-2">
           {(hasInitial || canEdit) && (
             <div className="flex overflow-hidden rounded-lg border border-slate-500" role="group" aria-label="Versión del odontograma">
-              <button type="button" onClick={() => setView("actual")} aria-pressed={view === "actual"} className={`min-h-11 px-3 text-sm font-semibold ${view === "actual" ? "bg-teal-700 text-white" : "bg-white text-slate-900"}`}>Actual</button>
-              <button type="button" disabled={!initial} onClick={() => setView("initial")} aria-pressed={view === "initial"} className={`min-h-11 border-l border-slate-500 px-3 text-sm font-semibold disabled:opacity-50 ${view === "initial" ? "bg-teal-700 text-white" : "bg-white text-slate-900"}`}>Inicial</button>
+              <button type="button" onClick={() => setView("actual")} aria-pressed={view === "actual"} className={`min-h-11 px-3 text-sm font-semibold ${view === "actual" ? "bg-teal-100 text-teal-900" : "bg-white text-slate-900"}`}>Actual</button>
+              <button type="button" disabled={!initial} onClick={() => setView("initial")} aria-pressed={view === "initial"} className={`min-h-11 border-l border-slate-500 px-3 text-sm font-semibold disabled:opacity-50 ${view === "initial" ? "bg-teal-100 text-teal-900" : "bg-white text-slate-900"}`}>Inicial</button>
             </div>
           )}
           {editable && <VoiceButton onPhrase={heard} label="🎤 Dictar hallazgos" />}

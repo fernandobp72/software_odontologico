@@ -145,10 +145,10 @@ export const CONDITIONS = {
   FRACTURE: { label: "Fractura", abbr: "Fr", scope: "surface", fill: "#c2410c", cls: "bg-orange-700 text-white border-orange-900" },
   CROWN: { label: "Corona", abbr: "Co", scope: "tooth", fill: "#fcd34d", cls: "bg-amber-300 text-slate-900 border-amber-700" },
   ROOT_CANAL: { label: "Endodoncia", abbr: "En", scope: "tooth", fill: "#9333ea", cls: "bg-purple-600 text-white border-purple-800" },
-  IMPLANT: { label: "Implante", abbr: "Im", scope: "tooth", fill: "#0f766e", cls: "bg-teal-700 text-white border-teal-900" },
+  IMPLANT: { label: "Implante", abbr: "Im", scope: "tooth", fill: "#0e7490", cls: "bg-cyan-700 text-white border-cyan-900" },
   IMPACTED: { label: "Retenido / impactado", abbr: "Re", scope: "tooth", fill: "#4f46e5", cls: "bg-indigo-600 text-white border-indigo-800" },
   PARTIAL: { label: "Parcialmente erupcionado", abbr: "PE", scope: "tooth", fill: "#bef264", cls: "bg-lime-300 text-slate-900 border-lime-700" },
-  EXTRACTED: { label: "Extraído", abbr: "Ex", scope: "tooth", fill: "#334155", cls: "bg-slate-700 text-white border-slate-900" },
+  EXTRACTED: { label: "Extraído", abbr: "Ex", scope: "tooth", fill: "#46514a", cls: "bg-slate-700 text-white border-slate-900" },
   MISSING: { label: "Ausente", abbr: "Au", scope: "tooth", fill: "#e2e8f0", cls: "bg-slate-200 text-slate-800 border-slate-600 border-dashed" },
 } as const;
 

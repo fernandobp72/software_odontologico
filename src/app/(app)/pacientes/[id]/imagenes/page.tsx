@@ -20,7 +20,7 @@ export default async function ImagenesPage({ params, searchParams }: PageProps<"
   });
   const hasThumb = new Set((await db.clinicalImage.findMany({ where: { id: { in: images.map((i) => i.id) }, thumb: { not: null } }, select: { id: true } })).map((i) => i.id));
   const fmt = new Intl.DateTimeFormat("es-CO", { dateStyle: "medium", timeZone: "UTC" });
-  const chip = (active: boolean) => `rounded-full border px-3 py-1.5 text-sm font-semibold ${active ? "border-teal-700 bg-teal-700 text-white" : "border-slate-500 bg-white text-slate-900"}`;
+  const chip = (active: boolean) => `rounded-full border px-3 py-1.5 text-sm font-semibold ${active ? "border-teal-700 bg-teal-100 text-teal-900" : "border-slate-500 bg-white text-slate-900"}`;
 
   return (
     <div className="space-y-6">

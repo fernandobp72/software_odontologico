@@ -31,7 +31,7 @@ export function SideNav({ role, platform }: { role: string; platform: boolean })
             key={l.href}
             href={l.href}
             aria-current={active ? "page" : undefined}
-            className={`rounded-lg px-3 py-2.5 text-sm font-semibold ${active ? "bg-teal-700 text-white" : "text-slate-800 hover:bg-slate-200"}`}
+            className={`rounded-lg px-3 py-2.5 text-sm font-semibold ${active ? "bg-teal-100 text-teal-900 shadow-[inset_4px_0_0_#e98a45]" : "text-slate-800 hover:bg-slate-200"}`}
           >
             {l.label}
           </Link>
@@ -53,7 +53,7 @@ export function BottomNav() {
             key={l.href}
             href={l.href}
             aria-current={active ? "page" : undefined}
-            className={`flex-1 py-4 text-center text-sm font-semibold ${active ? "bg-teal-50 text-teal-800 shadow-[inset_0_3px_0_#0f766e]" : "text-slate-800"}`}
+            className={`flex-1 py-4 text-center text-sm font-semibold ${active ? "bg-teal-50 text-teal-800 shadow-[inset_0_3px_0_#e98a45]" : "text-slate-800"}`}
           >
             {l.label}
           </Link>
