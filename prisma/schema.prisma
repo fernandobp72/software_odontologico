@@ -75,6 +75,8 @@ model Clinic {
   phone            String?
   // ACTIVE | TRIAL | SUSPENDED. Lo cambia el dueño de la plataforma.
   status           String            @default("ACTIVE")
+  // Consultorio interno que solo guarda la cuenta del dueño de la plataforma: no es un cliente y no tiene pacientes.
+  system           Boolean           @default(false)
   trialEndsAt      DateTime?
   termsAcceptedAt  DateTime?
   termsVersion     String?

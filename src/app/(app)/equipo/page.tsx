@@ -15,7 +15,10 @@ export default async function EquipoPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="page-title">Equipo</h1>
+      <div>
+        <h1 className="page-title">Equipo</h1>
+        <p className="muted">Quién trabaja en tu consultorio y qué puede hacer. <strong>Administrador:</strong> todo, incluidos equipo, sedes, catálogo y ajustes. <strong>Odontólogo:</strong> atiende pacientes y escribe en la historia clínica. <strong>Recepción:</strong> agenda, caja y datos de contacto, sin acceso a la historia clínica.</p>
+      </div>
       <InviteForm branches={branches} />
 
       {invitations.length > 0 && (

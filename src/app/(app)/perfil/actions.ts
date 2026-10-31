@@ -2,13 +2,13 @@
 
 import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
-import { requireUser } from "@/lib/dal";
+import { requireAnyUser } from "@/lib/dal";
 import { password } from "@/lib/tokens";
 
 export type PwState = { error?: string; ok?: boolean } | undefined;
 
 export async function changePassword(_: PwState, fd: FormData): Promise<PwState> {
-  const user = await requireUser();
+  const user = await requireAnyUser();
   const next = password.safeParse(fd.get("next"));
   if (!next.success) return { error: next.error.issues[0].message };
   const row = await db.user.findUniqueOrThrow({ where: { id: user.id }, select: { passwordHash: true } });

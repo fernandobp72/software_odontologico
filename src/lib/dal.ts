@@ -6,18 +6,26 @@ import { readSession } from "./session";
 import { db } from "./db";
 
 // Verificación real de sesión (el proxy solo hace una comprobación optimista).
-export const requireUser = cache(async () => {
+// Incluye la cuenta de plataforma; las pantallas clínicas usan requireUser, que la deja fuera.
+export const requireAnyUser = cache(async () => {
   const session = await readSession();
   if (!session) redirect("/login");
   const user = await db.user.findUnique({
     where: { id: session.userId },
-    select: { id: true, name: true, email: true, role: true, clinicId: true, active: true, isPlatformAdmin: true, clinic: { select: { name: true, status: true, trialEndsAt: true } } },
+    select: { id: true, name: true, email: true, role: true, clinicId: true, active: true, isPlatformAdmin: true, clinic: { select: { name: true, status: true, trialEndsAt: true, system: true } } },
   });
   if (!user || !user.active) redirect("/login");
   // Un consultorio suspendido no puede usar el sistema (los datos se conservan).
   if (user.clinic.status === "SUSPENDED") redirect("/suspendida");
   return user;
 });
+
+// Las cuentas de plataforma (dueño del negocio) no usan el software clínico: van a su propia zona.
+export async function requireUser() {
+  const user = await requireAnyUser();
+  if (user.clinic.system) redirect("/plataforma");
+  return user;
+}
 
 // Solo odontólogos y administradores pueden escribir en la historia clínica.
 export async function requireClinician() {
@@ -35,7 +43,7 @@ export async function currentUser() {
 }
 
 export async function requirePlatformAdmin() {
-  const user = await requireUser();
+  const user = await requireAnyUser();
   if (!user.isPlatformAdmin) redirect("/agenda");
   return user;
 }

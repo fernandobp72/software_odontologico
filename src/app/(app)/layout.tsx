@@ -1,4 +1,4 @@
-import { branchState } from "@/lib/dal";
+import { branchState, requireAnyUser } from "@/lib/dal";
 import BranchSwitcher from "./branch-switcher";
 import { logout } from "../login/actions";
 import { BottomNav, SideNav } from "./nav";
@@ -7,7 +7,35 @@ const daysLeft = (d: Date) => Math.max(0, Math.ceil((d.getTime() - Date.now()) /
 
 const ROLE: Record<string, string> = { ADMIN: "Administrador", DENTIST: "Odontólogo", RECEPTION: "Recepción" };
 
+// Zona del dueño de la plataforma: solo clientes y su cuenta, sin menú clínico ni sedes.
+function PlatformShell({ name, children }: { name: string; children: React.ReactNode }) {
+  return (
+    <div className="min-h-dvh md:flex">
+      <aside className="hidden w-60 shrink-0 flex-col border-r border-slate-300 bg-white p-4 md:flex">
+        <p className="text-lg font-bold text-teal-800">Odontología</p>
+        <p className="mb-6 text-xs font-bold uppercase tracking-wide text-orange-600">Plataforma</p>
+        <SideNav role="ADMIN" platform platformOnly />
+        <div className="mt-auto space-y-2 border-t border-slate-300 pt-4">
+          <p className="text-sm font-semibold text-slate-900">{name}</p>
+          <p className="muted">Cuenta de plataforma</p>
+          <form action={logout}><button className="btn-secondary w-full">Salir</button></form>
+        </div>
+      </aside>
+      <div className="min-w-0 flex-1 pb-20 md:pb-0">
+        <header className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-300 bg-white px-4 py-3 md:hidden">
+          <span className="font-bold text-teal-800">Plataforma</span>
+          <form action={logout}><button className="btn-secondary min-h-10 px-3">Salir</button></form>
+        </header>
+        <main className="mx-auto w-full max-w-7xl p-4 md:p-8">{children}</main>
+      </div>
+      <BottomNav platformOnly />
+    </div>
+  );
+}
+
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
+  const account = await requireAnyUser();
+  if (account.clinic.system) return <PlatformShell name={account.name}>{children}</PlatformShell>;
   const { user, branches, branch } = await branchState();
   return (
     <div className="min-h-dvh md:flex">

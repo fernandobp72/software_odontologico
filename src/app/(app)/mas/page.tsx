@@ -1,11 +1,11 @@
 import Link from "next/link";
-import { requireUser } from "@/lib/dal";
+import { requireAnyUser } from "@/lib/dal";
 import { logout } from "../../login/actions";
 
 export default async function MasPage() {
-  const user = await requireUser();
-  const items = [
-    ...(user.role === "ADMIN" ? [["/inicio", "Inicio guiado"], ["/equipo", "Equipo"], ["/sedes", "Sedes"], ["/catalogo", "Catálogo y tarifas"], ["/configuracion", "Consultorio"]] : []),
+  const user = await requireAnyUser();
+  const items = user.clinic.system ? [["/plataforma", "Clientes"], ["/perfil", "Mi cuenta"]] : [
+    ...(user.role === "ADMIN" ? [["/inicio", "Inicio guiado"], ["/equipo", "Equipo"], ["/sedes", "Sedes"], ["/catalogo", "Catálogo y tarifas"], ["/configuracion", "Mi consultorio"]] : []),
     ...(user.isPlatformAdmin ? [["/plataforma", "Plataforma"]] : []),
     ["/recordatorios", "Recordatorios"],
     ["/perfil", "Mi cuenta"],
