@@ -8,7 +8,14 @@ export default function SignupForm() {
   const [state, action, pending] = useActionState(signup, undefined);
   return (
     <form action={action} className="space-y-4">
-      <label className="label">Nombre del consultorio o clínica<input name="clinicName" required className="field" /></label>
+      <label className="label">Tu centro es un
+        <select name="noun" defaultValue="consultorio" className="field">
+          <option value="consultorio">Consultorio</option>
+          <option value="clinica">Clínica</option>
+          <option value="centro">Centro odontológico</option>
+        </select>
+      </label>
+      <label className="label">Nombre<input name="clinicName" required className="field" /></label>
       <label className="label">NIT o documento (opcional)<input name="nit" className="field" /></label>
       <label className="label">Tu nombre<input name="name" autoComplete="name" required className="field" /></label>
       <label className="label">Correo<input name="email" type="email" autoComplete="username" required className="field" /></label>

@@ -12,7 +12,7 @@ export const requireAnyUser = cache(async () => {
   if (!session) redirect("/login");
   const user = await db.user.findUnique({
     where: { id: session.userId },
-    select: { id: true, name: true, email: true, role: true, clinicId: true, active: true, isPlatformAdmin: true, clinic: { select: { name: true, status: true, trialEndsAt: true, system: true } } },
+    select: { id: true, name: true, email: true, role: true, clinicId: true, active: true, isPlatformAdmin: true, clinic: { select: { name: true, status: true, trialEndsAt: true, system: true, noun: true } } },
   });
   if (!user || !user.active) redirect("/login");
   // Un consultorio suspendido no puede usar el sistema (los datos se conservan).

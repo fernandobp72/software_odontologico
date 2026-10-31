@@ -14,7 +14,7 @@ export default async function CatalogoPage() {
     <div className="space-y-6">
       <div>
         <h1 className="page-title">Catálogo y tarifas</h1>
-        <p className="muted max-w-2xl">Define qué procedimientos ofrece tu consultorio, con qué materiales y a qué tarifa. Lo que desactives deja de ofrecerse al armar un plan; las tarifas se usan solas en los planes y en las sugerencias automáticas.</p>
+        <p className="muted max-w-2xl">Define qué procedimientos ofreces, con qué materiales y a qué tarifa. Lo que desactives deja de ofrecerse al armar un plan; las tarifas se usan solas en los planes y en las sugerencias automáticas.</p>
         {priced > 0 && <p className="mt-2 text-sm font-semibold text-amber-900">{priced} procedimientos activos todavía no tienen tarifa.</p>}
       </div>
       {priced > 0 && <ReferencePricesForm />}

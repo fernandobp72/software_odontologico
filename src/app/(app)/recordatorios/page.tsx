@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { nounOf } from "@/lib/noun";
 import { db } from "@/lib/db";
 import { requireBranch } from "@/lib/dal";
 import { cloudConfig, normalizePhone, reminderParams, reminderText } from "@/lib/whatsapp";
@@ -28,10 +29,10 @@ export default async function RecordatoriosPage() {
       {showHelp && (
         <p className="rounded-lg border border-slate-300 bg-white p-3 text-sm text-slate-900">
           {auto
-            ? "Envío automático activo: los recordatorios salen desde el WhatsApp Business del consultorio. Aquí puedes ver el estado y reenviar a mano si hace falta."
+            ? "Envío automático activo: los recordatorios salen desde el WhatsApp Business {nounOf(user.clinic.noun).del} {nounOf(user.clinic.noun).name}. Aquí puedes ver el estado y reenviar a mano si hace falta."
             : "Modo manual: pulsa «Enviar por WhatsApp» y se abre el chat con el mensaje listo; solo falta enviarlo."}
           {" "}El mensaje no incluye datos de salud y trae un enlace para confirmar o cancelar.
-          {user.role === "ADMIN" && !auto && <> Para envío automático conecta el WhatsApp Business del consultorio en <Link href="/configuracion" className="font-semibold underline">Mi consultorio</Link>.</>}
+          {user.role === "ADMIN" && !auto && <> Para envío automático conecta el WhatsApp Business {nounOf(user.clinic.noun).del} {nounOf(user.clinic.noun).name} en <Link href="/configuracion" className="font-semibold underline">Mi {nounOf(user.clinic.noun).name}</Link>.</>}
         </p>
       )}
       <ul className="space-y-3">

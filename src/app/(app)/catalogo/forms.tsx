@@ -16,7 +16,7 @@ export function ProcedureEditor({ e }: { e: CatalogEntry }) {
           <input name="price" type="number" min={0} step={1000} defaultValue={e.price} inputMode="numeric" className="field" />
         </label>
         <label className="flex min-h-11 items-center gap-2 text-sm font-semibold text-slate-900">
-          <input name="active" type="checkbox" defaultChecked={e.active} className="h-5 w-5 accent-teal-700" /> Lo ofrece el consultorio
+          <input name="active" type="checkbox" defaultChecked={e.active} className="h-5 w-5 accent-teal-700" /> Lo ofrezco / lo ofrecemos
         </label>
       </div>
       <fieldset className="space-y-2">

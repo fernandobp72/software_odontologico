@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { requirePlatformAdmin } from "@/lib/dal";
 import { extendTrial, setClinicStatus, supportRevokeInvitation } from "../actions";
-import { UserSupport } from "./support";
+import { DeleteClinic, UserSupport } from "./support";
 
 const STATUS: Record<string, { label: string; cls: string }> = {
   ACTIVE: { label: "Activo", cls: "bg-green-100 text-green-900" },
@@ -107,6 +107,8 @@ export default async function ClientePage({ params }: PageProps<"/plataforma/[id
           {c.branches.map((b) => <li key={b.id} className="px-4 py-3 text-sm text-slate-900">{b.name}{b.active ? "" : " · inactiva"}</li>)}
         </ul>
       </section>
+    
+      <DeleteClinic clinicId={c.id} name={c.name} patients={patients} />
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import { branchState, requireAnyUser } from "@/lib/dal";
+import { nounOf } from "@/lib/noun";
 import BranchSwitcher from "./branch-switcher";
 import { logout } from "../login/actions";
 import { BottomNav, SideNav } from "./nav";
@@ -42,7 +43,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <aside className="hidden w-60 shrink-0 flex-col border-r border-slate-300 bg-white p-4 md:flex">
         <p className="mb-6 text-lg font-bold text-teal-800">Odontología</p>
         {branches.length > 1 && branch && <div className="mb-4"><BranchSwitcher branches={branches} activeId={branch.id} /></div>}
-        <SideNav role={user.role} platform={user.isPlatformAdmin} />
+        <SideNav role={user.role} platform={user.isPlatformAdmin} noun={nounOf(user.clinic.noun).name} />
         <div className="mt-auto space-y-2 border-t border-slate-300 pt-4">
           <p className="text-sm font-semibold text-slate-900">{user.name}</p>
           <p className="muted">{ROLE[user.role]}</p>

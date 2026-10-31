@@ -10,11 +10,11 @@ const base = [
   { href: "/cartera", label: "Cartera" },
 ];
 
-const admin = [{ href: "/inicio", label: "Inicio" }, { href: "/equipo", label: "Equipo" }, { href: "/sedes", label: "Sedes" }, { href: "/catalogo", label: "Catálogo" }, { href: "/configuracion", label: "Mi consultorio" }];
-const linksFor = (role: string, platform: boolean) => [
+const admin = (noun: string) => [{ href: "/inicio", label: "Inicio" }, { href: "/equipo", label: "Equipo" }, { href: "/sedes", label: "Sedes" }, { href: "/catalogo", label: "Catálogo" }, { href: "/configuracion", label: `Mi ${noun}` }];
+const linksFor = (role: string, platform: boolean, noun: string) => [
   ...base,
   { href: "/recordatorios", label: "Recordatorios" },
-  ...(role === "ADMIN" ? admin : []),
+  ...(role === "ADMIN" ? admin(noun) : []),
   ...(platform ? [{ href: "/plataforma", label: "Plataforma" }] : []),
   { href: "/perfil", label: "Mi cuenta" },
 ];
@@ -23,9 +23,9 @@ const linksFor = (role: string, platform: boolean) => [
 const isActive = (path: string, href: string) => (href === "/plataforma" ? path.startsWith(href) && !path.startsWith("/plataforma/actividad") : path.startsWith(href));
 const platformLinks = [{ href: "/plataforma", label: "Clientes" }, { href: "/plataforma/actividad", label: "Actividad" }, { href: "/perfil", label: "Mi cuenta" }];
 
-export function SideNav({ role, platform, platformOnly = false }: { role: string; platform: boolean; platformOnly?: boolean }) {
+export function SideNav({ role, platform, platformOnly = false, noun = "consultorio" }: { role: string; platform: boolean; platformOnly?: boolean; noun?: string }) {
   const path = usePathname();
-  const links = platformOnly ? platformLinks : linksFor(role, platform);
+  const links = platformOnly ? platformLinks : linksFor(role, platform, noun);
   return (
     <nav aria-label="Principal" className="flex flex-col gap-1">
       {links.map((l) => {

@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { requirePlatformAdmin } from "@/lib/dal";
@@ -78,4 +79,56 @@ export async function supportRevokeInvitation(id: string): Promise<void> {
   await db.invitation.update({ where: { id }, data: { revokedAt: new Date() } });
   await log(admin.id, "PLATFORM_INVITE_REVOKE", "Invitation", id, `anuló la invitación de ${inv.email} (${inv.clinic.name})`);
   revalidatePath(`/plataforma/${inv.clinicId}`);
+}
+
+// Eliminación definitiva. La historia clínica se conserva por ley (Res. 839 de 2017, 15 años), así que un cliente con pacientes
+// no se borra: se suspende. Solo se eliminan cuentas sin pacientes (pruebas abandonadas, registros de ensayo).
+export async function deleteClinic(clinicId: string, _: SupportState, fd: FormData): Promise<SupportState> {
+  const admin = await requirePlatformAdmin();
+  const c = await db.clinic.findFirst({ where: { id: clinicId, system: false }, select: { name: true, _count: { select: { patients: true } } } });
+  if (!c) return { error: "Cliente no encontrado" };
+  if (c._count.patients > 0) return { error: "Tiene pacientes con historia clínica, que debe conservarse. Suspéndelo en su lugar." };
+  if (String(fd.get("confirm") ?? "").trim().toLowerCase() !== c.name.trim().toLowerCase()) return { error: "Escribe el nombre exacto para confirmar" };
+  try {
+    await db.$transaction([
+      db.passwordReset.deleteMany({ where: { user: { clinicId } } }),
+      db.invitation.deleteMany({ where: { clinicId } }),
+      db.cashSession.deleteMany({ where: { clinicId } }),
+      db.clinicProcedure.deleteMany({ where: { clinicId } }),
+      db.userBranch.deleteMany({ where: { branch: { clinicId } } }),
+      db.appointment.deleteMany({ where: { clinicId } }),
+      db.user.deleteMany({ where: { clinicId } }),
+      db.branch.deleteMany({ where: { clinicId } }),
+      db.clinic.delete({ where: { id: clinicId } }),
+    ]);
+  } catch {
+    return { error: "Tiene registros asociados que impiden borrarlo. Suspéndelo en su lugar." };
+  }
+  await log(admin.id, "PLATFORM_CLINIC_DELETE", "Clinic", clinicId, `eliminó definitivamente a ${c.name} (sin pacientes)`);
+  revalidatePath("/plataforma");
+  redirect("/plataforma");
+}
+
+// Un usuario solo se borra si no dejó registros (evoluciones, cobros, imágenes…); si los dejó se desactiva.
+export async function supportDeleteUser(userId: string): Promise<SupportState> {
+  const admin = await requirePlatformAdmin();
+  const t = await clientUser(userId);
+  if (!t) return { error: "Usuario no encontrado" };
+  const full = await db.user.findUniqueOrThrow({ where: { id: userId }, select: { role: true, active: true } });
+  if (full.role === "ADMIN" && full.active && (await db.user.count({ where: { clinicId: t.clinicId, role: "ADMIN", active: true, id: { not: userId } } })) === 0) {
+    return { error: "Es el único administrador activo. Suspende el cliente o crea otro administrador antes." };
+  }
+  try {
+    await db.$transaction([
+      db.passwordReset.deleteMany({ where: { userId } }),
+      db.userBranch.deleteMany({ where: { userId } }),
+      db.invitation.deleteMany({ where: { invitedById: userId } }),
+      db.user.delete({ where: { id: userId } }),
+    ]);
+  } catch {
+    return { error: "Esa persona tiene registros clínicos o de caja a su nombre. Desactívala en su lugar." };
+  }
+  await log(admin.id, "PLATFORM_USER_DELETE", "User", userId, `eliminó a ${t.email} (${t.clinic.name})`);
+  revalidatePath(`/plataforma/${t.clinicId}`);
+  return { ok: true };
 }

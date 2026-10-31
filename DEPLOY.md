@@ -125,3 +125,8 @@ Seguimiento del dictado en el odontograma: al decir «diente 15» el diente qued
 - **Soporte** desde la ficha: enlace de restablecimiento de contraseña (24 h, un solo uso; nunca se ve ni se fija una contraseña), cambiar el correo de una persona, desactivar/reactivar usuarios y anular invitaciones pendientes. No hay modo «entrar como» el cliente, a propósito.
 - **Actividad** (`/plataforma/actividad`): registro de cada acción de plataforma (quién, qué, cuándo) sobre `AuditLog`, que no se edita.
 - `User.lastLoginAt` se guarda en cada ingreso; en desarrollo `allowedDevOrigins` permite abrir el servidor por 127.0.0.1.
+
+## Eliminar y nombre del centro
+
+- **Eliminar desde plataforma** (ficha del cliente): una persona se elimina solo si no dejó registros (evoluciones, cobros, imágenes…); si los dejó se desactiva. Un cliente se elimina solo si **no tiene pacientes**, escribiendo su nombre exacto; con pacientes no se borra (la historia clínica se conserva por ley, Res. 839 de 2017) y se suspende. No se puede eliminar al único administrador activo. Todo queda en *Actividad*.
+- **Nombre del centro:** `Clinic.noun` (`consultorio`, `clinica` o `centro`) se elige al registrarse y se cambia en *Mi consultorio*; las pantallas internas lo usan con su artículo (`src/lib/noun.ts`). Las pantallas públicas y de pacientes usan textos neutros.

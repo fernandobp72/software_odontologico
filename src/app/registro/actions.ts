@@ -12,7 +12,8 @@ import { TERMS_VERSION, password } from "@/lib/tokens";
 export type SignupState = { error?: string } | undefined;
 
 const schema = z.object({
-  clinicName: z.string().trim().min(2, "Escribe el nombre del consultorio").max(120),
+  clinicName: z.string().trim().min(2, "Escribe el nombre").max(120),
+  noun: z.enum(["consultorio", "clinica", "centro"]).default("consultorio"),
   nit: z.string().trim().max(30).optional(),
   name: z.string().trim().min(3, "Escribe tu nombre").max(120),
   email: z.string().trim().toLowerCase().email("Correo inválido"),
@@ -35,7 +36,7 @@ export async function signup(_: SignupState, fd: FormData): Promise<SignupState>
   const now = new Date();
   const user = await db.$transaction(async (tx) => {
     const clinic = await tx.clinic.create({
-      data: { name: d.clinicName, nit: d.nit || null, status: "TRIAL", trialEndsAt: new Date(now.getTime() + 30 * 86_400_000), termsAcceptedAt: now, termsVersion: TERMS_VERSION },
+      data: { name: d.clinicName, noun: d.noun, nit: d.nit || null, status: "TRIAL", trialEndsAt: new Date(now.getTime() + 30 * 86_400_000), termsAcceptedAt: now, termsVersion: TERMS_VERSION },
     });
     const branch = await tx.branch.create({ data: { clinicId: clinic.id, name: "Sede principal" } });
     const admin = await tx.user.create({ data: { clinicId: clinic.id, email: d.email, name: d.name, role: "ADMIN", passwordHash: await bcrypt.hash(d.password, 12) } });

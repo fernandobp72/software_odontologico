@@ -12,7 +12,7 @@ export default async function SedesPage() {
   return (
     <div className="space-y-6">
       <h1 className="page-title">Sedes</h1>
-      <p className="muted max-w-2xl">Los pacientes y su historia clínica son del consultorio completo. La agenda, la caja y los recordatorios son de cada sede. Cada persona entra solo a las sedes que le asignes en Equipo.</p>
+      <p className="muted max-w-2xl">Los pacientes y su historia clínica son compartidos por todas las sedes. La agenda, la caja y los recordatorios son de cada sede. Cada persona entra solo a las sedes que le asignes en Equipo.</p>
       <CreateBranchForm />
       <ul className="space-y-3">
         {branches.map((b) => (

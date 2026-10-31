@@ -14,7 +14,7 @@ export default async function ConfirmarPage({ params }: PageProps<"/confirmar/[t
         {!a || a.startsAt < new Date() ? (
           <>
             <h1 className="text-xl font-bold">Enlace no disponible</h1>
-            <p className="text-slate-700">Este enlace no existe o la cita ya pasó. Comunícate con el consultorio si necesitas ayuda.</p>
+            <p className="text-slate-700">Este enlace no existe o la cita ya pasó. Comunícate con tu odontólogo si necesitas ayuda.</p>
           </>
         ) : (
           <>
@@ -22,7 +22,7 @@ export default async function ConfirmarPage({ params }: PageProps<"/confirmar/[t
             <h1 className="text-xl font-bold">Hola {a.patient.firstName}</h1>
             <p className="text-lg first-letter:uppercase text-slate-900">{fmt.format(a.startsAt)}</p>
             {a.status === "CONFIRMED" && <p className="ok-text">Tu cita está confirmada. ¡Te esperamos!</p>}
-            {a.status === "CANCELLED" && <p className="error-text">Cancelaste esta cita. Comunícate con el consultorio para reprogramar.</p>}
+            {a.status === "CANCELLED" && <p className="error-text">Cancelaste esta cita. Comunícate con tu odontólogo para reprogramar.</p>}
             {(a.status === "SCHEDULED" || a.status === "CONFIRMED") && (
               <div className="space-y-2">
                 {a.status === "SCHEDULED" && <form action={respond.bind(null, token, "CONFIRMED")}><button className="btn-primary w-full">Confirmar mi cita</button></form>}

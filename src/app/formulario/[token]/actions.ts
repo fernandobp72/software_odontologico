@@ -24,7 +24,7 @@ export async function submitIntake(token: string, _: IntakeState, fd: FormData):
   const form = token.length >= 16 ? await db.intakeForm.findUnique({ where: { tokenHash: hashToken(token) }, include: { patient: { select: { id: true, dataConsentAt: true } } } }) : null;
   if (!form || form.revokedAt || form.expiresAt < new Date() || form.submittedAt) {
     recordFailure(key);
-    return { error: "Este enlace ya no está disponible. Pide uno nuevo al consultorio." };
+    return { error: "Este enlace ya no está disponible. Pide uno nuevo en el lugar donde te atienden." };
   }
   const parsed = schema.safeParse(Object.fromEntries(fd));
   if (!parsed.success) return { error: parsed.error.issues[0].message };

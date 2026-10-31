@@ -195,7 +195,7 @@ export function ItemEditForm({ item, catalog }: { item: { id: string; name: stri
   return (
     <form action={action} className="space-y-3">
       <label className="label">Procedimiento<input name="name" defaultValue={item.name} required className="field" /></label>
-      <label className="label">{item.pending ? "Elegir la restauración definitiva (opciones de tu consultorio)" : "Cambiar por otro procedimiento del catálogo"}
+      <label className="label">{item.pending ? "Elegir la restauración definitiva (opciones de tu catálogo)" : "Cambiar por otro procedimiento del catálogo"}
         <select name="procedure" value={proc} onChange={(e) => pickProcedure(e.target.value)} className="field">
           <option value="">{item.pending ? "— Elige una opción —" : "— Mantener el actual —"}</option>
           {options.map((p) => <option key={p.procId} value={p.procId}>{p.name}{p.cups ? ` · ${p.cups}` : ""}</option>)}

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { nounOf } from "@/lib/noun";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/dal";
 
@@ -15,7 +16,7 @@ export default async function InicioPage() {
   ]);
 
   const steps = [
-    { done: !!(clinic.nit && clinic.address && clinic.phone), title: "Completa los datos del consultorio", hint: "NIT, dirección y teléfono salen en recibos y cuentas de cobro.", href: "/configuracion" },
+    { done: !!(clinic.nit && clinic.address && clinic.phone), title: `Completa los datos ${nounOf(user.clinic.noun).del} ${nounOf(user.clinic.noun).name}`, hint: "NIT, dirección y teléfono salen en recibos y cuentas de cobro.", href: "/configuracion" },
     { done: users > 1 || invites > 0, title: "Invita a tu equipo", hint: "Odontólogos, auxiliares y recepción, cada uno con su rol.", href: "/equipo" },
     { done: patients > 0, title: "Crea tu primer paciente", hint: "Con su autorización de tratamiento de datos.", href: "/pacientes/nuevo" },
     { done: plans > 0, title: "Crea un plan de tratamiento", hint: "Desde la ficha del paciente, en Diagnósticos y plan.", href: "/pacientes" },

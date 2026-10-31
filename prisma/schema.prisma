@@ -77,6 +77,8 @@ model Clinic {
   status           String            @default("ACTIVE")
   // Consultorio interno que solo guarda la cuenta del dueño de la plataforma: no es un cliente y no tiene pacientes.
   system           Boolean           @default(false)
+  // Cómo llama la organización a su centro en la interfaz: consultorio | clinica | centro
+  noun             String            @default("consultorio")
   // WhatsApp Business propio del consultorio (API de Meta). El token se guarda cifrado.
   whatsappPhoneId  String?
   whatsappToken    String?

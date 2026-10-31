@@ -3,11 +3,18 @@
 import { useActionState } from "react";
 import { clearWhatsapp, saveClinic, saveWhatsapp } from "./actions";
 
-export default function ClinicForm({ clinic }: { clinic: { name: string; nit: string | null; address: string | null; phone: string | null } }) {
+export default function ClinicForm({ clinic }: { clinic: { name: string; noun: string; nit: string | null; address: string | null; phone: string | null } }) {
   const [state, action, pending] = useActionState(saveClinic, undefined);
   return (
     <form action={action} className="card max-w-xl space-y-4">
-      <label className="label">Nombre del consultorio<input name="name" defaultValue={clinic.name} required className="field" /></label>
+      <label className="label">¿Cómo le llamas a tu centro?
+        <select name="noun" defaultValue={clinic.noun} className="field">
+          <option value="consultorio">Consultorio</option>
+          <option value="clinica">Clínica</option>
+          <option value="centro">Centro odontológico</option>
+        </select>
+      </label>
+      <label className="label">Nombre<input name="name" defaultValue={clinic.name} required className="field" /></label>
       <label className="label">NIT<input name="nit" defaultValue={clinic.nit ?? ""} className="field" /></label>
       <label className="label">Dirección<input name="address" defaultValue={clinic.address ?? ""} className="field" /></label>
       <label className="label">Teléfono<input name="phone" defaultValue={clinic.phone ?? ""} className="field" /></label>
@@ -21,7 +28,7 @@ export default function ClinicForm({ clinic }: { clinic: { name: string; nit: st
 
 export type WaInfo = { phoneId: string | null; hasToken: boolean; template: string | null; lang: string | null; auto: boolean };
 
-export function WhatsappForm({ wa }: { wa: WaInfo }) {
+export function WhatsappForm({ wa, noun }: { wa: WaInfo; noun: string }) {
   const [state, action, pending] = useActionState(saveWhatsapp, undefined);
   return (
     <section className="card max-w-xl space-y-4">
@@ -29,7 +36,7 @@ export function WhatsappForm({ wa }: { wa: WaInfo }) {
         <h2 className="section-title">WhatsApp de recordatorios</h2>
         <p className="muted">
           <strong>Sin configurar nada</strong> ya funciona el modo manual: en Recordatorios se abre tu WhatsApp (o WhatsApp Business del celular o computador) con el mensaje listo y solo pulsas enviar.
-          Para que los recordatorios salgan <strong>solos desde el número de tu consultorio</strong> conecta aquí tu cuenta de WhatsApp Business (API de Meta).
+          Para que los recordatorios salgan <strong>solos desde el número de tu {noun}</strong> conecta aquí tu cuenta de WhatsApp Business (API de Meta).
         </p>
       </div>
       <form key={wa.phoneId ?? "nuevo"} action={action} className="space-y-4">

@@ -27,7 +27,7 @@ export default async function PlataformaPage() {
         <p className="muted">Cada cliente es un consultorio o clínica con su propia cuenta. Aquí solo ves cuentas y conteos, nunca datos clínicos.</p>
       </div>
       <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <div className="card"><dt className="muted">Consultorios</dt><dd className="text-xl font-bold">{clinics.length}</dd></div>
+        <div className="card"><dt className="muted">Clientes</dt><dd className="text-xl font-bold">{clinics.length}</dd></div>
         <div className="card"><dt className="muted">Activos</dt><dd className="text-xl font-bold text-green-800">{count("ACTIVE")}</dd></div>
         <div className="card"><dt className="muted">En prueba</dt><dd className="text-xl font-bold text-blue-800">{count("TRIAL")}</dd></div>
         <div className="card"><dt className="muted">Suspendidos</dt><dd className="text-xl font-bold text-red-800">{count("SUSPENDED")}</dd></div>

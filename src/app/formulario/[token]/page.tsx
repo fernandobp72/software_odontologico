@@ -16,7 +16,7 @@ export default async function FormularioPage({ params }: PageProps<"/formulario/
       {!valid ? (
         <div className="card space-y-2 p-6 text-center">
           <h1 className="text-xl font-bold">Enlace no disponible</h1>
-          <p className="text-slate-700">Este enlace no existe o venció. Pide uno nuevo al consultorio.</p>
+          <p className="text-slate-700">Este enlace no existe o venció. Pide uno nuevo en el lugar donde te atienden.</p>
         </div>
       ) : f.submittedAt ? (
         <div className="card space-y-2 p-6 text-center">

@@ -80,7 +80,7 @@ export async function addItem(patientId: string, _: FormState, fd: FormData): Pr
   if (!plan) return { error: "Plan no encontrado" };
   if (plan.status === "COMPLETED" || plan.status === "CANCELLED") return { error: "El plan está cerrado" };
   const entry = await db.clinicProcedure.findFirst({ where: { clinicId: user.clinicId, procId: d.procedure, active: true } });
-  if (!entry) return { error: "Ese procedimiento no está activo en el catálogo del consultorio" };
+  if (!entry) return { error: "Ese procedimiento no está activo en tu catálogo" };
   const name = entry.procId === "otro" ? d.customName : entry.name;
   if (!name) return { error: "Describe el procedimiento" };
   const surfaces = fd.getAll("surfaces").map(String).filter((s) => SURFACES.some((x) => x.key === s)).join("") || null;
