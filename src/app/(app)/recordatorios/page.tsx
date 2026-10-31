@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { requireBranch } from "@/lib/dal";
-import { cloudConfigured, normalizePhone, reminderParams, reminderText } from "@/lib/whatsapp";
+import { cloudConfig, normalizePhone, reminderParams, reminderText } from "@/lib/whatsapp";
 import SendButton from "./send-button";
 
 const placeName = (clinic: string, branch: string) => (branch === "Sede principal" ? clinic : `${clinic} - ${branch}`);
@@ -15,7 +15,9 @@ export default async function RecordatoriosPage() {
     orderBy: { startsAt: "asc" },
   });
   const fmt = new Intl.DateTimeFormat("es-CO", { weekday: "long", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "America/Bogota" });
-  const auto = cloudConfigured();
+  const auto = !!cloudConfig(appointments[0]?.clinic ?? (await db.clinic.findUniqueOrThrow({ where: { id: user.clinicId } })));
+  // El texto de ayuda y la configuración son para administración y recepción; el odontólogo solo ve la lista.
+  const showHelp = user.role !== "DENTIST";
 
   return (
     <div className="space-y-4">
@@ -23,12 +25,15 @@ export default async function RecordatoriosPage() {
         <h1 className="page-title">Recordatorios</h1>
         <Link href="/agenda" className="btn-secondary">Volver a la agenda</Link>
       </div>
-      <p className="rounded-lg border border-slate-300 bg-white p-3 text-sm text-slate-900">
-        {auto
-          ? "Envío automático activo: los recordatorios salen por la API de WhatsApp. Aquí puedes ver el estado y reenviar a mano si hace falta."
-          : "Modo manual: pulsa «Enviar por WhatsApp» y se abre el chat con el mensaje listo; solo falta enviarlo. Para envío automático hay que configurar la API de WhatsApp (ver DEPLOY.md)."}
-        {" "}El mensaje no incluye datos de salud y trae un enlace para confirmar o cancelar.
-      </p>
+      {showHelp && (
+        <p className="rounded-lg border border-slate-300 bg-white p-3 text-sm text-slate-900">
+          {auto
+            ? "Envío automático activo: los recordatorios salen desde el WhatsApp Business del consultorio. Aquí puedes ver el estado y reenviar a mano si hace falta."
+            : "Modo manual: pulsa «Enviar por WhatsApp» y se abre el chat con el mensaje listo; solo falta enviarlo."}
+          {" "}El mensaje no incluye datos de salud y trae un enlace para confirmar o cancelar.
+          {user.role === "ADMIN" && !auto && <> Para envío automático conecta el WhatsApp Business del consultorio en <Link href="/configuracion" className="font-semibold underline">Mi consultorio</Link>.</>}
+        </p>
+      )}
       <ul className="space-y-3">
         {appointments.map((a) => {
           const phone = normalizePhone(a.patient.phone);

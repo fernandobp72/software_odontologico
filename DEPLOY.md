@@ -15,18 +15,15 @@
 
 **Modo manual (funciona sin configurar nada).** En *Agenda → Recordatorios por WhatsApp* se listan las citas de las próximas 72 horas. Cada botón abre WhatsApp con el mensaje ya escrito. Solo se ofrece a pacientes que autorizaron recordatorios (Ley 1581 de 2012). El mensaje no incluye datos de salud y trae un enlace público para que el paciente confirme o cancele (`/confirmar/<token>`).
 
-**Modo automático (API de WhatsApp Cloud de Meta).** Requiere una cuenta de WhatsApp Business, un número y una plantilla aprobada. Los pasos de Meta los hace el titular de la cuenta.
+**Modo automático (API de WhatsApp Cloud de Meta), una cuenta por consultorio.** Cada consultorio conecta su propio WhatsApp Business en *Mi consultorio → WhatsApp de recordatorios* (solo administrador): identificador del número, token permanente, nombre e idioma de la plantilla y el interruptor de envío automático. Al guardar se comprueba con Meta que el número y el token sirvan; el token se guarda **cifrado** (AES-256-GCM con `SECRETS_KEY`, o `SESSION_SECRET` si no existe; si esa clave cambia hay que volver a pegar los tokens) y no se vuelve a mostrar. El texto de ayuda de Recordatorios lo ven administración y recepción, no el odontólogo. Los pasos de Meta (cuenta, número, plantilla) los hace el titular de cada consultorio.
 
-1. En Meta crea una plantilla de categoría *Utilidad*, idioma español, con este cuerpo (cinco variables):
+1. En Meta se crea una plantilla de categoría *Utilidad*, idioma español, con este cuerpo (cinco variables):
    `Hola {{1}}, te recordamos tu cita en {{2}} el {{3}} a las {{4}}. Confirma o cancela aquí: {{5}}`
-2. Variables de entorno de la aplicación en Coolify:
-   - `WHATSAPP_TOKEN` token permanente de la API
-   - `WHATSAPP_PHONE_ID` identificador del número
-   - `WHATSAPP_TEMPLATE` nombre de la plantilla (por defecto `recordatorio_cita`)
-   - `WHATSAPP_TEMPLATE_LANG` código de idioma de la plantilla (por defecto `es`)
-   - `APP_URL` dirección pública con HTTPS, sin barra final (ej. `https://odontologico.fjclouds.com`)
+2. Variables de entorno de la aplicación en Coolify (ya no hay credenciales de WhatsApp globales):
+   - `APP_URL` dirección pública con HTTPS, sin barra final (ej. `https://odontologia.fjclouds.com`)
    - `CRON_SECRET` una clave larga (`openssl rand -base64 32`)
    - `REMINDER_HOURS_BEFORE` horas de anticipación (por defecto 24)
+   - `SECRETS_KEY` (opcional) clave para cifrar los tokens de los consultorios
 3. En Coolify crea una *Scheduled Task* cada 30 minutos con:
    `curl -s -X POST -H "Authorization: Bearer $CRON_SECRET" $APP_URL/api/cron/reminders`
 
