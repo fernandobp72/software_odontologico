@@ -9,7 +9,6 @@ export default function LoginPage() {
         <p className="muted mb-6">Ingresa a tu cuenta</p>
         <LoginForm />
         <p className="mt-4 text-center text-sm text-slate-800">¿Eres nuevo? <Link href="/registro" className="font-semibold underline">Crear cuenta</Link></p>
-        <p className="mt-2 text-center text-xs text-slate-700">¿Olvidaste tu contraseña? Pide al administrador de tu cuenta un enlace para restablecerla.</p>
       </div>
     </main>
   );

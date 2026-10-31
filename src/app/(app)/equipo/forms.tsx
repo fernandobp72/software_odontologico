@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useState, useTransition } from "react";
-import { createReset, invite } from "./actions";
+import { createReset, emailReset, invite } from "./actions";
 
 export const ROLE_LABEL: Record<string, string> = { ADMIN: "Administrador", DENTIST: "Odontólogo", RECEPTION: "Recepción" };
 
@@ -18,7 +18,7 @@ function LinkBox({ path, kind }: { path: string; kind: "invite" | "reset" }) {
   );
 }
 
-export function InviteForm({ branches }: { branches: { id: string; name: string }[] }) {
+export function InviteForm({ branches, mailReady }: { branches: { id: string; name: string }[]; mailReady: boolean }) {
   const [state, action, pending] = useActionState(invite, undefined);
   return (
     <form action={action} className="card space-y-3">
@@ -39,23 +39,39 @@ export function InviteForm({ branches }: { branches: { id: string; name: string 
           ))}
         </div>
       </fieldset>
+      {mailReady && (
+        <label className="flex min-h-11 cursor-pointer items-center gap-3 text-sm font-semibold text-slate-900">
+          <input type="checkbox" name="sendEmail" defaultChecked className="h-5 w-5 accent-teal-700" /> Enviar la invitación por correo
+        </label>
+      )}
       {state?.error && <p role="alert" className="error-text">{state.error}</p>}
+      {state?.emailed && <p className="ok-text" role="status">Invitación enviada a {state.emailed}.</p>}
       {state?.ok && state.token && <LinkBox path={`/invitacion/${state.token}`} kind="invite" />}
       <button disabled={pending} className="btn-primary">{pending ? "Creando…" : "Crear invitación"}</button>
     </form>
   );
 }
 
-export function ResetButton({ userId }: { userId: string }) {
+export function ResetButton({ userId, mailReady }: { userId: string; mailReady: boolean }) {
   const [token, setToken] = useState<string>();
   const [error, setError] = useState<string>();
+  const [sentTo, setSentTo] = useState<string>();
   const [pending, start] = useTransition();
   return (
     <div className="space-y-2">
+      <div className="flex flex-wrap gap-2">
       <button type="button" disabled={pending} className="btn-secondary min-h-10" onClick={() => start(async () => {
         const r = await createReset(userId);
         if (r?.token) setToken(r.token); else setError(r?.error);
       })}>Enlace para restablecer contraseña</button>
+      {mailReady && (
+        <button type="button" disabled={pending} className="btn-secondary min-h-10" onClick={() => start(async () => {
+          const r = await emailReset(userId);
+          if (r?.emailed) { setSentTo(r.emailed); setError(undefined); } else setError(r?.error);
+        })}>Enviar por correo</button>
+      )}
+      </div>
+      {sentTo && <p className="ok-text" role="status">Enviamos el enlace a {sentTo}.</p>}
       {error && <p role="alert" className="error-text">{error}</p>}
       {token && <LinkBox path={`/restablecer/${token}`} kind="reset" />}
     </div>

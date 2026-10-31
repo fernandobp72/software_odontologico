@@ -5,8 +5,10 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/dal";
 import { hashToken, newToken } from "@/lib/tokens";
+import { mailConfigured } from "@/lib/mailer";
+import { sendInviteEmail, sendResetEmail } from "@/lib/mail-links";
 
-export type TeamState = { error?: string; ok?: boolean; token?: string; kind?: "invite" | "reset" } | undefined;
+export type TeamState = { error?: string; ok?: boolean; token?: string; kind?: "invite" | "reset"; emailed?: string } | undefined;
 
 async function requireAdmin() {
   const user = await requireUser();
@@ -15,6 +17,7 @@ async function requireAdmin() {
 }
 
 const ROLES = ["ADMIN", "DENTIST", "RECEPTION"] as const;
+const ROLE_NAMES = { ADMIN: "administrador", DENTIST: "odontólogo", RECEPTION: "recepción" } as const;
 
 export async function invite(_: TeamState, fd: FormData): Promise<TeamState> {
   const admin = await requireAdmin();
@@ -31,6 +34,12 @@ export async function invite(_: TeamState, fd: FormData): Promise<TeamState> {
   });
   await db.auditLog.create({ data: { userId: admin.id, action: "INVITE", entity: "Invitation", entityId: parsed.data.email } });
   revalidatePath("/equipo");
+  // Si lo pidió y el correo de la plataforma está configurado, la invitación sale por correo; el enlace se muestra igual por si acaso.
+  if (fd.get("sendEmail") === "on" && (await mailConfigured())) {
+    const clinic = await db.clinic.findUniqueOrThrow({ where: { id: admin.clinicId }, select: { name: true } });
+    const r = await sendInviteEmail({ to: parsed.data.email, clinic: clinic.name, role: ROLE_NAMES[parsed.data.role], token });
+    return { ok: true, token, kind: "invite", emailed: r.ok ? parsed.data.email : undefined, error: r.ok ? undefined : `La invitación se creó, pero el correo no salió: ${r.error}` };
+  }
   return { ok: true, token, kind: "invite" };
 }
 
@@ -75,6 +84,17 @@ export async function createReset(userId: string): Promise<TeamState> {
   await db.passwordReset.create({ data: { userId, tokenHash: hashToken(token), expiresAt: new Date(Date.now() + 24 * 3_600_000) } });
   await db.auditLog.create({ data: { userId: admin.id, action: "RESET_LINK", entity: "User", entityId: userId } });
   return { ok: true, token, kind: "reset" };
+}
+
+// Manda por correo el enlace para restablecer la contraseña de una persona del equipo.
+export async function emailReset(userId: string): Promise<TeamState> {
+  const admin = await requireAdmin();
+  if (!(await mailConfigured())) return { error: "El envío de correos aún no está activado en la plataforma" };
+  const target = await db.user.findFirst({ where: { id: userId, clinicId: admin.clinicId, active: true } });
+  if (!target) return { error: "Usuario no encontrado" };
+  const r = await sendResetEmail(target, 24);
+  await db.auditLog.create({ data: { userId: admin.id, action: "RESET_EMAIL", entity: "User", entityId: userId } });
+  return r.ok ? { ok: true, emailed: target.email } : { error: `No se pudo enviar: ${r.error}` };
 }
 
 // Sedes a las que puede entrar una persona (el administrador entra a todas, no necesita asignación).

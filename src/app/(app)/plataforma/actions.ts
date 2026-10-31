@@ -6,6 +6,8 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { requirePlatformAdmin } from "@/lib/dal";
 import { hashToken, newToken } from "@/lib/tokens";
+import { mailConfigured } from "@/lib/mailer";
+import { sendResetEmail } from "@/lib/mail-links";
 
 export type SupportState = { error?: string; ok?: boolean; token?: string } | undefined;
 
@@ -48,6 +50,18 @@ export async function supportReset(userId: string): Promise<SupportState> {
   await db.passwordReset.create({ data: { userId, tokenHash: hashToken(token), expiresAt: new Date(Date.now() + 24 * 3_600_000) } });
   await log(admin.id, "PLATFORM_RESET_LINK", "User", userId, `generó enlace de restablecimiento para ${t.email} (${t.clinic.name})`);
   return { ok: true, token };
+}
+
+// Manda el enlace de restablecimiento al correo de la persona (24 h).
+export async function supportEmailReset(userId: string): Promise<SupportState> {
+  const admin = await requirePlatformAdmin();
+  const t = await clientUser(userId);
+  if (!t) return { error: "Usuario no encontrado" };
+  if (!(await mailConfigured())) return { error: "Configura primero el correo de la plataforma (menú Correo)" };
+  const r = await sendResetEmail({ id: t.id, email: t.email, name: t.name }, 24);
+  if (!r.ok) return { error: `No se pudo enviar: ${r.error}` };
+  await log(admin.id, "PLATFORM_RESET_EMAIL", "User", userId, `envió por correo el enlace de restablecimiento a ${t.email} (${t.clinic.name})`);
+  return { ok: true };
 }
 
 export async function supportSetActive(userId: string, active: boolean): Promise<void> {

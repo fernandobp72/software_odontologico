@@ -20,8 +20,8 @@ const linksFor = (role: string, platform: boolean, noun: string) => [
 ];
 
 // «Clientes» (/plataforma y sus fichas) no debe quedar marcado cuando se está en /plataforma/actividad.
-const isActive = (path: string, href: string) => (href === "/plataforma" ? path.startsWith(href) && !path.startsWith("/plataforma/actividad") : path.startsWith(href));
-const platformLinks = [{ href: "/plataforma", label: "Clientes" }, { href: "/plataforma/actividad", label: "Actividad" }, { href: "/perfil", label: "Mi cuenta" }];
+const isActive = (path: string, href: string) => (href === "/plataforma" ? path.startsWith(href) && !path.startsWith("/plataforma/actividad") && !path.startsWith("/plataforma/correo") && !path.startsWith("/plataforma/comunicados") : path.startsWith(href));
+const platformLinks = [{ href: "/plataforma", label: "Clientes" }, { href: "/plataforma/actividad", label: "Actividad" }, { href: "/plataforma/comunicados", label: "Comunicados" }, { href: "/plataforma/correo", label: "Correo" }, { href: "/perfil", label: "Mi cuenta" }];
 
 export function SideNav({ role, platform, platformOnly = false, noun = "consultorio" }: { role: string; platform: boolean; platformOnly?: boolean; noun?: string }) {
   const path = usePathname();

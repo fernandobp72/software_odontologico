@@ -1,14 +1,15 @@
 "use client";
 
 import { useActionState, useState, useTransition } from "react";
-import { deleteClinic, supportChangeEmail, supportDeleteUser, supportReset, supportSetActive } from "../actions";
+import { deleteClinic, supportChangeEmail, supportDeleteUser, supportEmailReset, supportReset, supportSetActive } from "../actions";
 
-export function UserSupport({ userId, email, active }: { userId: string; email: string; active: boolean }) {
+export function UserSupport({ userId, email, active, mailReady }: { userId: string; email: string; active: boolean; mailReady: boolean }) {
   const [pending, start] = useTransition();
   const [link, setLink] = useState<string>();
   const [error, setError] = useState<string>();
   const [copied, setCopied] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [sent, setSent] = useState(false);
   const [state, action, saving] = useActionState(supportChangeEmail.bind(null, userId), undefined);
 
   return (
@@ -18,6 +19,12 @@ export function UserSupport({ userId, email, active }: { userId: string; email: 
           const r = await supportReset(userId);
           if (r?.token) { setLink(`${window.location.origin}/restablecer/${r.token}`); setError(undefined); setCopied(false); } else setError(r?.error);
         })}>Enlace de contraseña</button>
+        {mailReady && (
+          <button type="button" disabled={pending} className="btn-secondary min-h-10" onClick={() => start(async () => {
+            const r = await supportEmailReset(userId);
+            if (r?.ok) { setSent(true); setError(undefined); } else setError(r?.error);
+          })}>Enviar por correo</button>
+        )}
         <button type="button" className="btn-secondary min-h-10" onClick={() => setEditing((v) => !v)}>Cambiar correo</button>
         <button type="button" disabled={pending} className={active ? "btn-danger min-h-10" : "btn-primary min-h-10"} onClick={() => start(async () => { await supportSetActive(userId, !active); })}>
           {active ? "Desactivar" : "Reactivar"}
@@ -28,6 +35,7 @@ export function UserSupport({ userId, email, active }: { userId: string; email: 
         }}>Eliminar</button>
       </div>
       {error && <p role="alert" className="error-text">{error}</p>}
+      {sent && <p className="ok-text" role="status">Enviamos el enlace a {email}.</p>}
       {link && (
         <div className="space-y-2 rounded-lg border border-teal-700 bg-teal-50 p-3">
           <p className="text-sm font-semibold text-teal-900">Enlace para {email} (24 horas, un solo uso)</p>

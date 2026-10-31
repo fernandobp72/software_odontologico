@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { nounOf } from "@/lib/noun";
 import { requireUser } from "@/lib/dal";
+import { mailConfigured } from "@/lib/mailer";
 import { InviteForm, ROLE_LABEL, ResetButton } from "./forms";
 import { revokeInvitation, setActive, setRole, setUserBranches } from "./actions";
 
@@ -12,6 +13,7 @@ export default async function EquipoPage() {
     db.invitation.findMany({ where: { clinicId: user.clinicId, acceptedAt: null, revokedAt: null, expiresAt: { gt: new Date() } }, orderBy: { createdAt: "desc" } }),
     db.branch.findMany({ where: { clinicId: user.clinicId, active: true }, orderBy: { createdAt: "asc" }, select: { id: true, name: true } }),
   ]);
+  const mailReady = await mailConfigured();
   const fmt = new Intl.DateTimeFormat("es-CO", { dateStyle: "medium", timeZone: "America/Bogota" });
 
   return (
@@ -20,7 +22,7 @@ export default async function EquipoPage() {
         <h1 className="page-title">Equipo</h1>
         <p className="muted">Quién trabaja en tu {nounOf(user.clinic.noun).name} y qué puede hacer. <strong>Administrador:</strong> todo, incluidos equipo, sedes, catálogo y ajustes. <strong>Odontólogo:</strong> atiende pacientes y escribe en la historia clínica. <strong>Recepción:</strong> agenda, caja y datos de contacto, sin acceso a la historia clínica.</p>
       </div>
-      <InviteForm branches={branches} />
+      <InviteForm branches={branches} mailReady={mailReady} />
 
       {invitations.length > 0 && (
         <section className="space-y-2">
@@ -74,7 +76,7 @@ export default async function EquipoPage() {
                   <button className="btn-secondary min-h-10">Guardar sedes</button>
                 </form>
               )}
-              <ResetButton userId={u.id} />
+              <ResetButton userId={u.id} mailReady={mailReady} />
             </li>
           ))}
         </ul>

@@ -136,3 +136,12 @@ Seguimiento del dictado en el odontograma: al decir «diente 15» el diente qued
 ## Logo del consultorio
 
 *Mi consultorio → Logo* (solo administrador): acepta JPG, PNG, WebP, GIF, AVIF, TIFF o SVG de hasta 15 MB; el servidor (`sharp`, `src/lib/logo.ts`) lo orienta, lo reduce a máximo 512 px, lo convierte a WebP con transparencia y baja la calidad solo lo necesario para quedar en unos 60 KB. Se guarda en `Clinic.logo` y se sirve en `/api/logo/<id>` con caché (es imagen de marca, sin sesión). Se muestra en el menú, los recibos, las cuentas de cobro, la confirmación de cita y el formulario previo del paciente. Un SVG que referencia archivos externos se rechaza.
+
+## Correo de la plataforma y recuperación de contraseña
+
+- **Configurar:** cuenta de plataforma → *Correo*: servidor SMTP, puerto, usuario, contraseña (cifrada, no se vuelve a mostrar), nombre y correo del remitente. Al guardar se comprueba la conexión y la autenticación, y hay un botón «Enviarme una prueba». Sirve cualquier proveedor con SMTP (Brevo, Resend, Amazon SES, Zoho, Mailgun, Gmail con contraseña de aplicación). Para que no caiga en spam, usa un remitente de tu dominio con SPF y DKIM configurados en el proveedor.
+- **Recuperar contraseña:** `/olvide` (enlace «¿Olvidaste tu contraseña?» en el login). Envía un enlace de un solo uso que vence en 1 hora; responde igual exista o no el correo y limita los intentos. Sirve para todas las cuentas, incluida la de plataforma. Sin correo configurado, el administrador sigue pudiendo generar el enlace a mano en Equipo.
+- **Invitaciones y enlaces por correo:** Equipo (casilla «Enviar la invitación por correo» y botón «Enviar por correo» para restablecer) y la ficha del cliente en plataforma (soporte).
+- **Comunicados:** cuenta de plataforma → *Comunicados*: asunto y mensaje a todos los clientes o solo activos, en prueba o suspendidos; un correo por administrador activo (tope 300 por envío), anotado en *Actividad*.
+- **Si se pierde la contraseña de la cuenta de plataforma y no hay correo:** en Coolify define `SEED_PLATFORM_EMAIL`, `SEED_PLATFORM_PASSWORD` y `SEED_RESET=1`, redespliega, entra, y luego borra `SEED_PLATFORM_PASSWORD` y `SEED_RESET`.
+- Los formularios de ingreso y de registro conservan lo escrito (menos la contraseña) cuando hay un error, y el ingreso tiene «Mostrar la contraseña».

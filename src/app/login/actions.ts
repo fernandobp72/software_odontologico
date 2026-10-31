@@ -13,16 +13,18 @@ const schema = z.object({
   password: z.string().min(1, "Ingresa tu contraseña"),
 });
 
-export type LoginState = { error?: string } | undefined;
+// Devuelve el correo escrito para que no se borre cuando hay un error (la contraseña sí se vuelve a pedir).
+export type LoginState = { error?: string; email?: string } | undefined;
 
 export async function login(_: LoginState, formData: FormData): Promise<LoginState> {
+  const typed = String(formData.get("email") ?? "");
   const parsed = schema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) return { error: parsed.error.issues[0].message };
+  if (!parsed.success) return { error: parsed.error.issues[0].message, email: typed };
 
   const email = parsed.data.email.toLowerCase();
   const ip = (await headers()).get("x-forwarded-for")?.split(",")[0].trim() ?? "local";
   const keys = [`email:${email}`, `ip:${ip}`];
-  if (keys.some(isBlocked)) return { error: "Demasiados intentos. Espera 15 minutos e inténtalo de nuevo." };
+  if (keys.some(isBlocked)) return { error: "Demasiados intentos. Espera 15 minutos e inténtalo de nuevo.", email: typed };
 
   const user = await db.user.findUnique({ where: { email } });
   // Mismo mensaje y mismo costo de bcrypt exista o no el usuario.
@@ -30,7 +32,7 @@ export async function login(_: LoginState, formData: FormData): Promise<LoginSta
   const ok = await bcrypt.compare(parsed.data.password, hash);
   if (!user || !user.active || !ok) {
     keys.forEach(recordFailure);
-    return { error: "Correo o contraseña incorrectos" };
+    return { error: "Correo o contraseña incorrectos", email: typed };
   }
   keys.forEach(clearFailures);
 

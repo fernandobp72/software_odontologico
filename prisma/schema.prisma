@@ -615,3 +615,16 @@ model IntakeForm {
   @@index([patientId, createdAt])
   @@index([clinicId, submittedAt])
 }
+
+// Conexión de correo saliente de la plataforma (SMTP). Una sola fila; la contraseña se guarda cifrada.
+model EmailConfig {
+  id          String   @id @default("main")
+  host        String
+  port        Int
+  secure      Boolean  @default(false)
+  username    String?
+  passwordEnc String?
+  fromName    String
+  fromEmail   String
+  updatedAt   DateTime @updatedAt
+}

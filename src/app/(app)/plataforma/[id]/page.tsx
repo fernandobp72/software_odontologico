@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { requirePlatformAdmin } from "@/lib/dal";
+import { mailConfigured } from "@/lib/mailer";
 import { extendTrial, setClinicStatus, supportRevokeInvitation } from "../actions";
 import { DeleteClinic, UserSupport } from "./support";
 
@@ -19,6 +20,7 @@ export default async function ClientePage({ params }: PageProps<"/plataforma/[id
   const c = await db.clinic.findFirst({ where: { id, system: false }, include: { branches: { orderBy: { createdAt: "asc" }, select: { id: true, name: true, active: true } } } });
   if (!c) notFound();
 
+  const mailReady = await mailConfigured();
   const since = new Date(new Date().getTime() - 30 * 86_400_000);
   const [users, invitations, patients, appts, images, evolutions] = await Promise.all([
     db.user.findMany({ where: { clinicId: id }, orderBy: [{ active: "desc" }, { role: "asc" }, { name: "asc" }], select: { id: true, name: true, email: true, role: true, active: true, lastLoginAt: true, createdAt: true } }),
@@ -81,7 +83,7 @@ export default async function ClientePage({ params }: PageProps<"/plataforma/[id
                 </div>
                 <span className={`rounded-full px-3 py-1 text-xs font-semibold ${u.active ? "bg-green-100 text-green-900" : "bg-slate-200 text-slate-800"}`}>{u.active ? "Activo" : "Inactivo"}</span>
               </div>
-              <UserSupport userId={u.id} email={u.email} active={u.active} />
+              <UserSupport userId={u.id} email={u.email} active={u.active} mailReady={mailReady} />
             </li>
           ))}
         </ul>
