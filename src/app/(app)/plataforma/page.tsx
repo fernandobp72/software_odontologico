@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { db } from "@/lib/db";
 import { requirePlatformAdmin } from "@/lib/dal";
 import { extendTrial, setClinicStatus } from "./actions";
@@ -36,13 +37,14 @@ export default async function PlataformaPage() {
           <li key={c.id} className="card space-y-3">
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div>
-                <p className="text-lg font-semibold text-slate-900">{c.name}</p>
+                <Link href={`/plataforma/${c.id}`} className="text-lg font-semibold text-teal-800 underline">{c.name}</Link>
                 <p className="muted">{c.users.map((u) => `${u.name} · ${u.email}`).join(" · ") || "Sin administrador activo"}</p>
                 <p className="muted">Creado {fmt.format(c.createdAt)} · {c._count.users} usuarios · {c._count.patients} pacientes{c.status === "TRIAL" && c.trialEndsAt ? ` · prueba hasta ${fmt.format(c.trialEndsAt)}` : ""}</p>
               </div>
               <span className={`rounded-full px-3 py-1 text-xs font-semibold ${STATUS[c.status]?.cls}`}>{STATUS[c.status]?.label ?? c.status}</span>
             </div>
             <div className="flex flex-wrap gap-2">
+              <Link href={`/plataforma/${c.id}`} className="btn-secondary min-h-10">Ver ficha</Link>
               {c.status !== "ACTIVE" && <form action={setClinicStatus.bind(null, c.id, "ACTIVE")}><button className="btn-primary min-h-10">Activar</button></form>}
               {c.status !== "SUSPENDED" && <form action={setClinicStatus.bind(null, c.id, "SUSPENDED")}><button className="btn-danger min-h-10">Suspender</button></form>}
               <form action={extendTrial.bind(null, c.id, 15)}><button className="btn-secondary min-h-10">Dar 15 días de prueba</button></form>

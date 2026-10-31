@@ -104,6 +104,7 @@ model User {
   licenseNumber       String?
   active              Boolean              @default(true)
   isPlatformAdmin     Boolean              @default(false)
+  lastLoginAt         DateTime?
   createdAt           DateTime             @default(now())
   appointments        Appointment[]
   evolutions          Evolution[]
@@ -237,9 +238,12 @@ model AuditLog {
   action    String
   entity    String
   entityId  String?
+  // Texto legible para el registro de actividad de la plataforma (qué cliente o persona)
+  detail    String?
   createdAt DateTime @default(now())
 
   @@index([entity, entityId])
+  @@index([createdAt])
 }
 
 // Valoración clínica (anamnesis + examen). Solo se agregan versiones; la última es la vigente.

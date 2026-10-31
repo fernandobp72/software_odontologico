@@ -121,3 +121,10 @@ En el odontograma ("Dictar hallazgos") y el periodontograma ("Dictar sondaje") e
 - Periodontograma: «diente 18 vestibular 3 2 4 palatino 4 3 3» (los valores van por los 6 sitios, de izquierda a derecha como en el teclado y de a uno, 0 a 9), «sangra» / «placa» (el último sitio), «recesión 1 0 2», «menos 1», «ausente», «movilidad 2», «furca 1», «supuración». Los números de diente se dicen después de la palabra «diente».
 
 Seguimiento del dictado en el odontograma: al decir «diente 15» el diente queda marcado de inmediato (también con resultados parciales, antes de terminar la frase) y las frases siguientes se aplican a él: «oclusal mesial» (se recuerdan las superficies) y luego «caries de dentina»; o «caries» y luego «oclusal». Un diente nuevo reinicia lo pendiente.
+
+## Administración de plataforma (cuenta de plataforma)
+
+- **Clientes** (`/plataforma`): lista de consultorios con su administrador, estado, prueba y acciones rápidas. Cada cliente tiene una **ficha** (`/plataforma/<id>`) con datos de contacto, uso (pacientes, citas y evoluciones de 30 días, imágenes y MB, usuarios y sedes activos, última entrada) y la lista de personas y sedes. Solo conteos y tamaños: nunca contenido clínico.
+- **Soporte** desde la ficha: enlace de restablecimiento de contraseña (24 h, un solo uso; nunca se ve ni se fija una contraseña), cambiar el correo de una persona, desactivar/reactivar usuarios y anular invitaciones pendientes. No hay modo «entrar como» el cliente, a propósito.
+- **Actividad** (`/plataforma/actividad`): registro de cada acción de plataforma (quién, qué, cuándo) sobre `AuditLog`, que no se edita.
+- `User.lastLoginAt` se guarda en cada ingreso; en desarrollo `allowedDevOrigins` permite abrir el servidor por 127.0.0.1.

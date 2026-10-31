@@ -34,6 +34,7 @@ export async function login(_: LoginState, formData: FormData): Promise<LoginSta
   }
   keys.forEach(clearFailures);
 
+  await db.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
   await createSession({ userId: user.id, clinicId: user.clinicId, role: user.role });
   redirect("/agenda");
 }

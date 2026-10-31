@@ -19,7 +19,9 @@ const linksFor = (role: string, platform: boolean) => [
   { href: "/perfil", label: "Mi cuenta" },
 ];
 
-const platformLinks = [{ href: "/plataforma", label: "Clientes" }, { href: "/perfil", label: "Mi cuenta" }];
+// «Clientes» (/plataforma y sus fichas) no debe quedar marcado cuando se está en /plataforma/actividad.
+const isActive = (path: string, href: string) => (href === "/plataforma" ? path.startsWith(href) && !path.startsWith("/plataforma/actividad") : path.startsWith(href));
+const platformLinks = [{ href: "/plataforma", label: "Clientes" }, { href: "/plataforma/actividad", label: "Actividad" }, { href: "/perfil", label: "Mi cuenta" }];
 
 export function SideNav({ role, platform, platformOnly = false }: { role: string; platform: boolean; platformOnly?: boolean }) {
   const path = usePathname();
@@ -27,7 +29,7 @@ export function SideNav({ role, platform, platformOnly = false }: { role: string
   return (
     <nav aria-label="Principal" className="flex flex-col gap-1">
       {links.map((l) => {
-        const active = path.startsWith(l.href);
+        const active = isActive(path, l.href);
         return (
           <Link
             key={l.href}
@@ -49,7 +51,7 @@ export function BottomNav({ platformOnly = false }: { platformOnly?: boolean }) 
   return (
     <nav aria-label="Principal" className="fixed inset-x-0 bottom-0 z-20 flex border-t border-slate-300 bg-white md:hidden">
       {links.map((l) => {
-        const active = path.startsWith(l.href);
+        const active = isActive(path, l.href);
         return (
           <Link
             key={l.href}
