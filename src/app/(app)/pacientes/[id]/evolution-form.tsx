@@ -1,20 +1,10 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { CIE10, CUPS, NOTE_TEMPLATES } from "@/lib/catalogs";
 import { buildEvolutionText, replaceBlock, type DoneItem } from "@/lib/evolution-text";
 import { signEvolution, type EvolutionState } from "./actions";
-
-type SpeechEvent = { resultIndex: number; results: ArrayLike<ArrayLike<{ transcript: string }> & { isFinal: boolean }> };
-type Recognizer = { start(): void; stop(): void; lang: string; continuous: boolean; interimResults: boolean; onresult: ((e: SpeechEvent) => void) | null; onend: (() => void) | null };
-type RecognizerCtor = new () => Recognizer;
-type SpeechWindow = { SpeechRecognition?: RecognizerCtor; webkitSpeechRecognition?: RecognizerCtor };
-
-const speechCtor = () => {
-  const w = window as unknown as SpeechWindow;
-  return w.SpeechRecognition ?? w.webkitSpeechRecognition;
-};
-const noSubscribe = () => () => {};
+import VoiceButton from "./voice-button";
 
 export default function EvolutionForm({ patientId, openItems = [] }: { patientId: string; openItems?: DoneItem[] }) {
   const [note, setNote] = useState("");
@@ -38,11 +28,6 @@ export default function EvolutionForm({ patientId, openItems = [] }: { patientId
     return res;
   }, undefined);
   const draftKey = `evolucion-${patientId}`;
-  const [listening, setListening] = useState(false);
-  const voiceOk = useSyncExternalStore(noSubscribe, () => !!speechCtor(), () => false);
-  const rec = useRef<Recognizer | null>(null);
-  const wantListening = useRef(false);
-  const lastHeard = useRef("");
 
   useEffect(() => {
     // Recupera el borrador guardado en este dispositivo.
@@ -53,34 +38,6 @@ export default function EvolutionForm({ patientId, openItems = [] }: { patientId
   useEffect(() => {
     try { if (note) localStorage.setItem(draftKey, note); else localStorage.removeItem(draftKey); } catch {}
   }, [note, draftKey]);
-
-  // Chrome en Android repite los resultados en modo continuo, así que se usa una
-  // frase por sesión (continuous=false), solo resultados finales, y se reinicia al terminar.
-  function startRecognizer() {
-    const Ctor = speechCtor();
-    if (!Ctor) return;
-    const r = new Ctor();
-    lastHeard.current = ""; // el filtro de duplicados es solo por sesión
-    r.lang = "es-CO";
-    r.continuous = false;
-    r.interimResults = false;
-    r.onresult = (e) => {
-      let text = "";
-      for (let i = e.resultIndex; i < e.results.length; i++) {
-        if (e.results[i].isFinal) text += e.results[i][0].transcript + " ";
-      }
-      text = text.trim();
-      if (!text || text === lastHeard.current) return;
-      lastHeard.current = text;
-      setNote((cur) => (cur ? cur + " " : "") + text);
-    };
-    r.onend = () => {
-      if (wantListening.current) startRecognizer();
-      else setListening(false);
-    };
-    rec.current = r;
-    try { r.start(); } catch { setListening(false); wantListening.current = false; }
-  }
 
   // Al marcar lo realizado hoy, la nota y los códigos se completan solos (y se pueden editar).
   function toggleItem(id: string) {
@@ -101,18 +58,6 @@ export default function EvolutionForm({ patientId, openItems = [] }: { patientId
     // Solo se reemplaza el código si está vacío o es el que puso el sistema antes.
     setDx((cur) => (cur === "" || cur === oldDx ? newDx : cur));
     setProc((cur) => (cur === "" || cur === oldProc ? newProc : cur));
-  }
-
-  function toggleVoice() {
-    if (listening) {
-      wantListening.current = false;
-      rec.current?.stop();
-      setListening(false);
-      return;
-    }
-    wantListening.current = true;
-    setListening(true);
-    startRecognizer();
   }
 
   return (
@@ -148,11 +93,7 @@ export default function EvolutionForm({ patientId, openItems = [] }: { patientId
       <div>
         <div className="flex items-center justify-between">
           <label htmlFor="note" className="label">Evolución</label>
-          {voiceOk && (
-            <button type="button" onClick={toggleVoice} className={listening ? "btn bg-red-700 text-white hover:bg-red-800" : "btn-secondary"}>
-              {listening ? "Detener dictado" : "🎤 Dictar"}
-            </button>
-          )}
+          <VoiceButton label="🎤 Dictar" onPhrase={(text) => setNote((cur) => (cur ? cur + " " : "") + text)} />
         </div>
         <textarea id="note" name="note" rows={5} value={note} onChange={(e) => setNote(e.target.value)} className="field" />
         <div className="mt-2 flex flex-wrap gap-2">
