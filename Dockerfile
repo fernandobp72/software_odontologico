@@ -33,6 +33,6 @@ COPY --from=build /app/prisma ./prisma
 COPY --from=tools /tools /tools
 EXPOSE 3000
 
-# Aplica migraciones, crea el usuario inicial si SEED_PASSWORD (consultorio) o SEED_PLATFORM_PASSWORD (cuenta de plataforma) están definidas (idempotente) y arranca.
+# Aplica migraciones, crea el usuario inicial si SEED_PASSWORD (consultorio) o SEED_PLATFORM_EMAIL (cuenta de plataforma) están definidas (idempotente) y arranca.
 # NODE_PATH solo para el seed: bcryptjs viene en las herramientas, no en el paquete autónomo.
-CMD ["sh", "-c", "/tools/node_modules/.bin/prisma migrate deploy --schema prisma/schema.prisma && { { [ -z \"$SEED_PASSWORD\" ] && [ -z \"$SEED_PLATFORM_PASSWORD\" ]; } || NODE_PATH=/tools/node_modules /tools/node_modules/.bin/tsx prisma/seed.ts || true; } && node server.js"]
+CMD ["sh", "-c", "/tools/node_modules/.bin/prisma migrate deploy --schema prisma/schema.prisma && { { [ -z \"$SEED_PASSWORD\" ] && [ -z \"$SEED_PLATFORM_EMAIL\" ]; } || NODE_PATH=/tools/node_modules /tools/node_modules/.bin/tsx prisma/seed.ts || true; } && node server.js"]

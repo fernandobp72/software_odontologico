@@ -6,15 +6,28 @@ const db = new PrismaClient();
 // Cuenta del dueño de la plataforma: vive en un consultorio interno (system) y solo ve clientes.
 // Al crearla se retira el permiso de plataforma de cualquier otra cuenta de consultorio.
 async function platformAccount() {
-  const password = process.env.SEED_PLATFORM_PASSWORD;
   const email = process.env.SEED_PLATFORM_EMAIL?.toLowerCase();
-  if (!password || !email) return;
+  if (!email) return;
+  const password = process.env.SEED_PLATFORM_PASSWORD;
   const clinic = await db.clinic.upsert({ where: { id: "plataforma" }, update: { system: true }, create: { id: "plataforma", name: "Plataforma", system: true } });
-  await db.user.upsert({
-    where: { email },
-    update: { isPlatformAdmin: true, ...(process.env.SEED_RESET === "1" ? { passwordHash: await bcrypt.hash(password, 12) } : {}) },
-    create: { clinicId: clinic.id, email, name: process.env.SEED_PLATFORM_NAME ?? "Dueño de la plataforma", role: "ADMIN", isPlatformAdmin: true, passwordHash: await bcrypt.hash(password, 12) },
-  });
+  const existing = await db.user.findUnique({ where: { email }, select: { id: true, clinicId: true, clinic: { select: { _count: { select: { patients: true } } } } } });
+  if (existing && existing.clinicId !== clinic.id) {
+    // Cuenta ya registrada como consultorio: solo se convierte si ese consultorio no tiene pacientes.
+    if (existing.clinic._count.patients > 0) {
+      console.error(`${email} ya atiende pacientes en un consultorio; usa otro correo para la cuenta de plataforma.`);
+      return;
+    }
+    await db.userBranch.deleteMany({ where: { userId: existing.id } });
+    await db.user.update({ where: { id: existing.id }, data: { clinicId: clinic.id, isPlatformAdmin: true, role: "ADMIN", ...(password && process.env.SEED_RESET === "1" ? { passwordHash: await bcrypt.hash(password, 12) } : {}) } });
+  } else if (existing) {
+    await db.user.update({ where: { id: existing.id }, data: { isPlatformAdmin: true, ...(password && process.env.SEED_RESET === "1" ? { passwordHash: await bcrypt.hash(password, 12) } : {}) } });
+  } else {
+    if (!password) {
+      console.error("Falta SEED_PLATFORM_PASSWORD para crear la cuenta de plataforma.");
+      return;
+    }
+    await db.user.create({ data: { clinicId: clinic.id, email, name: process.env.SEED_PLATFORM_NAME ?? "Dueño de la plataforma", role: "ADMIN", isPlatformAdmin: true, passwordHash: await bcrypt.hash(password, 12) } });
+  }
   await db.user.updateMany({ where: { isPlatformAdmin: true, clinicId: { not: clinic.id } }, data: { isPlatformAdmin: false } });
   console.log(`Cuenta de plataforma lista: ${email}`);
 }
