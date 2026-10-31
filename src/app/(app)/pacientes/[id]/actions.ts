@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { requireClinician } from "@/lib/dal";
+import { redirect } from "next/navigation";
+import { requireClinician, requireUser } from "@/lib/dal";
 import { CONDITIONS, SURFACES, VALID_TEETH } from "@/lib/catalogs";
 import { syncPlan } from "@/lib/plan";
 
@@ -105,4 +106,42 @@ export async function signEvolution(_: EvolutionState, formData: FormData): Prom
   revalidatePath(`/pacientes/${patient.id}`);
   revalidatePath(`/pacientes/${patient.id}/plan`);
   return { ok: true };
+}
+
+export type DeleteState = { error?: string } | undefined;
+
+// Eliminación de un paciente de PRUEBA. La historia clínica real se conserva por ley (Res. 839 de 2017), así que exige
+// confirmar que es de prueba y escribir su documento; solo el administrador, y queda en el registro de auditoría.
+// Si tiene recibos o cuentas de cobro no se borra: el consecutivo de dinero no debe tener huecos.
+export async function deleteTestPatient(patientId: string, _: DeleteState, fd: FormData): Promise<DeleteState> {
+  const user = await requireUser();
+  if (user.role !== "ADMIN") return { error: "Solo el administrador puede eliminar pacientes de prueba" };
+  const p = await db.patient.findFirst({ where: { id: patientId, clinicId: user.clinicId }, select: { id: true, documentNumber: true, _count: { select: { payments: true, invoices: true } } } });
+  if (!p) return { error: "Paciente no encontrado" };
+  if (fd.get("isTest") !== "on") return { error: "Marca la casilla que confirma que es un paciente de prueba" };
+  if (String(fd.get("document") ?? "").trim() !== p.documentNumber) return { error: "Escribe el número de documento exacto para confirmar" };
+  if (p._count.payments > 0 || p._count.invoices > 0) return { error: "Tiene recibos o cuentas de cobro emitidos, que deben conservarse. No se puede eliminar." };
+  try {
+    await db.$transaction([
+      db.reminder.deleteMany({ where: { appointment: { patientId } } }),
+      db.appointment.deleteMany({ where: { patientId } }),
+      db.treatmentPlan.deleteMany({ where: { patientId } }),
+      db.evolution.deleteMany({ where: { patientId } }),
+      db.diagnosis.deleteMany({ where: { patientId } }),
+      db.dismissedSuggestion.deleteMany({ where: { patientId } }),
+      db.toothFinding.deleteMany({ where: { patientId } }),
+      db.odontogramSnapshot.deleteMany({ where: { patientId } }),
+      db.perioExam.deleteMany({ where: { patientId } }),
+      db.assessment.deleteMany({ where: { patientId } }),
+      db.consent.deleteMany({ where: { patientId } }),
+      db.clinicalImage.deleteMany({ where: { patientId } }),
+      db.intakeForm.deleteMany({ where: { patientId } }),
+      db.patient.delete({ where: { id: patientId } }),
+    ]);
+  } catch {
+    return { error: "Tiene registros asociados que impiden eliminarlo." };
+  }
+  await db.auditLog.create({ data: { userId: user.id, action: "PATIENT_DELETE_TEST", entity: "Patient", entityId: patientId, detail: "eliminó un paciente marcado como de prueba" } });
+  revalidatePath("/pacientes");
+  redirect("/pacientes");
 }
