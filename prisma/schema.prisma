@@ -114,6 +114,7 @@ model User {
   role                Role
   // Registro profesional (RETHUS / tarjeta profesional) requerido para firmar evoluciones
   licenseNumber       String?
+  phone               String?
   active              Boolean              @default(true)
   isPlatformAdmin     Boolean              @default(false)
   lastLoginAt         DateTime?

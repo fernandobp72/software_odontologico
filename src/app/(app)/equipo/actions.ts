@@ -75,15 +75,19 @@ export async function setActive(userId: string, active: boolean): Promise<void> 
   revalidatePath("/equipo");
 }
 
-// El administrador corrige el nombre y el registro profesional de cualquier persona de su equipo (por ejemplo, si quedó mal escrito).
+// El administrador corrige el nombre, el correo, el celular y el registro profesional de cualquier persona de su equipo.
 export async function updatePerson(userId: string, fd: FormData): Promise<void> {
   const admin = await requireAdmin();
   const target = await db.user.findFirst({ where: { id: userId, clinicId: admin.clinicId } });
   if (!target) return;
   const name = String(fd.get("name") ?? "").trim().replace(/\s+/g, " ");
   const license = String(fd.get("license") ?? "").trim();
-  if (name.length < 3 || name.length > 120 || license.length > 40) return;
-  await db.user.update({ where: { id: userId }, data: { name, licenseNumber: target.role === "RECEPTION" ? null : license || null } });
+  const phone = String(fd.get("phone") ?? "").trim();
+  const email = z.string().trim().toLowerCase().email().safeParse(fd.get("email"));
+  if (name.length < 3 || name.length > 120 || license.length > 40 || phone.length > 30 || !email.success) return;
+  // El correo es el usuario de ingreso: no puede repetirse con otra cuenta.
+  if (email.data !== target.email && (await db.user.findUnique({ where: { email: email.data } }))) return;
+  await db.user.update({ where: { id: userId }, data: { name, phone: phone || null, email: email.data, licenseNumber: target.role === "RECEPTION" ? null : license || null } });
   await db.auditLog.create({ data: { userId: admin.id, action: "USER_UPDATE", entity: "User", entityId: userId } });
   revalidatePath("/equipo");
 }

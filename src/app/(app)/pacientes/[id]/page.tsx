@@ -6,6 +6,8 @@ import { setWhatsappOptIn } from "../../recordatorios/actions";
 import Odontogram from "./odontogram";
 import EvolutionForm from "./evolution-form";
 import DeleteTestPatient from "./delete-test";
+import Link from "next/link";
+import { ageText } from "@/lib/patient-fields";
 
 export default async function PacientePage({ params }: PageProps<"/pacientes/[id]">) {
   const user = await requireUser();
@@ -35,9 +37,14 @@ export default async function PacientePage({ params }: PageProps<"/pacientes/[id
 
   const rows: [string, string | null][] = [
     ["Documento", `${p.documentType} ${p.documentNumber}`],
+    ["Nacimiento", p.birthDate ? `${new Intl.DateTimeFormat("es-CO", { dateStyle: "long", timeZone: "UTC" }).format(p.birthDate)} (${ageText(p.birthDate)})` : null],
+    ["Sexo", p.sex === "F" ? "Femenino" : p.sex === "M" ? "Masculino" : p.sex === "O" ? "Otro" : null],
     ["Celular", p.phone],
     ["Correo", p.email],
-    ["EPS", p.eps],
+    ["Dirección", [p.address, p.city].filter(Boolean).join(", ") || null],
+    ["Ocupación", p.occupation],
+    ["EPS", [p.eps, p.regime ? p.regime.charAt(0) + p.regime.slice(1).toLowerCase() : null].filter(Boolean).join(" · ") || null],
+    ["Acompañante", [p.companionName, p.companionKin ? `(${p.companionKin})` : null, p.companionPhone].filter(Boolean).join(" ") || null],
     ["Alergias", p.allergies],
   ];
 
@@ -45,6 +52,7 @@ export default async function PacientePage({ params }: PageProps<"/pacientes/[id
     <div className="space-y-4">
       <div className="grid gap-6 lg:grid-cols-3 lg:items-start">
         <aside className="order-first lg:order-last lg:sticky lg:top-8">
+          <div className="mb-3 flex justify-end"><Link href={`/pacientes/${p.id}/editar`} className="btn-secondary min-h-10">Editar datos</Link></div>
           <dl className="card divide-y divide-slate-200 p-0">
             {rows.map(([k, v]) => (
               <div key={k} className="flex justify-between gap-4 px-4 py-3">

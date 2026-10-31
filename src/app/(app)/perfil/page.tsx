@@ -1,13 +1,13 @@
 import { requireAnyUser } from "@/lib/dal";
 import { nounOf } from "@/lib/noun";
-import PasswordForm, { ProfileForm } from "./form";
+import PasswordForm, { EmailForm, ProfileForm } from "./form";
 import { db } from "@/lib/db";
 
 const ROLE: Record<string, string> = { ADMIN: "Administrador", DENTIST: "Odontólogo", RECEPTION: "Recepción" };
 
 export default async function PerfilPage() {
   const user = await requireAnyUser();
-  const me = await db.user.findUniqueOrThrow({ where: { id: user.id }, select: { licenseNumber: true } });
+  const me = await db.user.findUniqueOrThrow({ where: { id: user.id }, select: { licenseNumber: true, phone: true, email: true } });
   return (
     <div className="space-y-4">
       <h1 className="page-title">Mi cuenta</h1>
@@ -16,7 +16,8 @@ export default async function PerfilPage() {
           <div key={k} className="flex justify-between gap-4 px-4 py-3"><dt className="muted">{k}</dt><dd className="text-right text-sm font-semibold text-slate-900">{v}</dd></div>
         ))}
       </dl>
-      <ProfileForm key={user.name} name={user.name} license={me.licenseNumber} clinical={!user.clinic.system && user.role !== "RECEPTION"} />
+      <ProfileForm key={`${user.name}${me.phone}`} name={user.name} phone={me.phone} license={me.licenseNumber} clinical={!user.clinic.system && user.role !== "RECEPTION"} />
+      <EmailForm key={me.email} email={me.email} />
       <PasswordForm />
     </div>
   );
