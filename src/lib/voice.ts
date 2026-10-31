@@ -72,9 +72,17 @@ const SURFACE_WORDS: Record<string, string[]> = {
 const WHOLE_WORDS = new Set(["todo", "todas", "completo", "completa", "entero", "entera"]);
 
 export type OdontoCommand = { tooth: number; surfaces: string[] | null; condition: ConditionKey };
-export type OdontoParse = { commands: OdontoCommand[]; warnings: string[] };
+// Lo que queda de una frase para la siguiente: superficies dichas sin estado, o un estado dicho sin superficie.
+export type OdontoCarry = { pending: string[]; whole: boolean; awaiting?: ConditionKey };
+export type OdontoParse = { commands: OdontoCommand[]; warnings: string[]; tooth: number | null; carry: OdontoCarry };
 
-export function parseOdontogram(text: string, current?: number | null): OdontoParse {
+// Último diente nombrado en un texto (sirve con resultados parciales para marcarlo apenas se dice).
+export function lastToothIn(text: string): number | null {
+  const t = tokenize(text).filter(isTooth);
+  return t.length ? Number(t[t.length - 1]) : null;
+}
+
+export function parseOdontogram(text: string, current?: number | null, carry?: OdontoCarry): OdontoParse {
   const tokens = tokenize(text);
   const commands: OdontoCommand[] = [];
   const warnings: string[] = [];
@@ -82,10 +90,17 @@ export function parseOdontogram(text: string, current?: number | null): OdontoPa
   let teeth: number[] = current && !tokens.some(isTooth) ? [current] : [];
   let group: (typeof open)[number] | null = null;
   let preCond: ConditionKey | null = null;
-  let pending: string[] = [];
-  let pendingWhole = false;
+  let pending: string[] = [...(carry?.pending ?? [])];
+  let pendingWhole = carry?.whole ?? false;
   let open: { teeth: number[]; condition: ConditionKey; surfaces: string[]; whole: boolean }[] = [];
   const emitted: typeof open = [];
+  let awaiting: ConditionKey | undefined;
+  if (carry?.awaiting && teeth.length) {
+    // La frase anterior dejó un estado sin superficie: las superficies de esta frase se le aplican.
+    const cmd = { teeth: [...teeth], condition: carry.awaiting, surfaces: [], whole: false };
+    emitted.push(cmd);
+    open = [cmd];
+  }
 
   const flush = () => {
     for (const o of emitted) {
@@ -94,7 +109,7 @@ export function parseOdontogram(text: string, current?: number | null): OdontoPa
         if (o.condition === "HEALTHY" || scope === "tooth") commands.push({ tooth: t, surfaces: null, condition: o.condition });
         else if (o.whole) commands.push({ tooth: t, surfaces: null, condition: o.condition });
         else if (o.surfaces.length) commands.push({ tooth: t, surfaces: [...new Set(o.surfaces)], condition: o.condition });
-        else warnings.push(`Diente ${t}: falta la superficie para «${CONDITIONS[o.condition].label}»`);
+        else { awaiting = o.condition; warnings.push(`Diente ${t}: di la superficie para «${CONDITIONS[o.condition].label}»`); }
       }
     }
     emitted.length = 0;
@@ -157,8 +172,16 @@ export function parseOdontogram(text: string, current?: number | null): OdontoPa
   }
   flush();
   if (preCond) warnings.push(`«${CONDITIONS[preCond].label}» sin diente: di el número del diente`);
-  if (!commands.length && !warnings.length) warnings.push("No entendí ningún hallazgo. Ejemplo: «diente 16 oclusal mesial caries de dentina»");
-  return { commands, warnings };
+  const mentioned = tokens.some(isTooth);
+  const leftover = !commands.length && !awaiting && !pending.length && !pendingWhole;
+  // Solo «diente 15» es una orden válida: marca el diente y espera el resto en la frase siguiente.
+  if (leftover && !warnings.length && !mentioned) warnings.push("No entendí ningún hallazgo. Ejemplo: «diente 16 oclusal mesial caries de dentina»");
+  return {
+    commands,
+    warnings,
+    tooth: teeth.length ? teeth[teeth.length - 1] : (current ?? null),
+    carry: { pending: commands.length || mentioned ? [] : pending, whole: commands.length || mentioned ? false : pendingWhole, awaiting },
+  };
 }
 
 // ---------- Periodontograma ----------

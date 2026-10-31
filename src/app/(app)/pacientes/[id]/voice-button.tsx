@@ -15,13 +15,15 @@ const noSubscribe = () => () => {};
 
 // Escucha frase por frase (continuous=false evita las repeticiones de Chrome en Android) y entrega
 // cada frase final a onPhrase. No se muestra si el navegador no tiene reconocimiento de voz.
-export default function VoiceButton({ onPhrase, label = "🎤 Dictar" }: { onPhrase: (text: string) => void; label?: string }) {
+export default function VoiceButton({ onPhrase, onInterim, label = "🎤 Dictar" }: { onPhrase: (text: string) => void; onInterim?: (text: string) => void; label?: string }) {
   const [listening, setListening] = useState(false);
   const ok = useSyncExternalStore(noSubscribe, () => !!speechCtor(), () => false);
   const want = useRef(false);
   const last = useRef("");
   const handler = useRef(onPhrase);
   handler.current = onPhrase;
+  const interim = useRef(onInterim);
+  interim.current = onInterim;
 
   function start() {
     const Ctor = speechCtor();
@@ -30,10 +32,15 @@ export default function VoiceButton({ onPhrase, label = "🎤 Dictar" }: { onPhr
     last.current = "";
     r.lang = "es-CO";
     r.continuous = false;
-    r.interimResults = false;
+    r.interimResults = !!interim.current; // los parciales solo avisan (p. ej. marcar el diente); la orden se aplica con el resultado final
     r.onresult = (e) => {
       let text = "";
-      for (let i = e.resultIndex; i < e.results.length; i++) if (e.results[i].isFinal) text += e.results[i][0].transcript + " ";
+      let partial = "";
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        if (e.results[i].isFinal) text += e.results[i][0].transcript + " ";
+        else partial += e.results[i][0].transcript + " ";
+      }
+      if (partial.trim()) interim.current?.(partial.trim());
       text = text.trim();
       if (!text || text === last.current) return;
       last.current = text;
