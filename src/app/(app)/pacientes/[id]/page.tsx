@@ -50,14 +50,14 @@ export default async function PacientePage({ params }: PageProps<"/pacientes/[id
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-6 lg:grid-cols-3 lg:items-start">
-        <aside className="order-first lg:order-last lg:sticky lg:top-8">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:items-start">
+        <aside className="order-first min-w-0 lg:order-last lg:sticky lg:top-8">
           <div className="mb-3 flex justify-end"><Link href={`/pacientes/${p.id}/editar`} className="btn-secondary min-h-10">Editar datos</Link></div>
           <dl className="card divide-y divide-slate-200 p-0">
             {rows.map(([k, v]) => (
               <div key={k} className="flex justify-between gap-4 px-4 py-3">
                 <dt className="muted">{k}</dt>
-                <dd className="text-right text-sm font-semibold text-slate-900">{v || "—"}</dd>
+                <dd className="min-w-0 text-right text-sm font-semibold text-slate-900 [overflow-wrap:anywhere]">{v || "—"}</dd>
               </div>
             ))}
           </dl>
@@ -72,7 +72,7 @@ export default async function PacientePage({ params }: PageProps<"/pacientes/[id
           </div>
           {user.role === "ADMIN" && <div className="mt-3"><DeleteTestPatient patientId={p.id} documentNumber={p.documentNumber} /></div>}
         </aside>
-        <div className="space-y-6 lg:col-span-2">
+        <div className="min-w-0 space-y-6 lg:col-span-2">
           <Odontogram patientId={p.id} findings={findings} canEdit={canEdit} initial={initialSnap ? (initialSnap.data as unknown as { tooth: number; surface: string | null; condition: ConditionKey }[]) : null} planned={pending} />
           {canEdit && <EvolutionForm patientId={p.id} openItems={openItems} />}
           <section className="space-y-3">

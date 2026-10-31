@@ -50,7 +50,7 @@ export function BottomNav({ platformOnly = false }: { platformOnly?: boolean }) 
   const path = usePathname();
   const links = platformOnly ? platformLinks : [...base, { href: "/mas", label: "Más" }];
   return (
-    <nav aria-label="Principal" className="fixed inset-x-0 bottom-0 z-20 flex border-t border-slate-300 bg-white md:hidden">
+    <nav aria-label="Principal" className="fixed inset-x-0 bottom-0 z-20 flex border-t border-slate-300 bg-white pb-[env(safe-area-inset-bottom)] md:hidden">
       {links.map((l) => {
         const active = isActive(path, l.href);
         return (

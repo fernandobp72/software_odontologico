@@ -186,8 +186,8 @@ export default function PerioEditor({ patientId, initial }: { patientId: string;
                         </span>
                       </button>
                       <div className="mt-1 grid grid-cols-2 gap-1">
-                        <button type="button" aria-pressed={!!s.bop} onClick={() => toggleSite(side, col, "bop")} className={`min-h-9 rounded text-xs font-bold ${s.bop ? "bg-red-700 text-white" : "border border-slate-400 bg-white text-slate-800"}`}>Sang.</button>
-                        <button type="button" aria-pressed={!!s.plq} onClick={() => toggleSite(side, col, "plq")} className={`min-h-9 rounded text-xs font-bold ${s.plq ? "bg-amber-400 text-slate-900" : "border border-slate-400 bg-white text-slate-800"}`}>Placa</button>
+                        <button type="button" aria-pressed={!!s.bop} onClick={() => toggleSite(side, col, "bop")} className={`min-h-9 rounded px-0 text-[10px] font-bold min-[360px]:text-[11px] ${s.bop ? "bg-red-700 text-white" : "border border-slate-400 bg-white text-slate-800"}`}>Sang.</button>
+                        <button type="button" aria-pressed={!!s.plq} onClick={() => toggleSite(side, col, "plq")} className={`min-h-9 rounded px-0 text-[10px] font-bold min-[360px]:text-[11px] ${s.plq ? "bg-amber-400 text-slate-900" : "border border-slate-400 bg-white text-slate-800"}`}>Placa</button>
                       </div>
                     </div>
                   );
@@ -198,7 +198,7 @@ export default function PerioEditor({ patientId, initial }: { patientId: string;
         )}
 
         {!tooth.missing && (
-          <div className="sticky bottom-[3.9rem] z-10 -mx-2 rounded-lg border border-slate-300 bg-white p-2 shadow-lg md:static md:mx-0 md:border-0 md:p-0 md:shadow-none">
+          <div className="sticky bottom-[calc(3.9rem+env(safe-area-inset-bottom))] z-10 -mx-2 rounded-lg border border-slate-300 bg-white p-2 shadow-lg md:static md:mx-0 md:border-0 md:p-0 md:shadow-none">
             <p className="label mb-2 hidden md:block">{field === "pd" ? "Profundidad de sondaje" : "Recesión (+) / margen sobre la unión (−)"}</p>
             <div className="grid grid-cols-7 gap-1.5 md:gap-2">
               {keys.map((k) => (

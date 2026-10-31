@@ -1,9 +1,9 @@
 "use client";
 
 import { useActionState, useState, useTransition } from "react";
+import { ROLE_LABEL } from "@/lib/roles";
 import { createReset, emailReset, invite } from "./actions";
 
-export const ROLE_LABEL: Record<string, string> = { ADMIN: "Administrador", DENTIST: "Odontólogo", RECEPTION: "Recepción" };
 
 function LinkBox({ path, kind }: { path: string; kind: "invite" | "reset" }) {
   const [copied, setCopied] = useState(false);

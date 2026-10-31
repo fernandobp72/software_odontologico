@@ -14,9 +14,9 @@ export default function AppointmentForm({ patients }: { patients: { id: string; 
           {patients.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
         </select>
       </label>
-      <div className="grid grid-cols-2 gap-3">
-        <label className="label">Fecha y hora<input name="startsAt" type="datetime-local" required className="field" /></label>
-        <label className="label">Minutos<input name="minutes" type="number" defaultValue={30} step={5} className="field" /></label>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_8rem]">
+        <label className="label">Fecha y hora<input name="startsAt" type="datetime-local" required className="field min-w-0" /></label>
+        <label className="label">Minutos<input name="minutes" type="number" defaultValue={30} step={5} className="field min-w-0" /></label>
       </div>
       <label className="label">Motivo<input name="reason" className="field" /></label>
       {state?.error && <p role="alert" className="error-text">{state.error}</p>}

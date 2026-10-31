@@ -40,10 +40,10 @@ export default async function CarteraPage() {
     <div className="space-y-6">
       <h1 className="page-title">Cartera</h1>
       <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <div className="card"><dt className="muted">Cartera total</dt><dd className="text-xl font-bold">{copFmt.format(total)}</dd></div>
-        <div className="card"><dt className="muted">Vencida (más de 30 días)</dt><dd className="text-xl font-bold text-red-700">{copFmt.format(overdue)}</dd></div>
-        <div className="card"><dt className="muted">Pacientes con saldo</dt><dd className="text-xl font-bold">{rows.length}</dd></div>
-        <div className="card"><dt className="muted">Recaudo del mes</dt><dd className="text-xl font-bold text-teal-800">{copFmt.format(month._sum.amount ?? 0)}</dd></div>
+        <div className="card"><dt className="muted">Cartera total</dt><dd className="break-words text-lg font-bold sm:text-xl">{copFmt.format(total)}</dd></div>
+        <div className="card"><dt className="muted">Vencida (más de 30 días)</dt><dd className="break-words text-lg font-bold sm:text-xl text-red-700">{copFmt.format(overdue)}</dd></div>
+        <div className="card"><dt className="muted">Pacientes con saldo</dt><dd className="break-words text-lg font-bold sm:text-xl">{rows.length}</dd></div>
+        <div className="card"><dt className="muted">Recaudo del mes</dt><dd className="break-words text-lg font-bold sm:text-xl text-teal-800">{copFmt.format(month._sum.amount ?? 0)}</dd></div>
       </dl>
 
       <section className="card space-y-3">

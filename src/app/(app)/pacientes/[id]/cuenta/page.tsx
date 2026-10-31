@@ -26,7 +26,7 @@ export default async function CuentaPage({ params }: PageProps<"/pacientes/[id]/
 
   return (
     <div className="space-y-6">
-      <dl className="grid grid-cols-3 gap-3">
+      <dl className="grid grid-cols-1 gap-3 min-[480px]:grid-cols-3">
         <div className="card"><dt className="muted">Realizado</dt><dd className="text-lg font-bold">{copFmt.format(acc.charged)}</dd></div>
         <div className="card"><dt className="muted">Pagado</dt><dd className="text-lg font-bold">{copFmt.format(acc.paid)}</dd></div>
         <div className={`card ${acc.balance > 0 ? "border-red-700" : "border-teal-700"}`}>

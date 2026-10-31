@@ -23,7 +23,7 @@ function PlatformShell({ name, children }: { name: string; children: React.React
           <form action={logout}><button className="btn-secondary w-full">Salir</button></form>
         </div>
       </aside>
-      <div className="min-w-0 flex-1 pb-20 md:pb-0">
+      <div className="min-w-0 flex-1 pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0">
         <header className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-300 bg-white px-4 py-3 md:hidden">
           <span className="font-bold text-teal-800">Plataforma</span>
           <form action={logout}><button className="btn-secondary min-h-10 px-3">Salir</button></form>
@@ -55,7 +55,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </div>
       </aside>
 
-      <div className="min-w-0 flex-1 pb-20 md:pb-0">
+      <div className="min-w-0 flex-1 pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0">
         <header className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-300 bg-white px-4 py-3 md:hidden">
           <span className="flex min-w-0 items-center gap-2 font-bold text-teal-800">
             {user.clinic.logoUpdatedAt ? <ClinicLogo clinicId={user.clinicId} version={user.clinic.logoUpdatedAt} className="h-8 w-8" /> : null}

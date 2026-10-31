@@ -59,6 +59,11 @@
   --font-sans: var(--font-geist-sans), system-ui, sans-serif;
 }
 
+html, body {
+  /* Red de seguridad: si algo se desborda, no se desplaza la página de lado (sobre todo en iPhone). */
+  overflow-x: clip;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
@@ -70,6 +75,12 @@ body {
 :focus-visible {
   outline: 3px solid #e98a45;
   outline-offset: 2px;
+}
+
+@layer base {
+  /* Zonas táctiles cómodas en los desplegables y palabras largas que no rompan las tarjetas. */
+  summary { padding-block: 0.6rem; }
+  h1, h2, h3, p, dd, dt, li, label { overflow-wrap: break-word; }
 }
 
 @layer components {

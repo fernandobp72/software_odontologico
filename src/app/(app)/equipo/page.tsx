@@ -2,7 +2,8 @@ import { db } from "@/lib/db";
 import { nounOf } from "@/lib/noun";
 import { requireUser } from "@/lib/dal";
 import { mailConfigured } from "@/lib/mailer";
-import { InviteForm, ROLE_LABEL, ResetButton } from "./forms";
+import { ROLE_LABEL } from "@/lib/roles";
+import { InviteForm, ResetButton } from "./forms";
 import { revokeInvitation, setActive, setRole, setUserBranches, updatePerson } from "./actions";
 
 export default async function EquipoPage() {
@@ -61,9 +62,9 @@ export default async function EquipoPage() {
                 </form>
               </details>
               <div className="flex flex-wrap items-end gap-3">
-                <form action={setRole.bind(null, u.id)} className="flex items-end gap-2">
+                <form action={setRole.bind(null, u.id)} className="flex flex-wrap items-end gap-2">
                   <label className="label">Rol
-                    <select name="role" defaultValue={u.role} className="field mt-1 w-auto">{Object.entries(ROLE_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select>
+                    <select name="role" defaultValue={u.role} className="field mt-1 min-w-40 w-auto max-w-full">{Object.entries(ROLE_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select>
                   </label>
                   <button className="btn-secondary">Cambiar</button>
                 </form>

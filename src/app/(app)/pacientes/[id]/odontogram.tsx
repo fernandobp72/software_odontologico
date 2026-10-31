@@ -233,7 +233,7 @@ export default function Odontogram({
 
   return (
     <section className="card space-y-4">
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="section-title">Odontograma</h2>
         <div className="flex flex-wrap gap-2">
           {(hasInitial || canEdit) && (

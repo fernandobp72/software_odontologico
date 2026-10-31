@@ -139,7 +139,7 @@ export default function RxEditor({
 
             {d && it.presentationId && (
               <div className="flex flex-wrap items-center gap-2">
-                <select value={it.presentationId} onChange={(e) => changePresentation(it, e.target.value)} className="field mt-0 w-auto" aria-label="Presentación">
+                <select value={it.presentationId} onChange={(e) => changePresentation(it, e.target.value)} className="field mt-0 w-full sm:w-auto" aria-label="Presentación">
                   {d.presentations.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
                 </select>
                 <InvimaBadge drugId={d.id} presentationId={it.presentationId} />
