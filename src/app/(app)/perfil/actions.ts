@@ -17,3 +17,12 @@ export async function changePassword(_: PwState, fd: FormData): Promise<PwState>
   await db.auditLog.create({ data: { userId: user.id, action: "PASSWORD_CHANGE", entity: "User", entityId: user.id } });
   return { ok: true };
 }
+
+export async function saveLicense(_: PwState, fd: FormData): Promise<PwState> {
+  const user = await requireAnyUser();
+  const v = String(fd.get("license") ?? "").trim();
+  if (v.length > 40) return { error: "Es demasiado largo" };
+  await db.user.update({ where: { id: user.id }, data: { licenseNumber: v || null } });
+  await db.auditLog.create({ data: { userId: user.id, action: "LICENSE_UPDATE", entity: "User", entityId: user.id } });
+  return { ok: true };
+}

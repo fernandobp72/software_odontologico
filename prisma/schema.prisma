@@ -101,6 +101,7 @@ model Clinic {
   invitations      Invitation[]
   branches         Branch[]
   clinicProcedures ClinicProcedure[]
+  prescriptions    Prescription[]
 }
 
 model User {
@@ -131,6 +132,7 @@ model User {
   clinicalImages      ClinicalImage[]
   invoices            Invoice[]
   invitations         Invitation[]
+  prescriptions       Prescription[]
   passwordResets      PasswordReset[]
   userBranches        UserBranch[]
 }
@@ -180,6 +182,7 @@ model Patient {
   invoices             Invoice[]
   dismissedSuggestions DismissedSuggestion[]
   intakeForms          IntakeForm[]
+  prescriptions        Prescription[]
 
   @@unique([clinicId, documentType, documentNumber])
   @@index([clinicId, lastName])
@@ -627,4 +630,56 @@ model EmailConfig {
   fromName    String
   fromEmail   String
   updatedAt   DateTime @updatedAt
+}
+
+// Fórmula médica firmada. Inmutable: las correcciones se hacen anulándola y generando otra.
+model Prescription {
+  id            String             @id @default(cuid())
+  clinicId      String
+  clinic        Clinic             @relation(fields: [clinicId], references: [id])
+  number        Int // consecutivo por consultorio
+  patientId     String
+  patient       Patient            @relation(fields: [patientId], references: [id])
+  dentistId     String
+  dentist       User               @relation(fields: [dentistId], references: [id])
+  issuedAt      DateTime           @default(now())
+  diagnosisCode String? // CIE-10
+  diagnosisText String?
+  weightKg      Float?
+  notes         String?
+  vademecum     String // versión del vademécum con el que se armó
+  voidedAt      DateTime?
+  voidedById    String?
+  voidReason    String?
+  items         PrescriptionItem[]
+
+  @@unique([clinicId, number])
+  @@index([patientId, issuedAt])
+}
+
+model PrescriptionItem {
+  id             String       @id @default(cuid())
+  prescriptionId String
+  prescription   Prescription @relation(fields: [prescriptionId], references: [id], onDelete: Cascade)
+  position       Int
+  drugId         String? // clave del vademécum; vacío si se escribió a mano
+  name           String // denominación común internacional
+  concentration  String
+  form           String
+  route          String
+  dose           String
+  frequency      String
+  duration       String
+  quantity       Int
+  quantityText   String
+  instructions   String?
+  alerts         Json? // alertas vigentes al firmar
+  override       String? // motivo si el odontólogo firmó pese a una alerta de bloqueo
+}
+
+// Presentaciones vigentes del CUM del INVIMA por código ATC, guardadas para no consultar el servicio abierto en cada pantalla.
+model InvimaCache {
+  atc       String   @id
+  rows      Json
+  fetchedAt DateTime @default(now())
 }

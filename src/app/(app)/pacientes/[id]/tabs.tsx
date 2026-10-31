@@ -10,6 +10,7 @@ export default function PatientTabs({ id }: { id: string }) {
     { href: `/pacientes/${id}/historia`, label: "Historia clínica" },
     { href: `/pacientes/${id}/periodontograma`, label: "Periodontograma" },
     { href: `/pacientes/${id}/plan`, label: "Diagnósticos y plan" },
+    { href: `/pacientes/${id}/formulas`, label: "Fórmulas" },
     { href: `/pacientes/${id}/imagenes`, label: "Imágenes" },
     { href: `/pacientes/${id}/consentimientos`, label: "Consentimientos" },
     { href: `/pacientes/${id}/cuenta`, label: "Cuenta" },

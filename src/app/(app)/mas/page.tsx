@@ -9,6 +9,7 @@ export default async function MasPage() {
     ...(user.role === "ADMIN" ? [["/inicio", "Inicio guiado"], ["/equipo", "Equipo"], ["/sedes", "Sedes"], ["/catalogo", "Catálogo y tarifas"], ["/configuracion", `Mi ${nounOf(user.clinic.noun).name}`]] : []),
     ...(user.isPlatformAdmin ? [["/plataforma", "Plataforma"]] : []),
     ["/recordatorios", "Recordatorios"],
+    ...(user.role !== "RECEPTION" ? [["/vademecum", "Vademécum"]] : []),
     ["/perfil", "Mi cuenta"],
   ];
   return (

@@ -14,6 +14,7 @@ const admin = (noun: string) => [{ href: "/inicio", label: "Inicio" }, { href: "
 const linksFor = (role: string, platform: boolean, noun: string) => [
   ...base,
   { href: "/recordatorios", label: "Recordatorios" },
+  ...(role !== "RECEPTION" ? [{ href: "/vademecum", label: "Vademécum" }] : []),
   ...(role === "ADMIN" ? admin(noun) : []),
   ...(platform ? [{ href: "/plataforma", label: "Plataforma" }] : []),
   { href: "/perfil", label: "Mi cuenta" },

@@ -132,6 +132,7 @@ export async function deleteTestPatient(patientId: string, _: DeleteState, fd: F
       db.toothFinding.deleteMany({ where: { patientId } }),
       db.odontogramSnapshot.deleteMany({ where: { patientId } }),
       db.perioExam.deleteMany({ where: { patientId } }),
+      db.prescription.deleteMany({ where: { patientId } }),
       db.assessment.deleteMany({ where: { patientId } }),
       db.consent.deleteMany({ where: { patientId } }),
       db.clinicalImage.deleteMany({ where: { patientId } }),
