@@ -235,31 +235,31 @@ export default function Odontogram({
     <section className="card space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="section-title">Odontograma</h2>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {(hasInitial || canEdit) && (
             <div className="flex overflow-hidden rounded-lg border border-slate-500" role="group" aria-label="Versión del odontograma">
-              <button type="button" onClick={() => setView("actual")} aria-pressed={view === "actual"} className={`min-h-11 px-3 text-sm font-semibold ${view === "actual" ? "bg-teal-100 text-teal-900" : "bg-white text-slate-900"}`}>Actual</button>
-              <button type="button" disabled={!initial} onClick={() => setView("initial")} aria-pressed={view === "initial"} className={`min-h-11 border-l border-slate-500 px-3 text-sm font-semibold disabled:opacity-50 ${view === "initial" ? "bg-teal-100 text-teal-900" : "bg-white text-slate-900"}`}>Inicial</button>
+              <button type="button" onClick={() => setView("actual")} aria-pressed={view === "actual"} className={`min-h-10 px-2.5 text-sm font-semibold ${view === "actual" ? "bg-teal-100 text-teal-900" : "bg-white text-slate-900"}`}>Actual</button>
+              <button type="button" disabled={!initial} onClick={() => setView("initial")} aria-pressed={view === "initial"} className={`min-h-10 border-l border-slate-500 px-2.5 text-sm font-semibold disabled:opacity-50 ${view === "initial" ? "bg-teal-100 text-teal-900" : "bg-white text-slate-900"}`}>Inicial</button>
             </div>
           )}
-          {editable && <VoiceButton onPhrase={heard} onInterim={(t) => { const n = lastToothIn(t); if (n) setTooth(n); }} label="🎤 Dictar hallazgos" />}
+          {editable && <VoiceButton onPhrase={heard} onInterim={(t) => { const n = lastToothIn(t); if (n) setTooth(n); }} label="🎤 Dictar" />}
           {editable && (
-            <button type="button" className="btn-secondary" onClick={undoLast} disabled={!undo.length || pending}>
-              Deshacer
+            <button type="button" className="btn-secondary px-3" onClick={undoLast} disabled={!undo.length || pending} aria-label="Deshacer">
+              <span className="sm:hidden" aria-hidden="true">↶</span><span className="hidden sm:inline">Deshacer</span>
             </button>
           )}
         </div>
       </div>
       {canEdit && !hasInitial && (
-        <div className="flex flex-wrap items-center gap-3 rounded-lg border border-slate-300 bg-slate-50 p-3">
-          <p className="muted flex-1">Cuando el estado de la boca esté completo, fíjalo como odontograma inicial. No podrá modificarse después.</p>
-          <button type="button" className="btn-secondary" onClick={freezeInitial} disabled={pending}>Fijar como inicial</button>
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-300 bg-slate-50 p-2 sm:gap-3 sm:p-3">
+          <p className="muted min-w-0 flex-1"><span className="sm:hidden">Aún sin fijar el odontograma inicial.</span><span className="hidden sm:inline">Cuando el estado de la boca esté completo, fíjalo como odontograma inicial. No podrá modificarse después.</span></p>
+          <button type="button" className="btn-secondary min-h-9 px-3 py-1.5" onClick={freezeInitial} disabled={pending}>Fijar como inicial</button>
         </div>
       )}
       {view === "initial" && initial && <p className="rounded-lg border border-slate-300 bg-slate-100 p-2 text-sm font-semibold text-slate-900">Odontograma inicial (solo lectura)</p>}
 
       {editable && (
-        <div className="space-y-2 rounded-lg border border-slate-300 bg-slate-50 p-3 text-sm text-slate-900">
+        <div className="space-y-2 rounded-lg border border-slate-300 bg-slate-50 p-2 text-sm text-slate-900 sm:p-3">
           <VoiceBox onPhrase={heard} />
           {voice && (
             <div role="status">
@@ -273,8 +273,8 @@ export default function Odontogram({
       )}
       {editable && (
         <div>
-          <p className="label mb-2">1. Elige el estado</p>
-          <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Estado a aplicar">
+          <p className="label mb-2">1. Elige el estado <span className="font-normal text-slate-600 sm:hidden">· desliza →</span></p>
+          <div className="flex gap-2 overflow-x-auto pb-1 sm:flex-wrap sm:overflow-visible sm:pb-0" role="radiogroup" aria-label="Estado a aplicar">
             {TOOL_ORDER.map((c) => (
               <button
                 key={c}
@@ -282,7 +282,7 @@ export default function Odontogram({
                 role="radio"
                 aria-checked={tool === c}
                 onClick={() => setTool(c)}
-                className={`flex min-h-11 items-center gap-2 rounded-lg border-2 px-3 py-2 text-sm font-semibold text-slate-900 ${
+                className={`flex min-h-11 shrink-0 items-center gap-2 rounded-lg border-2 px-3 py-2 text-sm font-semibold text-slate-900 ${
                   tool === c ? "border-teal-700 bg-teal-50 ring-2 ring-teal-700" : "border-slate-400 bg-white hover:bg-slate-100"
                 }`}
               >

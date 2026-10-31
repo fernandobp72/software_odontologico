@@ -6,7 +6,6 @@ import { setWhatsappOptIn } from "../../recordatorios/actions";
 import Odontogram from "./odontogram";
 import EvolutionForm from "./evolution-form";
 import DeleteTestPatient from "./delete-test";
-import Link from "next/link";
 import { ageText } from "@/lib/patient-fields";
 
 export default async function PacientePage({ params }: PageProps<"/pacientes/[id]">) {
@@ -48,29 +47,45 @@ export default async function PacientePage({ params }: PageProps<"/pacientes/[id
     ["Alergias", p.allergies],
   ];
 
+  const dataPanel = (
+    <>
+      <dl className="card divide-y divide-slate-200 p-0">
+        {rows.map(([k, v]) => (
+          <div key={k} className="flex justify-between gap-4 px-4 py-3">
+            <dt className="muted">{k}</dt>
+            <dd className="min-w-0 text-right text-sm font-semibold text-slate-900 [overflow-wrap:anywhere]">{v || "—"}</dd>
+          </div>
+        ))}
+      </dl>
+      <div className="card flex items-center justify-between gap-3">
+        <div>
+          <p className="muted">Recordatorios por WhatsApp</p>
+          <p className="text-sm font-semibold text-slate-900">{p.whatsappOptInAt ? "Autorizado" : "No autorizado"}</p>
+        </div>
+        <form action={setWhatsappOptIn.bind(null, p.id, !p.whatsappOptInAt)}>
+          <button className="btn-secondary min-h-10">{p.whatsappOptInAt ? "Retirar" : "Registrar autorización"}</button>
+        </form>
+      </div>
+      {user.role === "ADMIN" && <DeleteTestPatient patientId={p.id} documentNumber={p.documentNumber} />}
+    </>
+  );
+
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:items-start">
         <aside className="order-first min-w-0 lg:order-last lg:sticky lg:top-8">
-          <div className="mb-3 flex justify-end"><Link href={`/pacientes/${p.id}/editar`} className="btn-secondary min-h-10">Editar datos</Link></div>
-          <dl className="card divide-y divide-slate-200 p-0">
-            {rows.map(([k, v]) => (
-              <div key={k} className="flex justify-between gap-4 px-4 py-3">
-                <dt className="muted">{k}</dt>
-                <dd className="min-w-0 text-right text-sm font-semibold text-slate-900 [overflow-wrap:anywhere]">{v || "—"}</dd>
-              </div>
-            ))}
-          </dl>
-          <div className="card mt-3 flex items-center justify-between gap-3">
-            <div>
-              <p className="muted">Recordatorios por WhatsApp</p>
-              <p className="text-sm font-semibold text-slate-900">{p.whatsappOptInAt ? "Autorizado" : "No autorizado"}</p>
-            </div>
-            <form action={setWhatsappOptIn.bind(null, p.id, !p.whatsappOptInAt)}>
-              <button className="btn-secondary min-h-10">{p.whatsappOptInAt ? "Retirar" : "Registrar autorización"}</button>
-            </form>
-          </div>
-          {user.role === "ADMIN" && <div className="mt-3"><DeleteTestPatient patientId={p.id} documentNumber={p.documentNumber} /></div>}
+          {/* Celular: una línea compacta (con las alergias a la vista) y los datos plegados, para dejar el odontograma como protagonista. */}
+          <details className="card p-0 lg:hidden">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 marker:hidden">
+              <span className="min-w-0 text-sm text-slate-900">
+                {p.allergies ? <span className="font-semibold text-red-700">⚠ Alergias: {p.allergies}</span> : <span className="font-semibold">Datos del paciente</span>}
+              </span>
+              <span className="shrink-0 text-sm font-semibold text-teal-800">Ver ▾</span>
+            </summary>
+            <div className="space-y-3 border-t border-slate-200 p-3">{dataPanel}</div>
+          </details>
+          {/* Escritorio: panel lateral siempre abierto. */}
+          <div className="hidden space-y-3 lg:block">{dataPanel}</div>
         </aside>
         <div className="min-w-0 space-y-6 lg:col-span-2">
           <Odontogram patientId={p.id} findings={findings} canEdit={canEdit} initial={initialSnap ? (initialSnap.data as unknown as { tooth: number; surface: string | null; condition: ConditionKey }[]) : null} planned={pending} />
