@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { requireUser } from "@/lib/dal";
 import { copFmt } from "@/lib/cartera";
 import PrintButton from "../../recibo/[id]/print-button";
+import ClinicLogo from "../../clinic-logo";
 
 export default async function CuentaDeCobroPage({ params }: PageProps<"/cuenta-de-cobro/[id]">) {
   const user = await requireUser();
@@ -15,6 +16,7 @@ export default async function CuentaDeCobroPage({ params }: PageProps<"/cuenta-d
     <main className="mx-auto max-w-2xl bg-white p-6 text-slate-900 print:p-0">
       <header className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-400 pb-4">
         <div>
+          <ClinicLogo clinicId={inv.clinic.id} version={inv.clinic.logoUpdatedAt} className="mb-2 h-14 w-auto max-w-44" />
           <h1 className="text-xl font-bold">{inv.clinic.name}</h1>
           {inv.clinic.nit && <p className="text-sm">NIT {inv.clinic.nit}</p>}
           {inv.clinic.address && <p className="text-sm">{inv.clinic.address}</p>}

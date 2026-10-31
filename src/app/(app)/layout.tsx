@@ -1,5 +1,6 @@
 import { branchState, requireAnyUser } from "@/lib/dal";
 import { nounOf } from "@/lib/noun";
+import ClinicLogo from "../clinic-logo";
 import BranchSwitcher from "./branch-switcher";
 import { logout } from "../login/actions";
 import { BottomNav, SideNav } from "./nav";
@@ -41,7 +42,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <div className="min-h-dvh md:flex">
       <aside className="hidden w-60 shrink-0 flex-col border-r border-slate-300 bg-white p-4 md:flex">
-        <p className="mb-6 text-lg font-bold text-teal-800">Odontología</p>
+        <div className="mb-6 flex items-center gap-3">
+          {user.clinic.logoUpdatedAt ? <ClinicLogo clinicId={user.clinicId} version={user.clinic.logoUpdatedAt} className="h-11 w-11" /> : null}
+          <p className="text-lg font-bold leading-tight text-teal-800">{user.clinic.logoUpdatedAt ? user.clinic.name : "Odontología"}</p>
+        </div>
         {branches.length > 1 && branch && <div className="mb-4"><BranchSwitcher branches={branches} activeId={branch.id} /></div>}
         <SideNav role={user.role} platform={user.isPlatformAdmin} noun={nounOf(user.clinic.noun).name} />
         <div className="mt-auto space-y-2 border-t border-slate-300 pt-4">
@@ -53,7 +57,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
       <div className="min-w-0 flex-1 pb-20 md:pb-0">
         <header className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-300 bg-white px-4 py-3 md:hidden">
-          <span className="font-bold text-teal-800">Odontología</span>
+          <span className="flex min-w-0 items-center gap-2 font-bold text-teal-800">
+            {user.clinic.logoUpdatedAt ? <ClinicLogo clinicId={user.clinicId} version={user.clinic.logoUpdatedAt} className="h-8 w-8" /> : null}
+            <span className="truncate">{user.clinic.logoUpdatedAt ? user.clinic.name : "Odontología"}</span>
+          </span>
           <form action={logout} className="flex items-center gap-3">
             <span className="text-sm font-medium text-slate-800">{user.name}</span>
             <button className="btn-secondary min-h-10 px-3">Salir</button>

@@ -79,6 +79,9 @@ model Clinic {
   system           Boolean           @default(false)
   // Cómo llama la organización a su centro en la interfaz: consultorio | clinica | centro
   noun             String            @default("consultorio")
+  // Logo ya optimizado por el servidor (WebP, máximo 512 px). Se sirve en /api/logo/<id>
+  logo             Bytes?
+  logoUpdatedAt    DateTime?
   // WhatsApp Business propio del consultorio (API de Meta). El token se guarda cifrado.
   whatsappPhoneId  String?
   whatsappToken    String?

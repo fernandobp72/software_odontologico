@@ -7,7 +7,7 @@ export const metadata = { title: "Formulario previo", robots: { index: false } }
 export default async function FormularioPage({ params }: PageProps<"/formulario/[token]">) {
   const { token } = await params;
   const f = token.length >= 16
-    ? await db.intakeForm.findUnique({ where: { tokenHash: hashToken(token) }, include: { patient: { select: { firstName: true, clinic: { select: { name: true } } } } } })
+    ? await db.intakeForm.findUnique({ where: { tokenHash: hashToken(token) }, include: { patient: { select: { firstName: true, clinic: { select: { id: true, name: true, logoUpdatedAt: true } } } } } })
     : null;
   const valid = f && !f.revokedAt && f.expiresAt > new Date();
 
@@ -24,7 +24,7 @@ export default async function FormularioPage({ params }: PageProps<"/formulario/
           <p className="ok-text">Ya recibimos tu información. ¡Gracias!</p>
         </div>
       ) : (
-        <IntakeForm token={token} clinic={f.patient.clinic.name} patientName={f.patient.firstName} />
+        <IntakeForm token={token} clinic={f.patient.clinic.name} clinicId={f.patient.clinic.id} logoVersion={f.patient.clinic.logoUpdatedAt?.getTime() ?? null} patientName={f.patient.firstName} />
       )}
     </main>
   );

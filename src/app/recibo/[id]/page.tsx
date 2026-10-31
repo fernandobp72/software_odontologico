@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { requireUser } from "@/lib/dal";
 import { METHODS, copFmt } from "@/lib/cartera";
 import PrintButton from "./print-button";
+import ClinicLogo from "../../clinic-logo";
 
 export default async function ReciboPage({ params }: PageProps<"/recibo/[id]">) {
   const user = await requireUser();
@@ -17,6 +18,7 @@ export default async function ReciboPage({ params }: PageProps<"/recibo/[id]">) 
   return (
     <main className="mx-auto max-w-md bg-white p-6 text-slate-900 print:p-0">
       <header className="border-b border-slate-400 pb-3 text-center">
+        <div className="mb-2 flex justify-center"><ClinicLogo clinicId={p.clinic.id} version={p.clinic.logoUpdatedAt} className="h-16 w-auto max-w-48" /></div>
         <h1 className="text-xl font-bold">{p.clinic.name}</h1>
         {p.clinic.nit && <p className="text-sm">NIT {p.clinic.nit}</p>}
         {(p.session.branch.address ?? p.clinic.address) && <p className="text-sm">{p.session.branch.address ?? p.clinic.address}</p>}

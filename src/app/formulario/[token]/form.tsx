@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import { INTAKE_SECTIONS } from "@/lib/intake";
 import type { Field } from "@/lib/assessment";
 import SignaturePad from "@/app/(app)/pacientes/[id]/consentimientos/signature-pad";
+import ClinicLogo from "@/app/clinic-logo";
 import { submitIntake } from "./actions";
 
 function Question({ f }: { f: Field }) {
@@ -39,7 +40,7 @@ function Question({ f }: { f: Field }) {
   );
 }
 
-export default function IntakeForm({ token, clinic, patientName }: { token: string; clinic: string; patientName: string }) {
+export default function IntakeForm({ token, clinic, clinicId, logoVersion, patientName }: { token: string; clinic: string; clinicId: string; logoVersion: number | null; patientName: string }) {
   const [state, action, pending] = useActionState(submitIntake.bind(null, token), undefined);
   if (state?.ok) {
     return (
@@ -52,6 +53,7 @@ export default function IntakeForm({ token, clinic, patientName }: { token: stri
   return (
     <form action={action} className="space-y-4">
       <div className="card space-y-1">
+        <ClinicLogo clinicId={clinicId} version={logoVersion} className="mb-1 h-14 w-auto max-w-44" />
         <p className="text-sm font-semibold text-teal-800">{clinic}</p>
         <h1 className="text-xl font-bold">Hola {patientName}, cuéntanos sobre ti</h1>
         <p className="muted">Toma unos 5 minutos. Contesta lo que sepas; si algo no aplica, déjalo en blanco. Tu odontólogo lo revisará contigo en la cita.</p>

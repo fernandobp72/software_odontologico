@@ -132,3 +132,7 @@ Seguimiento del dictado en el odontograma: al decir «diente 15» el diente qued
 - **Nombre del centro:** `Clinic.noun` (`consultorio`, `clinica` o `centro`) se elige al registrarse y se cambia en *Mi consultorio*; las pantallas internas lo usan con su artículo (`src/lib/noun.ts`). Las pantallas públicas y de pacientes usan textos neutros.
 
 - **Eliminar un paciente de prueba:** en la ficha del paciente, solo el administrador (sección «Eliminar paciente de prueba»): exige marcar que es de prueba y escribir su documento; borra todo lo registrado (odontograma, historia, evoluciones, plan, consentimientos, imágenes, citas). Si tiene recibos o cuentas de cobro no se elimina. Queda en la auditoría. La historia clínica de pacientes reales no se borra (Res. 839 de 2017).
+
+## Logo del consultorio
+
+*Mi consultorio → Logo* (solo administrador): acepta JPG, PNG, WebP, GIF, AVIF, TIFF o SVG de hasta 15 MB; el servidor (`sharp`, `src/lib/logo.ts`) lo orienta, lo reduce a máximo 512 px, lo convierte a WebP con transparencia y baja la calidad solo lo necesario para quedar en unos 60 KB. Se guarda en `Clinic.logo` y se sirve en `/api/logo/<id>` con caché (es imagen de marca, sin sesión). Se muestra en el menú, los recibos, las cuentas de cobro, la confirmación de cita y el formulario previo del paciente. Un SVG que referencia archivos externos se rechaza.

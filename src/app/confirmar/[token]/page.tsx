@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import ClinicLogo from "../../clinic-logo";
 import { respond } from "./actions";
 
 export const metadata = { title: "Confirmar cita", robots: { index: false } };
@@ -18,6 +19,7 @@ export default async function ConfirmarPage({ params }: PageProps<"/confirmar/[t
           </>
         ) : (
           <>
+            <div className="flex justify-center"><ClinicLogo clinicId={a.clinic.id} version={a.clinic.logoUpdatedAt} className="h-14 w-auto max-w-44" /></div>
             <p className="text-sm font-semibold text-teal-800">{a.clinic.name}</p>
             <h1 className="text-xl font-bold">Hola {a.patient.firstName}</h1>
             <p className="text-lg first-letter:uppercase text-slate-900">{fmt.format(a.startsAt)}</p>
