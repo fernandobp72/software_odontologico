@@ -1,6 +1,7 @@
 "use server";
 
 import bcrypt from "bcryptjs";
+import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { requireAnyUser } from "@/lib/dal";
 import { password } from "@/lib/tokens";
@@ -18,11 +19,17 @@ export async function changePassword(_: PwState, fd: FormData): Promise<PwState>
   return { ok: true };
 }
 
-export async function saveLicense(_: PwState, fd: FormData): Promise<PwState> {
+// Nombre (y registro profesional si aplica) de la propia cuenta. El nombre sale en las evoluciones y fórmulas, por eso queda en la auditoría.
+export async function saveProfile(_: PwState, fd: FormData): Promise<PwState> {
   const user = await requireAnyUser();
-  const v = String(fd.get("license") ?? "").trim();
-  if (v.length > 40) return { error: "Es demasiado largo" };
-  await db.user.update({ where: { id: user.id }, data: { licenseNumber: v || null } });
-  await db.auditLog.create({ data: { userId: user.id, action: "LICENSE_UPDATE", entity: "User", entityId: user.id } });
+  const name = String(fd.get("name") ?? "").trim().replace(/\s+/g, " ");
+  if (name.length < 3) return { error: "Escribe tu nombre completo" };
+  if (name.length > 120) return { error: "El nombre es demasiado largo" };
+  const license = String(fd.get("license") ?? "").trim();
+  if (license.length > 40) return { error: "El registro profesional es demasiado largo" };
+  const clinical = !user.clinic.system && user.role !== "RECEPTION";
+  await db.user.update({ where: { id: user.id }, data: { name, ...(clinical ? { licenseNumber: license || null } : {}) } });
+  await db.auditLog.create({ data: { userId: user.id, action: "PROFILE_UPDATE", entity: "User", entityId: user.id } });
+  revalidatePath("/", "layout");
   return { ok: true };
 }

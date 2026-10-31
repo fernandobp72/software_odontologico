@@ -75,6 +75,19 @@ export async function setActive(userId: string, active: boolean): Promise<void> 
   revalidatePath("/equipo");
 }
 
+// El administrador corrige el nombre y el registro profesional de cualquier persona de su equipo (por ejemplo, si quedó mal escrito).
+export async function updatePerson(userId: string, fd: FormData): Promise<void> {
+  const admin = await requireAdmin();
+  const target = await db.user.findFirst({ where: { id: userId, clinicId: admin.clinicId } });
+  if (!target) return;
+  const name = String(fd.get("name") ?? "").trim().replace(/\s+/g, " ");
+  const license = String(fd.get("license") ?? "").trim();
+  if (name.length < 3 || name.length > 120 || license.length > 40) return;
+  await db.user.update({ where: { id: userId }, data: { name, licenseNumber: target.role === "RECEPTION" ? null : license || null } });
+  await db.auditLog.create({ data: { userId: admin.id, action: "USER_UPDATE", entity: "User", entityId: userId } });
+  revalidatePath("/equipo");
+}
+
 // Genera un enlace de un solo uso (24 h) para que la persona defina una contraseña nueva.
 export async function createReset(userId: string): Promise<TeamState> {
   const admin = await requireAdmin();

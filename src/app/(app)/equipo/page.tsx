@@ -3,7 +3,7 @@ import { nounOf } from "@/lib/noun";
 import { requireUser } from "@/lib/dal";
 import { mailConfigured } from "@/lib/mailer";
 import { InviteForm, ROLE_LABEL, ResetButton } from "./forms";
-import { revokeInvitation, setActive, setRole, setUserBranches } from "./actions";
+import { revokeInvitation, setActive, setRole, setUserBranches, updatePerson } from "./actions";
 
 export default async function EquipoPage() {
   const user = await requireUser();
@@ -50,6 +50,14 @@ export default async function EquipoPage() {
                 </div>
                 <span className={`rounded-full px-3 py-1 text-xs font-semibold ${u.active ? "bg-green-100 text-green-900" : "bg-slate-200 text-slate-800"}`}>{u.active ? "Activo" : "Desactivado"}</span>
               </div>
+              <details>
+                <summary className="cursor-pointer text-sm font-semibold text-teal-800">Corregir nombre{u.role !== "RECEPTION" ? " o registro profesional" : ""}</summary>
+                <form action={updatePerson.bind(null, u.id)} className="mt-2 grid gap-3 sm:grid-cols-2">
+                  <label className="label">Nombre completo<input name="name" defaultValue={u.name} required className="field" /></label>
+                  {u.role !== "RECEPTION" && <label className="label">Registro profesional<input name="license" defaultValue={u.licenseNumber ?? ""} className="field" /></label>}
+                  <div className="sm:col-span-2"><button className="btn-secondary min-h-10">Guardar</button></div>
+                </form>
+              </details>
               <div className="flex flex-wrap items-end gap-3">
                 <form action={setRole.bind(null, u.id)} className="flex items-end gap-2">
                   <label className="label">Rol
