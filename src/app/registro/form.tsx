@@ -22,7 +22,7 @@ export default function SignupForm() {
       <label className="label">Contraseña (mínimo 10 caracteres)<input name="password" type="password" autoComplete="new-password" required minLength={10} className="field" /></label>
       <label className="flex items-start gap-3 text-sm text-slate-900">
         <input name="terms" type="checkbox" className="mt-0.5 h-5 w-5 accent-teal-700" />
-        <span>Acepto los <Link href="/terminos" target="_blank" className="font-semibold underline">términos y la política de datos</Link>.</span>
+        <span>Acepto los <Link href="/terminos" target="_blank" className="font-semibold underline">términos</Link> y la <Link href="/privacidad" target="_blank" className="font-semibold underline">política de privacidad</Link>.</span>
       </label>
       {state?.error && <p role="alert" className="error-text">{state.error}</p>}
       <button disabled={pending} className="btn-primary w-full">{pending ? "Creando cuenta…" : "Crear cuenta"}</button>

@@ -13,6 +13,8 @@ export default function TerminosPage() {
       <p>La historia clínica es reservada y de custodia del prestador de salud. Los registros firmados no se modifican; las correcciones se hacen por nuevas anotaciones.</p>
       <h2 className="text-lg font-bold">Cuenta y uso</h2>
       <p>El administrador del consultorio responde por los usuarios que invita y por el uso de sus credenciales. Cada persona debe usar su propia cuenta.</p>
+      <h2 className="text-lg font-bold">Privacidad</h2>
+      <p>Consulta la <a href="/privacidad" className="font-semibold underline">política de privacidad y tratamiento de datos</a>.</p>
       <h2 className="text-lg font-bold">Facturación electrónica</h2>
       <p>La factura electrónica ante la DIAN se emite con el proveedor tecnológico que el consultorio contrate y habilite; el software no reemplaza esa obligación.</p>
     </main>

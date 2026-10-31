@@ -145,3 +145,7 @@ Seguimiento del dictado en el odontograma: al decir «diente 15» el diente qued
 - **Comunicados:** cuenta de plataforma → *Comunicados*: asunto y mensaje a todos los clientes o solo activos, en prueba o suspendidos; un correo por administrador activo (tope 300 por envío), anotado en *Actividad*.
 - **Si se pierde la contraseña de la cuenta de plataforma y no hay correo:** en Coolify define `SEED_PLATFORM_EMAIL`, `SEED_PLATFORM_PASSWORD` y `SEED_RESET=1`, redespliega, entra, y luego borra `SEED_PLATFORM_PASSWORD` y `SEED_RESET`.
 - Los formularios de ingreso y de registro conservan lo escrito (menos la contraseña) cuando hay un error, y el ingreso tiene «Mostrar la contraseña».
+
+## Política de privacidad (URL pública)
+
+`/privacidad` (por ejemplo `https://odontologia.fjclouds.com/privacidad`) es la política de privacidad y tratamiento de datos, pública y sin sesión; es la URL que pide Meta para publicar la app de WhatsApp y también sirve como instrucciones de eliminación de datos (`/privacidad#eliminacion`). Variables opcionales: `LEGAL_NAME` (razón social del titular) y `CONTACT_EMAIL` (correo de contacto para privacidad y eliminación de datos). El texto es una base razonable pero debe revisarlo asesoría jurídica antes de darlo por definitivo.
