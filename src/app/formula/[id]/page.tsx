@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { requireUser } from "@/lib/dal";
 import PrintButton from "../../recibo/[id]/print-button";
 import ClinicLogo from "../../clinic-logo";
+import SealMark from "../../seal-mark";
 
 // Fórmula médica imprimible (Decreto 2200 de 2005: denominación común internacional, concentración, forma, dosis, vía,
 // frecuencia, duración y cantidad en números y letras, con los datos del prescriptor).
@@ -61,6 +62,7 @@ export default async function FormulaPage({ params }: PageProps<"/formula/[id]">
           <p>Odontólogo(a) · Registro profesional {r.dentist.licenseNumber ?? "—"}</p>
         </div>
         <p className="mt-4 text-xs text-slate-700">Fórmula generada con apoyo del vademécum {r.vademecum}; el profesional prescriptor es el responsable de su contenido.{r.voidReason ? ` Anulada: ${r.voidReason}.` : ""}</p>
+        <p className="mt-1 text-xs text-slate-700">Integridad: <SealMark seal={r.seal} full /> · Verifícala en /verificar/ con el código del sello.</p>
       </footer>
       <div className="mt-6 text-center print:hidden"><PrintButton /></div>
     </main>

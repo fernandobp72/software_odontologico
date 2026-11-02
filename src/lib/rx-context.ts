@@ -8,7 +8,7 @@ const yearsBetween = (from: Date, to: Date) => (to.getTime() - from.getTime()) /
 // Datos del paciente que alimentan las alertas y la fórmula automática: edad, peso, antecedentes,
 // lo realizado en los últimos 7 días y los diagnósticos activos.
 export async function rxContextFor(patientId: string, clinicId: string) {
-  const patient = await db.patient.findFirst({ where: { id: patientId, clinicId }, select: { id: true, firstName: true, lastName: true, documentType: true, documentNumber: true, birthDate: true, sex: true } });
+  const patient = await db.patient.findFirst({ where: { id: patientId, clinicId }, select: { id: true, firstName: true, lastName: true, documentType: true, documentNumber: true, birthDate: true, sex: true, allergies: true } });
   if (!patient) return null;
   const now = new Date();
   const since = new Date(now.getTime() - 7 * 86_400_000);
@@ -25,6 +25,7 @@ export async function rxContextFor(patientId: string, clinicId: string) {
     assessment: data,
     doneItems: done,
     diagnoses: dx,
+    patientAllergies: patient.allergies,
   };
   return { patient, ctx };
 }

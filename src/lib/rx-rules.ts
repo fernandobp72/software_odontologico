@@ -9,6 +9,7 @@ export type RxContext = {
   assessment: AssessmentData | null;
   doneItems: { name: string; tooth: number | null }[]; // tratamientos realizados recientemente
   diagnoses: { code: string; description: string; tooth: number | null }[];
+  patientAllergies?: string | null; // campo «Alergias» de la ficha del paciente (texto libre)
 };
 
 export type Alert = { level: "stop" | "warn"; text: string };
@@ -18,6 +19,13 @@ const arr = (v: string | string[] | undefined) => (Array.isArray(v) ? v : []);
 const txt = (v: string | string[] | undefined) => (typeof v === "string" ? v : Array.isArray(v) ? v.join(" ") : "");
 
 export type Flags = { tags: Set<Tag>; meds: string; allergyText: string; ageYears: number | null };
+
+// Nombres comerciales frecuentes de anticoagulantes y antiagregantes: se agrega el genérico para que las interacciones del vademécum los reconozcan.
+const BRANDS: [RegExp, string][] = [
+  [/coumadin|marevan/, "warfarina"], [/sintrom/, "acenocumarol"], [/xarelto/, "rivaroxaban"], [/eliquis/, "apixaban"],
+  [/pradaxa/, "dabigatran"], [/plavix/, "clopidogrel"], [/clexane|lovenox/, "enoxaparina"], [/cardioaspirina|\basa\b/, "aspirina"],
+];
+const withGenerics = (m: string) => BRANDS.reduce((acc, [re, g]) => (re.test(m) ? `${acc} ${g}` : acc), m);
 
 export function patientFlags(ctx: RxContext): Flags {
   const a = ctx.assessment ?? {};
@@ -35,10 +43,14 @@ export function patientFlags(ctx: RxContext): Flags {
   if (dis.includes("Epilepsia")) tags.add("epilepsy");
   if (alg.includes("Penicilina / antibióticos")) tags.add("allergy_penicillin");
   if (alg.includes("AINES")) tags.add("allergy_nsaid");
-  const meds = strip(`${txt(a.medicamentos)} ${txt(a.cirugias)} ${txt(a.observaciones)}`);
-  if (/warfarina|acenocumarol|rivaroxab|apixab|dabigatr|clopidogrel|heparina|enoxaparina|aspirina|acido acetilsalic/.test(meds)) { tags.add("anticoagulant"); tags.add("coagulation"); }
+  const meds = withGenerics(strip(`${txt(a.medicamentos)} ${txt(a.cirugias)} ${txt(a.observaciones)}`));
+  if (/warfarin|coumadin|acenocumarol|sintrom|rivaroxab|xarelto|apixab|eliquis|dabigatr|pradaxa|edoxaban|clopidogrel|plavix|ticagrelor|prasugrel|heparina|enoxaparina|clexane|aspirina|cardioaspirina|\basa\b|acido acetilsalic/.test(meds)) { tags.add("anticoagulant"); tags.add("coagulation"); }
   if (/ulcera|sangrado digestivo|hemorragia digestiva/.test(meds)) tags.add("gi_bleed");
-  return { tags, meds, allergyText: strip(`${txt(a.alergiasOtras)} ${alg.includes("Otra") ? "otra" : ""}`), ageYears: ctx.ageYears };
+  // Las alergias escritas a mano (valoración y ficha del paciente) también activan las alertas por familia de fármacos.
+  const written = strip(`${txt(a.alergiasOtras)} ${ctx.patientAllergies ?? ""}`);
+  if (/penicilin|amoxicilin|ampicilin|betalactam|cefalospor|cefalexin/.test(written)) tags.add("allergy_penicillin");
+  if (/\bains\b|antiinflamator|ibuprofen|naproxen|diclofenac|ketorolac|aspirin|acido acetilsalic|meloxicam|piroxicam|etoricoxib/.test(written)) tags.add("allergy_nsaid");
+  return { tags, meds, allergyText: strip(`${written} ${alg.includes("Otra") || written.trim() ? "otra" : ""}`), ageYears: ctx.ageYears };
 }
 
 // Alergia «otra» escrita a mano: se cruza con el nombre del medicamento y su familia.

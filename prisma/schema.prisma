@@ -225,6 +225,7 @@ model Evolution {
   procedureCode String? // CUPS
   note          String // descripción del procedimiento / evolución
   signedAt      DateTime    @default(now())
+  seal          String?     @unique // sello de integridad (HMAC) calculado al firmar
   correctsId    String?
   corrects      Evolution?  @relation("Correction", fields: [correctsId], references: [id])
   corrections   Evolution[] @relation("Correction")
@@ -350,6 +351,7 @@ model Consent {
   witnessName     String?
   signature       String // PNG en data URL
   signedAt        DateTime @default(now())
+  seal            String?  @unique // sello de integridad (HMAC) calculado al firmar
 
   @@index([patientId, signedAt])
 }
@@ -406,24 +408,27 @@ model CashSession {
 
 // Pago recibido. Inmutable: los errores se corrigen anulando con motivo.
 model Payment {
-  id           String      @id @default(cuid())
-  clinicId     String
-  clinic       Clinic      @relation(fields: [clinicId], references: [id])
-  number       Int // consecutivo del recibo por consultorio
-  patientId    String
-  patient      Patient     @relation(fields: [patientId], references: [id])
-  sessionId    String
-  session      CashSession @relation(fields: [sessionId], references: [id])
-  amount       Int // COP
-  method       PayMethod
-  reference    String?
-  note         String?
-  receivedById String
-  receivedBy   User        @relation(fields: [receivedById], references: [id])
-  receivedAt   DateTime    @default(now())
-  voidedAt     DateTime?
-  voidedById   String?
-  voidReason   String?
+  id             String      @id @default(cuid())
+  clinicId       String
+  clinic         Clinic      @relation(fields: [clinicId], references: [id])
+  number         Int // consecutivo del recibo por consultorio
+  patientId      String
+  patient        Patient     @relation(fields: [patientId], references: [id])
+  sessionId      String
+  session        CashSession @relation(fields: [sessionId], references: [id])
+  amount         Int // COP
+  method         PayMethod
+  reference      String?
+  note           String?
+  receivedById   String
+  receivedBy     User        @relation(fields: [receivedById], references: [id])
+  receivedAt     DateTime    @default(now())
+  voidedAt       DateTime?
+  voidedById     String?
+  voidReason     String?
+  // Enlace público para compartir el recibo por correo o WhatsApp: solo se guarda el hash; vence a los 30 días.
+  shareTokenHash String?     @unique
+  shareExpiresAt DateTime?
 
   @@unique([clinicId, number])
   @@index([patientId])
@@ -649,6 +654,7 @@ model Prescription {
   weightKg      Float?
   notes         String?
   vademecum     String // versión del vademécum con el que se armó
+  seal          String?            @unique // sello de integridad (HMAC) calculado al firmar
   voidedAt      DateTime?
   voidedById    String?
   voidReason    String?

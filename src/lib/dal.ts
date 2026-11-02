@@ -9,12 +9,12 @@ import { db } from "./db";
 // Incluye la cuenta de plataforma; las pantallas clínicas usan requireUser, que la deja fuera.
 export const requireAnyUser = cache(async () => {
   const session = await readSession();
-  if (!session) redirect("/login");
+  if (!session) redirect("/api/sesion/cerrar");
   const user = await db.user.findUnique({
     where: { id: session.userId },
     select: { id: true, name: true, email: true, role: true, clinicId: true, active: true, isPlatformAdmin: true, clinic: { select: { name: true, status: true, trialEndsAt: true, system: true, noun: true, logoUpdatedAt: true } } },
   });
-  if (!user || !user.active) redirect("/login");
+  if (!user || !user.active) redirect("/api/sesion/cerrar");
   // Un consultorio suspendido no puede usar el sistema (los datos se conservan).
   if (user.clinic.status === "SUSPENDED") redirect("/suspendida");
   return user;

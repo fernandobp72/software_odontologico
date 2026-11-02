@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/lib/db";
+import { sealConsent } from "@/lib/seal";
 import { requireClinician } from "@/lib/dal";
 import { CONSENT_TEMPLATES, CONSENT_VERSION, buildConsentBody } from "@/lib/consents";
 
@@ -53,6 +54,7 @@ export async function signConsent(patientId: string, _: ConsentState, fd: FormDa
       signature: d.signature,
     },
   });
+  await sealConsent(row.id);
   await db.auditLog.create({ data: { userId: user.id, action: "SIGN", entity: "Consent", entityId: row.id } });
   revalidatePath(`/pacientes/${patientId}/consentimientos`);
   return { ok: true };

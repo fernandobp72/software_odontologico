@@ -62,3 +62,7 @@ export const ageText = (birth: Date | null | undefined) => {
   const months = Math.max(0, (new Date().getUTCFullYear() - birth!.getUTCFullYear()) * 12 + new Date().getUTCMonth() - birth!.getUTCMonth());
   return `${months} ${months === 1 ? "mes" : "meses"}`;
 };
+
+// Un paciente puede eliminarse como «de prueba» solo durante su primera semana (después es historia clínica real).
+export const TEST_PATIENT_DAYS = 7;
+export const isRecentPatient = (createdAt: Date) => Date.now() - createdAt.getTime() <= TEST_PATIENT_DAYS * 86_400_000;

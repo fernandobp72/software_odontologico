@@ -3,9 +3,9 @@
 #  - tools: instala aparte solo lo necesario para migrar la base y crear el usuario inicial.
 #  - runtime: la imagen final lleva el paquete autónomo + esas herramientas, sin código de desarrollo.
 FROM node:22-bookworm-slim AS base
-RUN apt-get update -y && apt-get install -y --no-install-recommends openssl ca-certificates && rm -rf /var/lib/apt/lists/*
+RUN apt-get update -y && apt-get install -y --no-install-recommends openssl ca-certificates tzdata && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
-ENV NEXT_TELEMETRY_DISABLED=1
+ENV NEXT_TELEMETRY_DISABLED=1 TZ=America/Bogota
 
 FROM base AS build
 COPY package.json package-lock.json ./

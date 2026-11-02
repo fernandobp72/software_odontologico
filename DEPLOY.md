@@ -171,3 +171,21 @@ Seguimiento del dictado en el odontograma: al decir «diente 15» el diente qued
 Se midió con Chrome simulando 320, 360, 375 y 414 px (desbordes de página, texto que se sale de su caja, controles superpuestos y tamaño táctil), con montos grandes y nombres largos. Correcciones: tarjetas de montos de la cuenta del paciente (se apilan en pantallas angostas), resumen del paciente (ya no se ensancha con correos largos), agenda (fecha y hora a todo el ancho), selector de rol de Equipo (se veía vacío y diminuto: la lista de roles se leía de un módulo de cliente y llegaba vacía al servidor; ahora vive en `src/lib/roles.ts`), botones de sangrado y placa del periodontograma, encabezado del odontograma, zonas táctiles de los desplegables y áreas seguras de iPhone (`viewport-fit=cover` y márgenes `env(safe-area-inset-bottom)` en la barra inferior). Red de seguridad: `overflow-x: clip` en `html` y `body` para que la página no se desplace de lado.
 
 - **Resumen del paciente en el celular:** muestra solo nombre, documento y edad (con un botón «Editar» pequeño) y, si tiene alergias, una franja roja con ellas; los demás datos, el consentimiento de WhatsApp y la opción de eliminar quedan plegados bajo «Ver». En el odontograma, los estados se eligen en una fila deslizable y el aviso de «fijar como inicial» es corto, para que los dientes aparezcan en la primera pantalla. En escritorio no cambia (panel lateral).
+
+## Firma e integridad de los documentos (sello)
+- Al firmar una **evolución**, un **consentimiento** o una **fórmula** se calcula un sello (HMAC-SHA256 del contenido con la clave `SEAL_KEY`) y se guarda aparte. Si alguien cambia el contenido en la base de datos, el sello deja de coincidir.
+- Cada documento muestra «✓ Sello XXXXXXXX» y enlaza a `/verificar/<sello>`, página pública que confirma si el contenido sigue intacto y dice quién firmó y cuándo, **sin mostrar datos del paciente**. La fórmula impresa lleva el sello completo para que una droguería pueda comprobarla. Anular una fórmula no rompe el sello.
+- Los documentos firmados antes de esta función aparecen «sin sello».
+- **`SEAL_KEY` (variable de Coolify): defínela con un texto largo aleatorio, no la cambies ni la pierdas**; con otra clave los sellos anteriores dejan de verificar. Guarda una copia en tu gestor de contraseñas. Si no existe usa `SECRETS_KEY` o `SESSION_SECRET` (y rotar esa clave rompería la verificación).
+- Esto es una **prueba de integridad**, no una firma digital certificada (Ley 527 de 1999, Decreto 2364 de 2012). Una firma digital con certificado de una entidad certificadora y sello de tiempo es un servicio de pago aparte; consulta con un abogado de salud si tu caso lo exige (la historia clínica electrónica admite firma electrónica con mecanismos confiables).
+
+## Recibo compartido por WhatsApp, correo o enlace
+- En el recibo de caja, «WhatsApp» abre tu WhatsApp con el mensaje y el enlace listos para el celular del paciente; «Correo» lo envía desde el correo de la plataforma (Plataforma → Correo) al correo del paciente; «Copiar enlace» lo deja en el portapapeles.
+- El enlace (`/comprobante/<código>`) no necesita sesión, es secreto, vence a los 30 días y se renueva cada vez que se comparte (el anterior deja de servir). Permite imprimir o guardar PDF. Los recibos anulados no se comparten. Cada envío queda en la auditoría (`RECEIPT_SHARE`).
+
+## Seguridad añadida
+- Cabeceras: `X-Frame-Options`, `Content-Security-Policy` (sin marcos ajenos, formularios solo al mismo sitio), `Strict-Transport-Security`, `Referrer-Policy`, `Permissions-Policy` (micrófono propio para el dictado).
+- Sesión vencida o de un usuario desactivado: `/api/sesion/cerrar` borra la cookie y vuelve al ingreso (antes producía un bucle de redirecciones).
+- Zona horaria del servidor `America/Bogota` (Dockerfile, `TZ`): las citas y «hoy» ya no se corren 5 horas.
+- Fórmula: las alertas leen también el campo «Alergias» de la ficha del paciente y reconocen nombres comerciales de anticoagulantes (Coumadin, Xarelto…).
+- Eliminar paciente de prueba: solo durante su primera semana.

@@ -7,6 +7,8 @@ import { redirect } from "next/navigation";
 import { requireClinician, requireUser } from "@/lib/dal";
 import { CONDITIONS, SURFACES, VALID_TEETH } from "@/lib/catalogs";
 import { syncPlan } from "@/lib/plan";
+import { sealEvolution } from "@/lib/seal";
+import { isRecentPatient, TEST_PATIENT_DAYS } from "@/lib/patient-fields";
 
 const changeSchema = z.object({
   tooth: z.number().int().refine((t) => VALID_TEETH.has(t), "Diente inválido"),
@@ -99,6 +101,7 @@ export async function signEvolution(_: EvolutionState, formData: FormData): Prom
     }
     return ev;
   });
+  await sealEvolution(evolution.id);
   for (const planId of new Set(items.map((i) => i.planId))) await syncPlan(planId);
   await db.auditLog.create({
     data: { userId: user.id, action: "SIGN", entity: "Evolution", entityId: evolution.id },
@@ -110,14 +113,17 @@ export async function signEvolution(_: EvolutionState, formData: FormData): Prom
 
 export type DeleteState = { error?: string } | undefined;
 
+
 // Eliminación de un paciente de PRUEBA. La historia clínica real se conserva por ley (Res. 839 de 2017), así que exige
 // confirmar que es de prueba y escribir su documento; solo el administrador, y queda en el registro de auditoría.
+// Solo si se creó hace poco: pasada la primera semana ya es historia clínica real y se conserva.
 // Si tiene recibos o cuentas de cobro no se borra: el consecutivo de dinero no debe tener huecos.
 export async function deleteTestPatient(patientId: string, _: DeleteState, fd: FormData): Promise<DeleteState> {
   const user = await requireUser();
   if (user.role !== "ADMIN") return { error: "Solo el administrador puede eliminar pacientes de prueba" };
-  const p = await db.patient.findFirst({ where: { id: patientId, clinicId: user.clinicId }, select: { id: true, documentNumber: true, _count: { select: { payments: true, invoices: true } } } });
+  const p = await db.patient.findFirst({ where: { id: patientId, clinicId: user.clinicId }, select: { id: true, documentNumber: true, createdAt: true, _count: { select: { payments: true, invoices: true } } } });
   if (!p) return { error: "Paciente no encontrado" };
+  if (!isRecentPatient(p.createdAt)) return { error: `Solo se pueden eliminar pacientes creados en los últimos ${TEST_PATIENT_DAYS} días. Pasado ese tiempo la historia clínica se conserva por ley.` };
   if (fd.get("isTest") !== "on") return { error: "Marca la casilla que confirma que es un paciente de prueba" };
   if (String(fd.get("document") ?? "").trim() !== p.documentNumber) return { error: "Escribe el número de documento exacto para confirmar" };
   if (p._count.payments > 0 || p._count.invoices > 0) return { error: "Tiene recibos o cuentas de cobro emitidos, que deben conservarse. No se puede eliminar." };

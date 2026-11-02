@@ -6,7 +6,8 @@ import { setWhatsappOptIn } from "../../recordatorios/actions";
 import Odontogram from "./odontogram";
 import EvolutionForm from "./evolution-form";
 import DeleteTestPatient from "./delete-test";
-import { ageText } from "@/lib/patient-fields";
+import SealMark from "@/app/seal-mark";
+import { ageText, isRecentPatient } from "@/lib/patient-fields";
 
 export default async function PacientePage({ params }: PageProps<"/pacientes/[id]">) {
   const user = await requireUser();
@@ -66,7 +67,7 @@ export default async function PacientePage({ params }: PageProps<"/pacientes/[id
           <button className="btn-secondary min-h-10">{p.whatsappOptInAt ? "Retirar" : "Registrar autorización"}</button>
         </form>
       </div>
-      {user.role === "ADMIN" && <DeleteTestPatient patientId={p.id} documentNumber={p.documentNumber} />}
+      {user.role === "ADMIN" && isRecentPatient(p.createdAt) && <DeleteTestPatient patientId={p.id} documentNumber={p.documentNumber} />}
     </>
   );
 
@@ -94,7 +95,7 @@ export default async function PacientePage({ params }: PageProps<"/pacientes/[id
             <h2 className="section-title">Evoluciones</h2>
             {evolutions.map((e) => (
               <article key={e.id} className="card">
-                <p className="muted">{fmt.format(e.signedAt)} · {e.dentist.name}{e.diagnosisCode ? ` · ${e.diagnosisCode}` : ""}{e.procedureCode ? ` · CUPS ${e.procedureCode}` : ""}</p>
+                <p className="muted">{fmt.format(e.signedAt)} · {e.dentist.name}{e.diagnosisCode ? ` · ${e.diagnosisCode}` : ""}{e.procedureCode ? ` · CUPS ${e.procedureCode}` : ""} · <SealMark seal={e.seal} /></p>
                 {e.reason && <p className="font-semibold">{e.reason}</p>}
                 <p className="whitespace-pre-wrap">{e.note}</p>
               </article>

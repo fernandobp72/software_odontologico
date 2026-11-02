@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/lib/db";
+import { sealPrescription } from "@/lib/seal";
 import { requireClinician } from "@/lib/dal";
 import { rxContextFor } from "@/lib/rx-context";
 import { alertsFor, patientFlags } from "@/lib/rx-rules";
@@ -71,6 +72,7 @@ export async function signPrescription(patientId: string, raw: unknown): Promise
       },
     });
   });
+  await sealPrescription(rx.id);
   await db.auditLog.create({ data: { userId: user.id, action: "SIGN", entity: "Prescription", entityId: rx.id } });
   revalidatePath(`/pacientes/${patientId}/formulas`);
   return { id: rx.id };

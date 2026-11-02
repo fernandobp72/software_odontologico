@@ -2,6 +2,8 @@ import { db } from "@/lib/db";
 import { requireUser } from "@/lib/dal";
 import ConsentForm from "./form";
 
+import SealMark from "@/app/seal-mark";
+
 export default async function ConsentimientosPage({ params }: PageProps<"/pacientes/[id]/consentimientos">) {
   const user = await requireUser();
   const { id } = await params;
@@ -21,7 +23,7 @@ export default async function ConsentimientosPage({ params }: PageProps<"/pacien
           <details key={c.id} className="card">
             <summary className="cursor-pointer">
               <span className="font-semibold text-slate-900">{c.title}</span>
-              <span className="muted block">{fmt.format(c.signedAt)} · firma de {c.signerName} ({c.signerRelation})</span>
+              <span className="muted block">{fmt.format(c.signedAt)} · firma de {c.signerName} ({c.signerRelation}) · <SealMark seal={c.seal} /></span>
             </summary>
             <div className="mt-4 space-y-3 border-t border-slate-200 pt-4">
               <p className="whitespace-pre-wrap text-slate-900">{c.body}</p>
