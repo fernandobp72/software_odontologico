@@ -14,6 +14,7 @@ const admin = (noun: string) => [{ href: "/inicio", label: "Inicio" }, { href: "
 const linksFor = (role: string, platform: boolean, noun: string) => [
   ...base,
   { href: "/recordatorios", label: "Recordatorios" },
+  { href: "/inventario", label: "Inventario" },
   ...(role !== "RECEPTION" ? [{ href: "/vademecum", label: "Vademécum" }] : []),
   ...(role === "ADMIN" ? admin(noun) : []),
   ...(platform ? [{ href: "/plataforma", label: "Plataforma" }] : []),
@@ -24,7 +25,7 @@ const linksFor = (role: string, platform: boolean, noun: string) => [
 const isActive = (path: string, href: string) => (href === "/plataforma" ? path.startsWith(href) && !path.startsWith("/plataforma/actividad") && !path.startsWith("/plataforma/correo") && !path.startsWith("/plataforma/comunicados") : path.startsWith(href));
 const platformLinks = [{ href: "/plataforma", label: "Clientes" }, { href: "/plataforma/actividad", label: "Actividad" }, { href: "/plataforma/comunicados", label: "Comunicados" }, { href: "/plataforma/correo", label: "Correo" }, { href: "/perfil", label: "Mi cuenta" }];
 
-export function SideNav({ role, platform, platformOnly = false, noun = "consultorio" }: { role: string; platform: boolean; platformOnly?: boolean; noun?: string }) {
+export function SideNav({ role, platform, platformOnly = false, noun = "consultorio", invAlerts }: { role: string; platform: boolean; platformOnly?: boolean; noun?: string; invAlerts?: { red: number; yellow: number } }) {
   const path = usePathname();
   const links = platformOnly ? platformLinks : linksFor(role, platform, noun);
   return (
@@ -39,6 +40,9 @@ export function SideNav({ role, platform, platformOnly = false, noun = "consulto
             className={`rounded-lg px-3 py-2.5 text-sm font-semibold ${active ? "bg-teal-100 text-teal-900 shadow-[inset_4px_0_0_#e98a45]" : "text-slate-800 hover:bg-slate-200"}`}
           >
             {l.label}
+            {l.href === "/inventario" && invAlerts && invAlerts.red + invAlerts.yellow > 0 && (
+              <span className={`ml-2 rounded-full px-2 py-0.5 text-xs font-bold ${invAlerts.red ? "bg-red-100 text-red-900" : "bg-amber-100 text-amber-900"}`} title="Productos que necesitan atención">{invAlerts.red + invAlerts.yellow}</span>
+            )}
           </Link>
         );
       })}
@@ -46,7 +50,7 @@ export function SideNav({ role, platform, platformOnly = false, noun = "consulto
   );
 }
 
-export function BottomNav({ platformOnly = false }: { platformOnly?: boolean }) {
+export function BottomNav({ platformOnly = false, moreAlert = false }: { platformOnly?: boolean; moreAlert?: boolean }) {
   const path = usePathname();
   const links = platformOnly ? platformLinks : [...base, { href: "/mas", label: "Más" }];
   return (
@@ -61,6 +65,7 @@ export function BottomNav({ platformOnly = false }: { platformOnly?: boolean }) 
             className={`flex-1 py-4 text-center text-sm font-semibold ${active ? "bg-teal-50 text-teal-800 shadow-[inset_0_3px_0_#e98a45]" : "text-slate-800"}`}
           >
             {l.label}
+            {l.href === "/mas" && moreAlert && <span className="ml-1 inline-block h-2.5 w-2.5 rounded-full bg-red-600 align-middle" role="img" aria-label="Hay productos del inventario que necesitan atención" />}
           </Link>
         );
       })}

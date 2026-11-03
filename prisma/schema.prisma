@@ -606,6 +606,61 @@ model ClinicProcedure {
   @@unique([clinicId, procId])
 }
 
+// Inventario de insumos. El producto es del consultorio; las existencias (lotes) son de cada sede.
+model SupplyItem {
+  id         String           @id @default(cuid())
+  clinicId   String
+  name       String
+  category   String
+  unit       String // caja, tubo, frasco, unidad…
+  perishable Boolean          @default(true) // si vence, el ingreso exige fecha de vencimiento
+  minStock   Int              @default(0) // por debajo de este nivel el semáforo queda en rojo
+  warnDays   Int              @default(60) // días antes del vencimiento en que pasa a amarillo
+  active     Boolean          @default(true)
+  catalogKey String? // clave del catálogo precargado, si salió de ahí
+  createdAt  DateTime         @default(now())
+  lots       SupplyLot[]
+  movements  SupplyMovement[]
+
+  @@unique([clinicId, name])
+  @@index([clinicId])
+}
+
+model SupplyLot {
+  id          String     @id @default(cuid())
+  clinicId    String
+  branchId    String
+  itemId      String
+  item        SupplyItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  lotCode     String?
+  quantity    Int // lo que queda
+  initialQty  Int
+  expiresAt   DateTime?  @db.Date
+  receivedAt  DateTime   @default(now())
+  createdById String
+
+  @@index([itemId, branchId])
+  @@index([clinicId, branchId])
+}
+
+// Bitácora de existencias: IN ingreso, OUT consumo, DISCARD descarte de vencidos.
+model SupplyMovement {
+  id        String     @id @default(cuid())
+  clinicId  String
+  branchId  String
+  itemId    String
+  item      SupplyItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  lotId     String?
+  kind      String
+  delta     Int
+  note      String?
+  userId    String
+  createdAt DateTime   @default(now())
+
+  @@index([clinicId, branchId, createdAt])
+  @@index([itemId])
+}
+
 // Formulario previo: el paciente llena su anamnesis desde un enlace antes de la cita.
 // Solo se guarda el hash del token; el profesional revisa y lo pasa a la valoración.
 model IntakeForm {
