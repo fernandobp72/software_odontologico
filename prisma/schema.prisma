@@ -429,6 +429,10 @@ model Payment {
   // Enlace público para compartir el recibo por correo o WhatsApp: solo se guarda el hash; vence a los 30 días.
   shareTokenHash String?     @unique
   shareExpiresAt DateTime?
+  // Protección del enlace: intentos fallidos de documento (se bloquea a los 5) y aperturas del día (tope diario).
+  shareFailures  Int         @default(0)
+  shareOpens     Int         @default(0)
+  shareOpensDay  String?
 
   @@unique([clinicId, number])
   @@index([patientId])

@@ -17,7 +17,8 @@ export type Receipt = NonNullable<Awaited<ReturnType<typeof loadReceipt>>>;
 const fmt = new Intl.DateTimeFormat("es-CO", { dateStyle: "long", timeStyle: "short", timeZone: "America/Bogota" });
 
 // El recibo tal como se imprime y se comparte: el mismo diseño en la pantalla del consultorio y en el enlace público.
-export default function ReceiptView({ p }: { p: Receipt }) {
+export default function ReceiptView({ p, maskDocument = false }: { p: Receipt; maskDocument?: boolean }) {
+  const doc = maskDocument ? `••••${p.patient.documentNumber.slice(-4)}` : p.patient.documentNumber;
   return (
     <>
       <header className="border-b border-slate-400 pb-3 text-center">
@@ -33,7 +34,7 @@ export default function ReceiptView({ p }: { p: Receipt }) {
       <dl className="space-y-2 py-4 text-sm">
         <div className="flex justify-between"><dt>Fecha</dt><dd className="font-semibold">{fmt.format(p.receivedAt)}</dd></div>
         <div className="flex justify-between"><dt>Paciente</dt><dd className="font-semibold">{p.patient.firstName} {p.patient.lastName}</dd></div>
-        <div className="flex justify-between"><dt>Documento</dt><dd className="font-semibold">{p.patient.documentType} {p.patient.documentNumber}</dd></div>
+        <div className="flex justify-between"><dt>Documento</dt><dd className="font-semibold">{p.patient.documentType} {doc}</dd></div>
         <div className="flex justify-between"><dt>Medio de pago</dt><dd className="font-semibold">{METHODS[p.method]}</dd></div>
         {p.reference && <div className="flex justify-between"><dt>Referencia</dt><dd className="font-semibold">{p.reference}</dd></div>}
         {p.note && <div className="flex justify-between"><dt>Nota</dt><dd className="font-semibold">{p.note}</dd></div>}

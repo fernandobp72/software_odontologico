@@ -16,7 +16,7 @@ export default async function ReciboPage({ params }: PageProps<"/recibo/[id]">) 
       <ReceiptView p={p} />
       <div className="mt-6 space-y-3 text-center print:hidden">
         <PrintButton />
-        {!p.voidedAt && <ShareButtons paymentId={p.id} hasPhone={!!normalizePhone(p.patient.phone)} email={p.patient.email} />}
+        {!p.voidedAt && <ShareButtons paymentId={p.id} hasPhone={!!normalizePhone(p.patient.phone)} email={p.patient.email} hasLink={!!p.shareTokenHash && !!p.shareExpiresAt && p.shareExpiresAt > new Date()} />}
       </div>
     </main>
   );

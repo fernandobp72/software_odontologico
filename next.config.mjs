@@ -6,6 +6,8 @@ const nextConfig = {
   // Cabeceras de seguridad: sin marcos ajenos, sin adivinar tipos, HTTPS siempre y permisos de sensores limitados (micrófono propio para el dictado).
   async headers() {
     return [
+      // Recibos compartidos: ni el navegador ni intermediarios guardan copia.
+      { source: "/comprobante/:path*", headers: [{ key: "Cache-Control", value: "no-store" }] },
       {
         source: "/:path*",
         headers: [

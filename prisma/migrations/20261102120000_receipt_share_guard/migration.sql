@@ -1,0 +1,4 @@
+-- AlterTable
+ALTER TABLE "Payment" ADD COLUMN "shareFailures" INTEGER NOT NULL DEFAULT 0,
+ADD COLUMN "shareOpens" INTEGER NOT NULL DEFAULT 0,
+ADD COLUMN "shareOpensDay" TEXT;

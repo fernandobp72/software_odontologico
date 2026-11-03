@@ -10,7 +10,7 @@ import { normalizePhone, waLink } from "@/lib/whatsapp";
 
 export type ShareState = { error?: string; ok?: string; whatsapp?: string; link?: string } | undefined;
 
-const DAYS = 30;
+const DAYS = 7;
 
 // Genera (o renueva) el enlace secreto del recibo. Solo se guarda su huella; el enlace anterior deja de servir.
 async function shareUrl(paymentId: string, clinicId: string) {
@@ -21,12 +21,12 @@ async function shareUrl(paymentId: string, clinicId: string) {
   if (!p) return { error: "Recibo no encontrado" } as const;
   if (p.voidedAt) return { error: "El recibo está anulado y no se comparte" } as const;
   const token = newToken();
-  await db.payment.update({ where: { id: p.id }, data: { shareTokenHash: hashToken(token), shareExpiresAt: new Date(Date.now() + DAYS * 86_400_000) } });
+  await db.payment.update({ where: { id: p.id }, data: { shareTokenHash: hashToken(token), shareExpiresAt: new Date(Date.now() + DAYS * 86_400_000), shareFailures: 0, shareOpens: 0, shareOpensDay: null } });
   return { p, url: `${await appOrigin()}/comprobante/${token}` } as const;
 }
 
 const text = (p: { number: number; amount: number; patient: { firstName: string }; clinic: { name: string } }, url: string) =>
-  `Hola ${p.patient.firstName}, este es tu recibo de caja N.º ${p.number} por ${copFmt.format(p.amount)} de ${p.clinic.name}: ${url}`;
+  `Hola ${p.patient.firstName}, este es tu recibo de caja N.º ${p.number} por ${copFmt.format(p.amount)} de ${p.clinic.name}. Para abrirlo te pedirá los últimos 4 dígitos del documento del paciente: ${url}`;
 
 export async function whatsappReceipt(paymentId: string): Promise<ShareState> {
   const user = await requireUser();
@@ -46,7 +46,7 @@ export async function emailReceipt(paymentId: string): Promise<ShareState> {
   if (!to) return { error: "El paciente no tiene correo. Agrégalo en Editar." };
   const body = mailBody({
     title: `Recibo de caja N.º ${r.p.number}`,
-    paragraphs: [`Hola ${r.p.patient.firstName}, gracias por tu pago de ${copFmt.format(r.p.amount)} en ${r.p.clinic.name}.`, `Puedes ver, imprimir o guardar tu recibo con el botón de abajo. El enlace vence en ${DAYS} días.`],
+    paragraphs: [`Hola ${r.p.patient.firstName}, gracias por tu pago de ${copFmt.format(r.p.amount)} en ${r.p.clinic.name}.`, `Puedes ver, imprimir o guardar tu recibo con el botón de abajo. Por tu seguridad te pedirá los últimos 4 dígitos del documento del paciente, y el enlace vence en ${DAYS} días.`],
     button: { label: "Ver mi recibo", url: r.url },
     footer: `Enviado por ${r.p.clinic.name} con su software odontológico.`,
   });
@@ -62,4 +62,13 @@ export async function linkReceipt(paymentId: string): Promise<ShareState> {
   if ("error" in r) return { error: r.error };
   await db.auditLog.create({ data: { userId: user.id, action: "RECEIPT_SHARE", entity: "Payment", entityId: paymentId, detail: "enlace" } });
   return { ok: "Enlace listo", link: r.url };
+}
+
+// Apaga el enlace compartido al instante (por ejemplo si el paciente lo reenvió por error).
+export async function revokeReceiptLink(paymentId: string): Promise<ShareState> {
+  const user = await requireUser();
+  const r = await db.payment.updateMany({ where: { id: paymentId, clinicId: user.clinicId, shareTokenHash: { not: null } }, data: { shareTokenHash: null, shareExpiresAt: null } });
+  if (!r.count) return { error: "No hay un enlace activo para revocar" };
+  await db.auditLog.create({ data: { userId: user.id, action: "RECEIPT_SHARE", entity: "Payment", entityId: paymentId, detail: "revocado" } });
+  return { ok: "Enlace revocado: ya no abre" };
 }
