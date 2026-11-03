@@ -117,18 +117,21 @@ export type DeleteState = { error?: string } | undefined;
 // Eliminación de un paciente de PRUEBA. La historia clínica real se conserva por ley (Res. 839 de 2017), así que exige
 // confirmar que es de prueba y escribir su documento; solo el administrador, y queda en el registro de auditoría.
 // Solo si se creó hace poco: pasada la primera semana ya es historia clínica real y se conserva.
-// Si tiene recibos o cuentas de cobro no se borra: el consecutivo de dinero no debe tener huecos.
+// Si tiene recibos o cuentas de cobro vigentes no se borra: el dinero cobrado debe conservarse. Si todos están anulados sí se puede
+// (queda en la auditoría qué números se retiraron), para que una prueba de caja no deje al paciente de prueba sin poder borrarse.
 export async function deleteTestPatient(patientId: string, _: DeleteState, fd: FormData): Promise<DeleteState> {
   const user = await requireUser();
   if (user.role !== "ADMIN") return { error: "Solo el administrador puede eliminar pacientes de prueba" };
-  const p = await db.patient.findFirst({ where: { id: patientId, clinicId: user.clinicId }, select: { id: true, documentNumber: true, createdAt: true, _count: { select: { payments: true, invoices: true } } } });
+  const p = await db.patient.findFirst({ where: { id: patientId, clinicId: user.clinicId }, select: { id: true, documentNumber: true, createdAt: true, payments: { select: { number: true, voidedAt: true } }, invoices: { select: { number: true, voidedAt: true } } } });
   if (!p) return { error: "Paciente no encontrado" };
   if (!isRecentPatient(p.createdAt)) return { error: `Solo se pueden eliminar pacientes creados en los últimos ${TEST_PATIENT_DAYS} días. Pasado ese tiempo la historia clínica se conserva por ley.` };
   if (fd.get("isTest") !== "on") return { error: "Marca la casilla que confirma que es un paciente de prueba" };
   if (String(fd.get("document") ?? "").trim() !== p.documentNumber) return { error: "Escribe el número de documento exacto para confirmar" };
-  if (p._count.payments > 0 || p._count.invoices > 0) return { error: "Tiene recibos o cuentas de cobro emitidos, que deben conservarse. No se puede eliminar." };
+  if (p.payments.some((x) => !x.voidedAt) || p.invoices.some((x) => !x.voidedAt)) return { error: "Tiene recibos o cuentas de cobro vigentes, que deben conservarse. Anúlalos primero (en Caja) y podrás eliminarlo." };
   try {
     await db.$transaction([
+      db.payment.deleteMany({ where: { patientId, voidedAt: { not: null } } }),
+      db.invoice.deleteMany({ where: { patientId, voidedAt: { not: null } } }),
       db.reminder.deleteMany({ where: { appointment: { patientId } } }),
       db.appointment.deleteMany({ where: { patientId } }),
       db.treatmentPlan.deleteMany({ where: { patientId } }),
@@ -148,7 +151,7 @@ export async function deleteTestPatient(patientId: string, _: DeleteState, fd: F
   } catch {
     return { error: "Tiene registros asociados que impiden eliminarlo." };
   }
-  await db.auditLog.create({ data: { userId: user.id, action: "PATIENT_DELETE_TEST", entity: "Patient", entityId: patientId, detail: "eliminó un paciente marcado como de prueba" } });
+  await db.auditLog.create({ data: { userId: user.id, action: "PATIENT_DELETE_TEST", entity: "Patient", entityId: patientId, detail: `eliminó un paciente marcado como de prueba${p.payments.length ? `; recibos anulados retirados: ${p.payments.map((x) => x.number).join(", ")}` : ""}${p.invoices.length ? `; cuentas de cobro anuladas retiradas: ${p.invoices.map((x) => x.number).join(", ")}` : ""}` } });
   revalidatePath("/pacientes");
   redirect("/pacientes");
 }

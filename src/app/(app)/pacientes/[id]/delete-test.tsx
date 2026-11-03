@@ -11,7 +11,7 @@ export default function DeleteTestPatient({ patientId, documentNumber }: { patie
       <form action={action} className="mt-3 space-y-3">
         <p className="muted">
           Borra el paciente y todo lo registrado (odontograma, historia, evoluciones, plan, consentimientos, imágenes y citas). No se deshace.
-          Solo para datos de prueba: la historia clínica de pacientes reales se conserva por ley. No se puede si tiene recibos o cuentas de cobro.
+          Solo para datos de prueba: la historia clínica de pacientes reales se conserva por ley. Si tiene recibos o cuentas de cobro, deben estar anulados (los anulados se retiran con el paciente).
         </p>
         <label className="flex min-h-11 cursor-pointer items-start gap-3 text-sm text-slate-900">
           <input type="checkbox" name="isTest" className="mt-1 h-5 w-5 accent-teal-700" /> Confirmo que es un paciente de prueba, no una persona real
