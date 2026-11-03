@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import DocLink from "@/app/doc-link";
 import { useActionState } from "react";
 import { METHODS } from "@/lib/cartera";
 import { closeSession, openSession, registerPayment } from "./actions";
@@ -66,7 +66,7 @@ export function PaymentForm({ patients, fixedPatientId, suggested }: { patients?
       </div>
       {state?.error && <p role="alert" className="error-text">{state.error}</p>}
       {state?.ok && state.receiptId && (
-        <p className="ok-text">Pago registrado. <Link href={`/recibo/${state.receiptId}`} target="_blank" className="underline">Ver recibo</Link></p>
+        <p className="ok-text">Pago registrado. <DocLink href={`/recibo/${state.receiptId}`} title="Recibo de caja" className="underline">Ver recibo</DocLink></p>
       )}
       <button disabled={pending} className="btn-primary w-full sm:w-auto">{pending ? "Registrando…" : "Registrar pago"}</button>
     </form>

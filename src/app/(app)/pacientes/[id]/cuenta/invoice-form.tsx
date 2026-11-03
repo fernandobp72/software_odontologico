@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import DocLink from "@/app/doc-link";
 import { useActionState } from "react";
 import { copFmt } from "@/lib/cartera";
 import { createInvoice } from "./actions";
@@ -29,7 +29,7 @@ export default function InvoiceForm({ patientId, items, defaultName, defaultDocu
       </div>
       <label className="label">Nota (opcional)<input name="note" maxLength={300} className="field" /></label>
       {state?.error && <p role="alert" className="error-text">{state.error}</p>}
-      {state?.ok && state.invoiceId && <p className="ok-text">Cuenta de cobro generada. <Link href={`/cuenta-de-cobro/${state.invoiceId}`} target="_blank" className="underline">Abrir documento</Link></p>}
+      {state?.ok && state.invoiceId && <p className="ok-text">Cuenta de cobro generada. <DocLink href={`/cuenta-de-cobro/${state.invoiceId}`} title="Cuenta de cobro" className="underline">Abrir documento</DocLink></p>}
       <button disabled={pending} className="btn-primary w-full sm:w-auto">{pending ? "Generando…" : "Generar cuenta de cobro"}</button>
       <p className="muted">Es un documento interno de cobro. No es factura electrónica de venta ante la DIAN.</p>
     </form>

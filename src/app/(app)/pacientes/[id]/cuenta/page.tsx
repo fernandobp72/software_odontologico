@@ -1,3 +1,4 @@
+import DocLink from "@/app/doc-link";
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { requireBranch } from "@/lib/dal";
@@ -53,7 +54,7 @@ export default async function CuentaPage({ params }: PageProps<"/pacientes/[id]/
                   <span className={v.voidedAt ? "line-through opacity-70" : ""}>N.º {v.number} · {fmt.format(v.issuedAt)} · {v.customerName}</span>
                   <span className="flex items-center gap-3">
                     <span className={`font-semibold ${v.voidedAt ? "line-through" : ""}`}>{copFmt.format(v.total)}</span>
-                    <Link href={`/cuenta-de-cobro/${v.id}`} target="_blank" className="font-semibold underline">Abrir</Link>
+                    <DocLink href={`/cuenta-de-cobro/${v.id}`} title="Cuenta de cobro" className="font-semibold underline">Abrir</DocLink>
                   </span>
                 </div>
                 {v.voidedAt && <p className="error-text">Anulada: {v.voidReason}</p>}
@@ -93,7 +94,7 @@ export default async function CuentaPage({ params }: PageProps<"/pacientes/[id]/
                 <span className={p.voidedAt ? "line-through opacity-70" : ""}>{fmt.format(p.receivedAt)} · Recibo {p.number} · {METHODS[p.method]}</span>
                 <span className="flex items-center gap-3">
                   <span className={`font-semibold ${p.voidedAt ? "line-through" : ""}`}>{copFmt.format(p.amount)}</span>
-                  <Link href={`/recibo/${p.id}`} target="_blank" className="font-semibold underline">Recibo</Link>
+                  <DocLink href={`/recibo/${p.id}`} title="Recibo de caja" className="font-semibold underline">Recibo</DocLink>
                 </span>
               </li>
             ))}

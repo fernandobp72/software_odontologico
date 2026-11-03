@@ -1,4 +1,4 @@
-import Link from "next/link";
+import DocLink from "@/app/doc-link";
 import { db } from "@/lib/db";
 import { requireBranch } from "@/lib/dal";
 import { METHODS, copFmt, type MethodKey } from "@/lib/cartera";
@@ -57,7 +57,7 @@ export default async function CajaPage() {
                         <p className="muted">Recibo {p.number} · {METHODS[p.method]}{p.reference ? ` · ${p.reference}` : ""} · {p.receivedBy.name}</p>
                         {p.voidedAt && <p className="error-text">Anulado: {p.voidReason}</p>}
                       </div>
-                      <Link href={`/recibo/${p.id}`} target="_blank" className="btn-secondary min-h-10">Recibo</Link>
+                      <DocLink href={`/recibo/${p.id}`} title="Recibo de caja" className="btn-secondary min-h-10">Recibo</DocLink>
                     </div>
                     {user.role === "ADMIN" && !p.voidedAt && (
                       <details className="mt-2">

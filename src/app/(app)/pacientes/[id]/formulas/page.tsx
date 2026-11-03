@@ -1,4 +1,4 @@
-import Link from "next/link";
+import DocLink from "@/app/doc-link";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/dal";
 import { rxContextFor } from "@/lib/rx-context";
@@ -44,7 +44,7 @@ export default async function FormulasPage({ params }: PageProps<"/pacientes/[id
                 <p className="muted">{fmt.format(r.issuedAt)} · {r.dentist.name}{r.diagnosisCode ? ` · ${r.diagnosisCode}` : ""}</p>
               </div>
               <div className="flex gap-2">
-                <Link href={`/formula/${r.id}`} className="btn-secondary min-h-10" target="_blank">Ver / imprimir</Link>
+                <DocLink href={`/formula/${r.id}`} title="Fórmula médica" className="btn-secondary min-h-10">Ver / imprimir</DocLink>
                 {!r.voidedAt && (r.dentistId === user.id || user.role === "ADMIN") && <VoidButton id={r.id} />}
               </div>
             </div>
