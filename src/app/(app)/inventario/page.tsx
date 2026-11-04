@@ -3,7 +3,8 @@ import { db } from "@/lib/db";
 import { requireBranch } from "@/lib/dal";
 import { LEVEL_LABEL, LEVEL_ORDER, evaluate, unitLabel, type Level } from "@/lib/inventory";
 import VoicePanel from "./voice-panel";
-import { CatalogPicker, ConsumeForm, CustomItemForm, DiscardButton, ItemSettings, ReceiveForm } from "./forms";
+import { oldUnitItems } from "@/lib/supply-ops";
+import { UpgradeBanner, CatalogPicker, ConsumeForm, CustomItemForm, DiscardButton, ItemSettings, ReceiveForm } from "./forms";
 
 const STYLE: Record<Level, { chip: string; dot: string; icon: string }> = {
   RED: { chip: "bg-red-100 text-red-900", dot: "bg-red-600", icon: "⛔" },
@@ -37,6 +38,7 @@ export default async function InventarioPage({ searchParams }: PageProps<"/inven
   const count = (l: Level) => rows.filter((r) => r.st.level === l).length;
   const shown = filter ? rows.filter((r) => r.st.level === filter) : rows;
   const inactive = items.filter((i) => !i.active);
+  const old = admin ? await oldUnitItems(user.clinicId) : [];
 
   return (
     <div className="space-y-6">
@@ -45,6 +47,8 @@ export default async function InventarioPage({ searchParams }: PageProps<"/inven
         {admin && <p className="mt-1"><Link href="/inventario/kits" className="text-sm font-semibold text-teal-800 underline">Kits por procedimiento (descuento automático)</Link></p>}
         <p className="muted max-w-2xl">Lo que está en rojo o amarillo sube arriba. Registra los ingresos con su fecha de vencimiento y las salidas; el sistema gasta primero lo que vence antes.{branches.length > 1 ? ` Sede: ${branch.name} (cada sede tiene sus propias existencias).` : ""}</p>
       </div>
+
+      {old.length > 0 && <UpgradeBanner names={old.map((o) => o.item.name)} />}
 
       {rows.length > 0 && <VoicePanel items={rows.map(({ i }) => ({ id: i.id, name: i.name, category: i.category, unit: i.unit, packLabel: i.packLabel, packSize: i.packSize, perishable: i.perishable }))} />}
 

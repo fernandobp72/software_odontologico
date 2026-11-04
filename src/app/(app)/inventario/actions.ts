@@ -5,7 +5,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { requireBranch } from "@/lib/dal";
 import { todayBogota, unitLabel } from "@/lib/inventory";
-import { receiveLot, takeFefo } from "@/lib/supply-ops";
+import { oldUnitItems, receiveLot, takeFefo } from "@/lib/supply-ops";
 import { SUPPLY_CATALOG, SUPPLY_CATEGORIES, SUPPLY_UNITS } from "@/lib/supplies-catalog";
 
 export type SupplyState = { error?: string; ok?: string } | undefined;
@@ -171,4 +171,24 @@ export async function applyDrafts(lines: DraftLine[]): Promise<ApplyResult> {
     out.push({ ok: !r?.error, text: `${name}: ${r?.error ?? r?.ok ?? "listo"}` });
   }
   return { lines: out };
+}
+
+// ---- Productos de la primera versión: pasarlos a unidad de uso ----
+
+// Convierte las existencias: «2 cajas» pasan a «100 carpules». Ajusta lotes, historial y mínimo para que todo siga cuadrando.
+export async function upgradeOldItems(): Promise<SupplyState> {
+  const { user } = await requireAdmin();
+  const list = await oldUnitItems(user.clinicId);
+  if (!list.length) return { ok: "No hay productos por actualizar" };
+  await db.$transaction(async (tx) => {
+    for (const { item, base } of list) {
+      const f = base.packSize as number;
+      await tx.supplyLot.updateMany({ where: { itemId: item.id }, data: { quantity: { multiply: f }, initialQty: { multiply: f } } });
+      await tx.supplyMovement.updateMany({ where: { itemId: item.id }, data: { delta: { multiply: f } } });
+      await tx.supplyItem.update({ where: { id: item.id }, data: { unit: base.unit, packLabel: base.pack, packSize: f, minStock: item.minStock > 0 ? item.minStock * f : base.min } });
+    }
+  });
+  await db.auditLog.create({ data: { userId: user.id, action: "SUPPLY_UPDATE", entity: "SupplyItem", entityId: `${list.length} pasados a unidad de uso` } });
+  revalidatePath("/inventario");
+  return { ok: `${list.length} producto${list.length === 1 ? "" : "s"} actualizado${list.length === 1 ? "" : "s"}` };
 }

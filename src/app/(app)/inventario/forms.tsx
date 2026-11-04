@@ -3,7 +3,7 @@
 import { useActionState } from "react";
 import { SUPPLY_CATALOG, SUPPLY_CATEGORIES, SUPPLY_UNITS } from "@/lib/supplies-catalog";
 import { unitLabel } from "@/lib/inventory";
-import { addFromCatalog, addKitLine, consumeStock, createItem, discardExpired, receiveStock, removeKitLine, saveItem } from "./actions";
+import { addFromCatalog, addKitLine, upgradeOldItems, consumeStock, createItem, discardExpired, receiveStock, removeKitLine, saveItem } from "./actions";
 
 const Msg = ({ s }: { s: { error?: string; ok?: string } | undefined }) => (
   <>
@@ -155,6 +155,18 @@ export function KitRemoveButton({ lineId }: { lineId: string }) {
   return (
     <form action={removeKitLine.bind(null, lineId)}>
       <button className="min-h-11 px-2 text-sm font-semibold text-red-800 underline">Quitar</button>
+    </form>
+  );
+}
+
+export function UpgradeBanner({ names }: { names: string[] }) {
+  const [state, action, pending] = useActionState(upgradeOldItems, undefined);
+  return (
+    <form action={action} className="card space-y-2 border-amber-500">
+      <p className="font-semibold text-slate-900">{names.length} producto{names.length === 1 ? "" : "s"} se cuenta{names.length === 1 ? "" : "n"} por caja y no sirve{names.length === 1 ? "" : "n"} para los kits</p>
+      <p className="muted">{names.join(", ")}. Al actualizar, las existencias pasan a unidad de uso (por ejemplo 2 cajas de guantes pasan a 100 pares), con su empaque y su mínimo. El historial y los lotes se ajustan solos.</p>
+      <Msg s={state} />
+      <button disabled={pending} className="btn-primary min-h-11">{pending ? "Actualizando…" : "Actualizar ahora"}</button>
     </form>
   );
 }

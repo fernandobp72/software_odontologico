@@ -1,5 +1,6 @@
 import { db } from "./db";
 import { pickFefo, todayBogota } from "./inventory";
+import { SUPPLY_CATALOG } from "./supplies-catalog";
 
 type Ctx = { clinicId: string; branchId: string; userId: string };
 
@@ -55,4 +56,13 @@ export async function consumeForProcedures(ctx: Ctx, refId: string, label: strin
     used += r.taken;
   }
   return { used };
+}
+
+// Productos del catálogo que se crearon contando por caja y que ahora tienen unidad de uso y empaque (guantes, anestesia…).
+export async function oldUnitItems(clinicId: string) {
+  const items = await db.supplyItem.findMany({ where: { clinicId, catalogKey: { not: null }, packSize: null } });
+  return items.flatMap((i) => {
+    const base = SUPPLY_CATALOG.find((c) => c.key === i.catalogKey);
+    return base?.pack && base.packSize ? [{ item: i, base }] : [];
+  });
 }
