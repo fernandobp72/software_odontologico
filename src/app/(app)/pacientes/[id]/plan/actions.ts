@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { requireClinician } from "@/lib/dal";
+import { branchState, requireClinician } from "@/lib/dal";
+import { consumeForProcedures } from "@/lib/supply-ops";
 import { syncPlan } from "@/lib/plan";
 import { applySuggestions } from "@/lib/suggest-apply";
 import { CIE10, VALID_TEETH, SURFACES } from "@/lib/catalogs";
@@ -104,6 +105,14 @@ export async function setItemStatus(itemId: string, status: "PLANNED" | "IN_PROG
     where: { id: itemId },
     data: { status, doneAt: status === "DONE" ? new Date() : null, doneById: status === "DONE" ? user.id : null },
   });
+  if (status === "DONE" && item.status !== "DONE") {
+    try {
+      const { branch } = await branchState();
+      if (branch) await consumeForProcedures({ clinicId: user.clinicId, branchId: branch.id, userId: user.id }, `item:${itemId}`, `Kit: ${item.name}`.slice(0, 120), [{ name: item.name, quantity: item.quantity }]);
+    } catch (e) {
+      console.error("Descuento de inventario por kits falló", e);
+    }
+  }
   await audit(user.id, `ITEM_${status}`, "TreatmentItem", itemId);
   await syncPlan(item.planId);
   revalidatePath(`/pacientes/${item.plan.patientId}/plan`);

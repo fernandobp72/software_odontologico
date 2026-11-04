@@ -618,9 +618,14 @@ model SupplyItem {
   warnDays   Int              @default(60) // días antes del vencimiento en que pasa a amarillo
   active     Boolean          @default(true)
   catalogKey String? // clave del catálogo precargado, si salió de ahí
+  // Las existencias se cuentan en la unidad de uso (carpule, par, aplicación…). Si viene empacado, packLabel/packSize
+  // permiten ingresar «2 cajas» y que cuente 100 carpules.
+  packLabel  String?
+  packSize   Int?
   createdAt  DateTime         @default(now())
   lots       SupplyLot[]
   movements  SupplyMovement[]
+  kitLines   SupplyKitLine[]
 
   @@unique([clinicId, name])
   @@index([clinicId])
@@ -655,10 +660,26 @@ model SupplyMovement {
   delta     Int
   note      String?
   userId    String
+  // Si el consumo salió de un procedimiento hecho: «evo:<id>» o «item:<id>». Evita descontar dos veces lo mismo.
+  refId     String?
   createdAt DateTime   @default(now())
 
   @@index([clinicId, branchId, createdAt])
   @@index([itemId])
+  @@index([refId])
+}
+
+// Kit: lo que gasta un procedimiento del catálogo (procId de ClinicProcedure), en la unidad de uso del insumo.
+model SupplyKitLine {
+  id       String     @id @default(cuid())
+  clinicId String
+  procId   String
+  itemId   String
+  item     SupplyItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  quantity Int
+
+  @@unique([clinicId, procId, itemId])
+  @@index([clinicId, procId])
 }
 
 // Formulario previo: el paciente llena su anamnesis desde un enlace antes de la cita.

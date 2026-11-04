@@ -2,6 +2,7 @@ import Link from "next/link";
 import { db } from "@/lib/db";
 import { requireBranch } from "@/lib/dal";
 import { LEVEL_LABEL, LEVEL_ORDER, evaluate, unitLabel, type Level } from "@/lib/inventory";
+import VoicePanel from "./voice-panel";
 import { CatalogPicker, ConsumeForm, CustomItemForm, DiscardButton, ItemSettings, ReceiveForm } from "./forms";
 
 const STYLE: Record<Level, { chip: string; dot: string; icon: string }> = {
@@ -41,8 +42,11 @@ export default async function InventarioPage({ searchParams }: PageProps<"/inven
     <div className="space-y-6">
       <div>
         <h1 className="page-title">Inventario</h1>
+        {admin && <p className="mt-1"><Link href="/inventario/kits" className="text-sm font-semibold text-teal-800 underline">Kits por procedimiento (descuento automático)</Link></p>}
         <p className="muted max-w-2xl">Lo que está en rojo o amarillo sube arriba. Registra los ingresos con su fecha de vencimiento y las salidas; el sistema gasta primero lo que vence antes.{branches.length > 1 ? ` Sede: ${branch.name} (cada sede tiene sus propias existencias).` : ""}</p>
       </div>
+
+      {rows.length > 0 && <VoicePanel items={rows.map(({ i }) => ({ id: i.id, name: i.name, category: i.category, unit: i.unit, packLabel: i.packLabel, packSize: i.packSize, perishable: i.perishable }))} />}
 
       {rows.length > 0 && (
         <nav aria-label="Filtrar por estado" className="flex flex-wrap gap-2">
@@ -71,7 +75,7 @@ export default async function InventarioPage({ searchParams }: PageProps<"/inven
                     <span className="min-w-0"><span className="block font-semibold text-slate-900">{i.name}</span><span className="muted">{i.category}</span></span>
                   </span>
                   <span className="text-sm text-slate-800 sm:text-right">
-                    <span className="block font-semibold">{st.stock} {unitLabel(i.unit, st.stock)}{i.minStock ? ` · mín. ${i.minStock}` : ""}</span>
+                    <span className="block font-semibold">{st.stock} {unitLabel(i.unit, st.stock)}{i.packSize && i.packLabel && st.stock >= i.packSize ? ` (${Math.floor(st.stock / i.packSize)} ${unitLabel(i.packLabel, Math.floor(st.stock / i.packSize))}${st.stock % i.packSize ? ` y ${st.stock % i.packSize}` : ""})` : ""}{i.minStock ? ` · mín. ${i.minStock}` : ""}</span>
                     {st.reasons.length > 0 && <span className="block">{st.reasons.join(" · ")}</span>}
                   </span>
                 </summary>
@@ -86,8 +90,8 @@ export default async function InventarioPage({ searchParams }: PageProps<"/inven
                   )}
                   {st.expiredQty > 0 && <DiscardButton itemId={i.id} />}
                   <div className="grid gap-6 md:grid-cols-2">
-                    <ReceiveForm itemId={i.id} unit={i.unit} perishable={i.perishable} />
-                    <ConsumeForm itemId={i.id} unit={i.unit} />
+                    <ReceiveForm itemId={i.id} unit={i.unit} perishable={i.perishable} pack={i} />
+                    <ConsumeForm itemId={i.id} unit={i.unit} pack={i} />
                   </div>
                   {admin && <div className="border-t border-slate-200 pt-4"><ItemSettings itemId={i.id} minStock={i.minStock} warnDays={i.warnDays} perishable={i.perishable} active={i.active} /></div>}
                 </div>

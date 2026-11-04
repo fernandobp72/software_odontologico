@@ -4,7 +4,8 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { redirect } from "next/navigation";
-import { requireClinician, requireUser } from "@/lib/dal";
+import { branchState, requireClinician, requireUser } from "@/lib/dal";
+import { consumeForProcedures } from "@/lib/supply-ops";
 import { CONDITIONS, SURFACES, VALID_TEETH } from "@/lib/catalogs";
 import { syncPlan } from "@/lib/plan";
 import { sealEvolution } from "@/lib/seal";
@@ -78,7 +79,7 @@ export async function signEvolution(_: EvolutionState, formData: FormData): Prom
   const items = itemIds.length
     ? await db.treatmentItem.findMany({
         where: { id: { in: itemIds }, status: { in: ["PLANNED", "IN_PROGRESS"] }, plan: { patientId: patient.id } },
-        select: { id: true, planId: true },
+        select: { id: true, planId: true, name: true, quantity: true },
       })
     : [];
 
@@ -102,6 +103,13 @@ export async function signEvolution(_: EvolutionState, formData: FormData): Prom
     return ev;
   });
   await sealEvolution(evolution.id);
+  // Kits de inventario: lo que gastan los procedimientos hechos se descuenta solo. Nunca interrumpe la historia clínica.
+  try {
+    const { branch } = await branchState();
+    if (branch && items.length) await consumeForProcedures({ clinicId: user.clinicId, branchId: branch.id, userId: user.id }, `evo:${evolution.id}`, `Kit: ${items.map((i) => i.name).join(", ").slice(0, 110)}`, items);
+  } catch (e) {
+    console.error("Descuento de inventario por kits falló", e);
+  }
   for (const planId of new Set(items.map((i) => i.planId))) await syncPlan(planId);
   await db.auditLog.create({
     data: { userId: user.id, action: "SIGN", entity: "Evolution", entityId: evolution.id },

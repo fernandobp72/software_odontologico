@@ -60,6 +60,7 @@ export function pickFefo<T extends { quantity: number; expiresAt: Date | null }>
 // «3 cajas», «1 unidad», «5 unidades», «2 kits».
 export function unitLabel(unit: string, n: number) {
   if (n === 1) return unit;
+  if (unit.endsWith("ón")) return `${unit.slice(0, -2)}ones`;
   if (unit.endsWith("d") || unit.endsWith("r") || unit.endsWith("l")) return `${unit}es`;
   return `${unit}s`;
 }

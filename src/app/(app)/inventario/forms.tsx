@@ -2,7 +2,8 @@
 
 import { useActionState } from "react";
 import { SUPPLY_CATALOG, SUPPLY_CATEGORIES, SUPPLY_UNITS } from "@/lib/supplies-catalog";
-import { addFromCatalog, consumeStock, createItem, discardExpired, receiveStock, saveItem } from "./actions";
+import { unitLabel } from "@/lib/inventory";
+import { addFromCatalog, addKitLine, consumeStock, createItem, discardExpired, receiveStock, removeKitLine, saveItem } from "./actions";
 
 const Msg = ({ s }: { s: { error?: string; ok?: string } | undefined }) => (
   <>
@@ -11,15 +12,33 @@ const Msg = ({ s }: { s: { error?: string; ok?: string } | undefined }) => (
   </>
 );
 
-export function ReceiveForm({ itemId, unit, perishable }: { itemId: string; unit: string; perishable: boolean }) {
+type Pack = { packLabel: string | null; packSize: number | null };
+
+// «Cantidad» con la unidad de uso o, si el producto viene empacado, también por empaque (2 cajas = 100 carpules).
+function QtyField({ unit, pack }: { unit: string; pack: Pack }) {
+  return (
+    <div className="label">
+      <span>Cantidad</span>
+      <div className="flex gap-2">
+        <input name="quantity" type="number" inputMode="numeric" min={1} required aria-label="Cantidad" className="field min-w-0 flex-1" />
+        {pack.packSize && pack.packLabel ? (
+          <select name="inPack" aria-label="Unidad" className="field w-auto shrink-0" defaultValue="unit">
+            <option value="unit">{unitLabel(unit, 2)}</option>
+            <option value="pack">{unitLabel(pack.packLabel, 2)} de {pack.packSize}</option>
+          </select>
+        ) : <span className="self-center text-sm text-slate-800">{unitLabel(unit, 2)}</span>}
+      </div>
+    </div>
+  );
+}
+
+export function ReceiveForm({ itemId, unit, perishable, pack }: { itemId: string; unit: string; perishable: boolean; pack: Pack }) {
   const [state, action, pending] = useActionState(receiveStock.bind(null, itemId), undefined);
   return (
     <form action={action} className="space-y-3">
       <h3 className="font-semibold text-slate-900">Ingreso</h3>
-      <div className="grid grid-cols-2 gap-3">
-        <label className="label">Cantidad ({unit})<input name="quantity" type="number" inputMode="numeric" min={1} required className="field" /></label>
-        <label className="label">{perishable ? "Vence" : "Vence (opcional)"}<input name="expiresAt" type="date" required={perishable} className="field" /></label>
-      </div>
+      <QtyField unit={unit} pack={pack} />
+      <label className="label">{perishable ? "Vence" : "Vence (opcional)"}<input name="expiresAt" type="date" required={perishable} className="field" /></label>
       <label className="label">Lote (opcional)<input name="lotCode" maxLength={40} className="field" /></label>
       <Msg s={state} />
       <button disabled={pending} className="btn-primary min-h-11">{pending ? "Guardando…" : "Registrar ingreso"}</button>
@@ -27,12 +46,12 @@ export function ReceiveForm({ itemId, unit, perishable }: { itemId: string; unit
   );
 }
 
-export function ConsumeForm({ itemId, unit }: { itemId: string; unit: string }) {
+export function ConsumeForm({ itemId, unit, pack }: { itemId: string; unit: string; pack: Pack }) {
   const [state, action, pending] = useActionState(consumeStock.bind(null, itemId), undefined);
   return (
     <form action={action} className="space-y-3">
       <h3 className="font-semibold text-slate-900">Salida</h3>
-      <label className="label">Cantidad ({unit})<input name="quantity" type="number" inputMode="numeric" min={1} required className="field" /></label>
+      <QtyField unit={unit} pack={pack} />
       <label className="label">Nota (opcional)<input name="note" maxLength={120} placeholder="Ej. consultorio 2" className="field" /></label>
       <p className="muted">Sale primero lo que vence antes.</p>
       <Msg s={state} />
@@ -103,10 +122,39 @@ export function CustomItemForm() {
         <label className="label">Unidad<select name="unit" className="field">{SUPPLY_UNITS.map((u) => <option key={u}>{u}</option>)}</select></label>
         <label className="label">Mínimo<input name="minStock" type="number" inputMode="numeric" min={0} defaultValue={1} className="field" /></label>
         <label className="label">Aviso (días antes de vencer)<input name="warnDays" type="number" inputMode="numeric" min={1} max={365} defaultValue={60} className="field" /></label>
+        <label className="label">Viene en (opcional)<input name="packLabel" maxLength={20} placeholder="caja" className="field" /></label>
+        <label className="label">Trae cuántas unidades<input name="packSize" type="number" inputMode="numeric" min={2} placeholder="50" className="field" /></label>
       </div>
       <label className="flex min-h-11 cursor-pointer items-center gap-3 text-sm font-semibold text-slate-900"><input type="checkbox" name="perishable" defaultChecked className="h-5 w-5 accent-teal-700" /> Vence (pedir fecha al ingresar)</label>
       <Msg s={state} />
       <button disabled={pending} className="btn-secondary min-h-11">{pending ? "Agregando…" : "Agregar producto"}</button>
+    </form>
+  );
+}
+
+export function KitAddForm({ procId, items }: { procId: string; items: { id: string; label: string }[] }) {
+  const [state, action, pending] = useActionState(addKitLine.bind(null, procId), undefined);
+  return (
+    <form action={action} className="space-y-3">
+      <div className="grid gap-3 sm:grid-cols-[1fr_7rem]">
+        <label className="label">Insumo
+          <select name="itemId" required defaultValue="" className="field">
+            <option value="" disabled>Selecciona…</option>
+            {items.map((i) => <option key={i.id} value={i.id}>{i.label}</option>)}
+          </select>
+        </label>
+        <label className="label">Cantidad<input name="quantity" type="number" inputMode="numeric" min={1} defaultValue={1} required className="field" /></label>
+      </div>
+      <Msg s={state} />
+      <button disabled={pending} className="btn-secondary min-h-11">{pending ? "Guardando…" : "Agregar al kit"}</button>
+    </form>
+  );
+}
+
+export function KitRemoveButton({ lineId }: { lineId: string }) {
+  return (
+    <form action={removeKitLine.bind(null, lineId)}>
+      <button className="min-h-11 px-2 text-sm font-semibold text-red-800 underline">Quitar</button>
     </form>
   );
 }
