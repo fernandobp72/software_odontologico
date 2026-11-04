@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useRef, useState } from "react";
 import { CIE10, CUPS, NOTE_TEMPLATES } from "@/lib/catalogs";
+import { applyDictation, isUndoCommand } from "@/lib/dictation";
 import { buildEvolutionText, replaceBlock, type DoneItem } from "@/lib/evolution-text";
 import { signEvolution, type EvolutionState } from "./actions";
 import VoiceButton from "./voice-button";
@@ -11,6 +12,8 @@ export default function EvolutionForm({ patientId, openItems = [] }: { patientId
   const [checked, setChecked] = useState<string[]>([]);
   const [dx, setDx] = useState("");
   const [proc, setProc] = useState("");
+  const noteRef = useRef("");
+  const history = useRef<string[]>([]); // notas anteriores, para «deshacer» por voz
   const block = useRef(""); // texto que redactó el sistema, para reemplazarlo sin tocar lo que escribas
   const autoDx = useRef("");
   const autoProc = useRef("");
@@ -34,6 +37,24 @@ export default function EvolutionForm({ patientId, openItems = [] }: { patientId
     // eslint-disable-next-line react-hooks/set-state-in-effect
     try { setNote(localStorage.getItem(draftKey) ?? ""); } catch {}
   }, [draftKey]);
+
+  useEffect(() => {
+    noteRef.current = note;
+  }, [note]);
+
+  // Dictado: entiende «coma», «punto», «punto y aparte», «dos puntos», «nueva línea» y «deshacer».
+  function dictate(text: string) {
+    if (isUndoCommand(text)) {
+      const prev = history.current.pop();
+      if (prev !== undefined) { noteRef.current = prev; setNote(prev); }
+      return;
+    }
+    const next = applyDictation(noteRef.current, text);
+    if (next === noteRef.current) return;
+    history.current = [...history.current.slice(-19), noteRef.current];
+    noteRef.current = next;
+    setNote(next);
+  }
 
   useEffect(() => {
     try { if (note) localStorage.setItem(draftKey, note); else localStorage.removeItem(draftKey); } catch {}
@@ -93,8 +114,9 @@ export default function EvolutionForm({ patientId, openItems = [] }: { patientId
       <div>
         <div className="flex items-center justify-between">
           <label htmlFor="note" className="label">Evolución</label>
-          <VoiceButton label="🎤 Dictar" onPhrase={(text) => setNote((cur) => (cur ? cur + " " : "") + text)} />
+          <VoiceButton label="🎤 Dictar" onPhrase={dictate} />
         </div>
+        <p className="muted">Al dictar di «coma», «punto», «punto y aparte», «dos puntos» o «nueva línea». Para borrar lo último que dictaste di «deshacer».</p>
         <textarea id="note" name="note" rows={5} value={note} onChange={(e) => setNote(e.target.value)} className="field" />
         <div className="mt-2 flex flex-wrap gap-2">
           {NOTE_TEMPLATES.map((t) => (
