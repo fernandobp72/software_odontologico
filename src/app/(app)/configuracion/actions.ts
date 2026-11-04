@@ -73,3 +73,19 @@ export async function clearWhatsapp(): Promise<void> {
   revalidatePath("/configuracion");
   revalidatePath("/recordatorios");
 }
+
+export type IconState = { error?: string; ok?: string } | undefined;
+
+// Color de fondo del ícono de la app instalada. Vacío = automático (blanco con logo, verde con un diente sin logo).
+export async function saveIconColor(_: IconState, fd: FormData): Promise<IconState> {
+  const user = await requireUser();
+  if (user.role !== "ADMIN") return { error: "Solo administración puede cambiar el ícono" };
+  const auto = fd.get("auto") === "on";
+  const raw = String(fd.get("color") ?? "");
+  if (!auto && !/^#[0-9a-fA-F]{6}$/.test(raw)) return { error: "Color inválido" };
+  await db.clinic.update({ where: { id: user.clinicId }, data: { iconColor: auto ? null : raw.toLowerCase() } });
+  await db.auditLog.create({ data: { userId: user.id, action: "CLINIC_UPDATE", entity: "Clinic", entityId: user.clinicId, detail: "color del ícono de la app" } });
+  revalidatePath("/configuracion");
+  revalidatePath("/", "layout");
+  return { ok: auto ? "Color automático" : "Color guardado" };
+}

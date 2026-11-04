@@ -1,3 +1,5 @@
+import type { Metadata } from "next";
+import { hexOk } from "@/lib/app-icon";
 import { branchState, requireAnyUser } from "@/lib/dal";
 import { nounOf } from "@/lib/noun";
 import { supplyAlerts } from "@/lib/inventory-alerts";
@@ -5,6 +7,20 @@ import ClinicLogo from "../clinic-logo";
 import BranchSwitcher from "./branch-switcher";
 import { logout } from "../login/actions";
 import { BottomNav, SideNav } from "./nav";
+
+// App instalada del consultorio: su nombre y su ícono (en iPhone se toman de aquí al «Añadir a pantalla de inicio»).
+export async function generateMetadata(): Promise<Metadata> {
+  const account = await requireAnyUser();
+  if (account.clinic.system) return {};
+  const c = account.clinic;
+  const v = `${c.logoUpdatedAt?.getTime() ?? 0}${hexOk(c.iconColor) ? c.iconColor.slice(1) : ""}`;
+  return {
+    manifest: `/api/manifiesto/${c.id}`,
+    applicationName: c.name,
+    icons: { icon: [{ url: `/api/icono/${c.id}/192?v=${v}`, sizes: "192x192", type: "image/png" }], apple: [{ url: `/api/icono/${c.id}/180?v=${v}`, sizes: "180x180", type: "image/png" }] },
+    appleWebApp: { capable: true, title: c.name.length > 14 ? c.name.slice(0, 14).trim() : c.name, statusBarStyle: "default" },
+  };
+}
 
 const daysLeft = (d: Date) => Math.max(0, Math.ceil((d.getTime() - Date.now()) / 86_400_000));
 
