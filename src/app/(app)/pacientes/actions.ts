@@ -49,13 +49,18 @@ export async function updatePatient(patientId: string, _: EditState, formData: F
   const user = await requireUser();
   const parsed = patientSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { error: parsed.error.issues[0].message };
-  const current = await db.patient.findFirst({ where: { id: patientId, clinicId: user.clinicId }, select: { id: true, dataConsentAt: true } });
+  const current = await db.patient.findFirst({ where: { id: patientId, clinicId: user.clinicId }, select: { id: true, dataConsentAt: true, phone: true, email: true } });
   if (!current) return { error: "Paciente no encontrado" };
   const data = dataFor(parsed.data);
   const clash = await db.patient.findFirst({ where: { clinicId: user.clinicId, documentType: data.documentType, documentNumber: data.documentNumber, id: { not: patientId } }, select: { id: true } });
   if (clash) return { error: "Ya existe otro paciente con ese documento" };
   await db.patient.update({ where: { id: patientId }, data: { ...data, ...(!current.dataConsentAt && formData.get("consent") === "on" ? { dataConsentAt: new Date() } : {}) } });
   await db.auditLog.create({ data: { userId: user.id, action: "UPDATE", entity: "Patient", entityId: patientId } });
+  // Un cambio de celular o correo poco antes de una firma remota es una señal que se muestra en el consentimiento.
+  const digits = (v: string | null) => (v ?? "").replace(/\D/g, "");
+  const phoneChanged = digits(current.phone) !== digits(data.phone);
+  const emailChanged = (current.email ?? "").toLowerCase() !== (data.email ?? "").toLowerCase();
+  if (phoneChanged || emailChanged) await db.auditLog.create({ data: { userId: user.id, action: "PATIENT_CONTACT_CHANGE", entity: "Patient", entityId: patientId, detail: [phoneChanged && "celular", emailChanged && "correo"].filter(Boolean).join(" y ") } });
   revalidatePath(`/pacientes/${patientId}`, "layout");
   revalidatePath("/pacientes");
   redirect(`/pacientes/${patientId}`);

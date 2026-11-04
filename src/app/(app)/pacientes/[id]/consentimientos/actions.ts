@@ -9,6 +9,7 @@ import { normalizePhone, waLink } from "@/lib/whatsapp";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { sealConsent } from "@/lib/seal";
+import { CONSTANCIA_DAYS, constanciaAfterSigning, emailConstancia, issueConstancia } from "@/lib/constancia";
 import { requireClinician } from "@/lib/dal";
 import { CONSENT_TEMPLATES, CONSENT_VERSION, buildConsentBody } from "@/lib/consents";
 
@@ -62,6 +63,7 @@ export async function signConsent(patientId: string, _: ConsentState, fd: FormDa
     },
   });
   await sealConsent(row.id);
+  await constanciaAfterSigning(row.id);
   await db.auditLog.create({ data: { userId: user.id, action: "SIGN", entity: "Consent", entityId: row.id } });
   revalidatePath(`/pacientes/${patientId}/consentimientos`);
   return { ok: true };
@@ -119,4 +121,31 @@ export async function cancelConsentRequest(requestId: string): Promise<void> {
   const r = await db.consentRequest.updateMany({ where: { id: requestId, clinicId: user.clinicId, consentId: null, cancelledAt: null }, data: { cancelledAt: new Date() } });
   if (r.count) await db.auditLog.create({ data: { userId: user.id, action: "CONSENT_REQUEST_CANCEL", entity: "ConsentRequest", entityId: requestId } });
   revalidatePath("/pacientes", "layout");
+}
+
+// ---- Constancia para el paciente: reenviar o entregar por otro medio ----
+
+export type ConstanciaResult = { error?: string; ok?: string; link?: string; whatsapp?: string } | undefined;
+
+// Cada envío crea un enlace nuevo y el anterior deja de servir.
+export async function sendConstancia(consentId: string, channel: "correo" | "whatsapp" | "enlace"): Promise<ConstanciaResult> {
+  const user = await requireClinician();
+  const c = await db.consent.findFirst({
+    where: { id: consentId, patient: { clinicId: user.clinicId } },
+    select: { id: true, title: true, patientId: true, patient: { select: { firstName: true, phone: true, email: true, clinic: { select: { name: true } } } } },
+  });
+  if (!c) return { error: "Consentimiento no encontrado" };
+  const url = await issueConstancia(c.id);
+  await db.auditLog.create({ data: { userId: user.id, action: "CONSTANCIA_RESEND", entity: "Consent", entityId: c.id, detail: channel } });
+  revalidatePath(`/pacientes/${c.patientId}/consentimientos`);
+  if (channel === "correo") {
+    const r = await emailConstancia(c.id, url);
+    return r.ok ? { ok: `Constancia enviada a ${r.to}` } : { error: `No se pudo enviar el correo: ${r.error}. Puedes usar WhatsApp o copiar el enlace.` };
+  }
+  if (channel === "whatsapp") {
+    const phone = normalizePhone(c.patient.phone);
+    if (!phone) return { error: "El paciente no tiene un celular válido en su ficha" };
+    return { ok: "Se abrió WhatsApp con el mensaje listo", whatsapp: waLink(phone, `Hola ${c.patient.firstName}, ${c.patient.clinic.name} te envía la constancia de tu firma de «${c.title}»: ${url}\nTe pedirá los últimos 4 dígitos del documento de quien firmó. Vale ${CONSTANCIA_DAYS} días.`) };
+  }
+  return { ok: "Enlace listo", link: url };
 }

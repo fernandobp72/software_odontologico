@@ -340,28 +340,37 @@ model TreatmentItem {
 
 // Consentimiento informado firmado. Inmutable: guarda el texto exacto que se firmó.
 model Consent {
-  id              String   @id @default(cuid())
-  patientId       String
-  patient         Patient  @relation(fields: [patientId], references: [id])
-  dentistId       String
-  dentist         User     @relation(fields: [dentistId], references: [id])
-  templateId      String
-  templateVersion String
-  title           String
-  body            String
-  procedureNote   String?
-  signerName      String
-  signerDocument  String?
-  signerRelation  String
-  witnessName     String?
-  signature       String // PNG en data URL
-  signedAt        DateTime @default(now())
-  seal            String?  @unique // sello de integridad (HMAC) calculado al firmar
+  id               String    @id @default(cuid())
+  patientId        String
+  patient          Patient   @relation(fields: [patientId], references: [id])
+  dentistId        String
+  dentist          User      @relation(fields: [dentistId], references: [id])
+  templateId       String
+  templateVersion  String
+  title            String
+  body             String
+  procedureNote    String?
+  signerName       String
+  signerDocument   String?
+  signerRelation   String
+  witnessName      String?
+  signature        String // PNG en data URL
+  signedAt         DateTime  @default(now())
+  seal             String?   @unique // sello de integridad (HMAC) calculado al firmar
   // Firma hecha por el paciente en su propio celular (QR o enlace). Vacíos si se firmó en el aparato del consultorio.
-  signMethod      String? // QR | ENLACE
-  signIp          String?
-  signAgent       String?
-  requestId       String?  @unique
+  signMethod       String? // QR | ENLACE
+  signIp           String?
+  signAgent        String?
+  requestId        String?   @unique
+  // Huella del aparato (cookie propia, solo su hash) y segundos entre abrir el documento y firmar: sirven para detectar firmas dudosas.
+  signDevice       String?
+  signReadSec      Int?
+  // Constancia para el paciente: enlace secreto (solo su huella) que muestra el documento firmado; vence y se bloquea tras 5 fallos.
+  receiptTokenHash String?   @unique
+  receiptExpiresAt DateTime?
+  receiptFailures  Int       @default(0)
+  receiptSentAt    DateTime?
+  receiptSentTo    String?
 
   @@index([patientId, signedAt])
 }
@@ -385,6 +394,7 @@ model ConsentRequest {
   tokenHash       String    @unique
   expiresAt       DateTime
   failures        Int       @default(0)
+  unlockedAt      DateTime? // cuándo el paciente escribió los 4 dígitos y vio el documento
   consentId       String?
   cancelledAt     DateTime?
   createdAt       DateTime  @default(now())

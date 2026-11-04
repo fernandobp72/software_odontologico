@@ -1,6 +1,8 @@
 import "server-only";
-import { createHmac } from "node:crypto";
+import { createHmac, timingSafeEqual } from "node:crypto";
+import { cookies } from "next/headers";
 import { headers } from "next/headers";
+import { readSession } from "@/lib/session";
 import { hashToken } from "@/lib/tokens";
 
 export const MAX_FAILURES = 5;
@@ -24,4 +26,14 @@ export async function evidence() {
   const ip = (h.get("cf-connecting-ip") ?? h.get("x-forwarded-for")?.split(",")[0] ?? h.get("x-real-ip") ?? "").trim().slice(0, 64) || null;
   const agent = (h.get("user-agent") ?? "").slice(0, 300) || null;
   return { ip, agent };
+}
+
+// Una sesión abierta del consultorio no puede firmar por el paciente: el documento se firma en el celular del paciente.
+export const STAFF_BLOCK = "Este documento se firma en el celular del paciente. No se puede firmar desde un navegador con la sesión del consultorio abierta.";
+export const staffSession = async () => !!(await readSession());
+
+export async function unlocked(token: string) {
+  const want = signCookie(token);
+  const got = (await cookies()).get(want.name)?.value ?? "";
+  return got.length === want.value.length && timingSafeEqual(Buffer.from(got), Buffer.from(want.value));
 }

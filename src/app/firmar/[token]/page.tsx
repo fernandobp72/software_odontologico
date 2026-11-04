@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { hashToken } from "@/lib/tokens";
 import { MAX_FAILURES } from "./access";
-import { unlocked } from "./actions";
+import { STAFF_BLOCK, staffSession, unlocked } from "./access";
 import SignForm from "./sign-form";
 import UnlockForm from "./unlock-form";
 
@@ -23,6 +23,7 @@ export default async function FirmarPage({ params }: PageProps<"/firmar/[token]"
   if (r.cancelledAt) return <Shell><p className="text-center">El consultorio canceló esta solicitud. Pide una nueva si la necesitas.</p></Shell>;
   if (r.expiresAt <= new Date()) return <Shell><p className="text-center">Este enlace venció. Pide uno nuevo al consultorio.</p></Shell>;
   if (r.failures >= MAX_FAILURES) return <Shell><p className="text-center">Enlace bloqueado por demasiados intentos. Pide uno nuevo al consultorio.</p></Shell>;
+  if (await staffSession()) return <Shell><h1 className="text-lg font-bold">Firma bloqueada</h1><p className="mt-2">{STAFF_BLOCK}</p></Shell>;
   if (!(await unlocked(token))) return <Shell><h1 className="mb-4 text-center text-lg font-bold">{clinic?.name}</h1><UnlockForm token={token} /></Shell>;
 
   return (
