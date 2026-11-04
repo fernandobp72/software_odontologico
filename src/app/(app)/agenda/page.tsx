@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { requireBranch } from "@/lib/dal";
+import { branchProfessionals } from "@/lib/professionals";
 import AppointmentForm from "./form";
 import { setStatus } from "./actions";
 
@@ -17,15 +18,17 @@ export default async function AgendaPage() {
   const from = new Date();
   from.setHours(0, 0, 0, 0);
 
-  const [appointments, patients] = await Promise.all([
+  const [appointments, patients, pros] = await Promise.all([
     db.appointment.findMany({
       where: { clinicId: user.clinicId, branchId: branch.id, startsAt: { gte: from } },
-      include: { patient: true },
+      include: { patient: true, dentist: { select: { name: true } } },
       orderBy: { startsAt: "asc" },
       take: 50,
     }),
     db.patient.findMany({ where: { clinicId: user.clinicId }, orderBy: { lastName: "asc" }, take: 500 }),
+    branchProfessionals(user.clinicId, branch.id),
   ]);
+  const defaultDentistId = user.role === "DENTIST" ? user.id : pros.some((p) => p.id === user.id) ? user.id : null;
 
   const fmt = new Intl.DateTimeFormat("es-CO", { weekday: "long", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "America/Bogota" });
 
@@ -47,6 +50,7 @@ export default async function AgendaPage() {
                 <span className={`rounded-full px-3 py-1 text-xs font-semibold ${STATUS[a.status].cls}`}>{STATUS[a.status].label}</span>
               </div>
               <p className="mt-1 text-lg font-semibold">{a.patient.firstName} {a.patient.lastName}</p>
+              {pros.length > 1 && <p className="muted">Con {a.dentist.name}</p>}
               {a.reason && <p className="muted">{a.reason}</p>}
               <div className="mt-3 flex flex-wrap gap-2">
                 <form action={setStatus.bind(null, a.id, "CONFIRMED")}><button className="btn-secondary">Confirmar</button></form>
@@ -58,7 +62,7 @@ export default async function AgendaPage() {
           {appointments.length === 0 && <li className="card text-center text-slate-700">No hay citas próximas</li>}
         </ul>
         <div className="lg:sticky lg:top-8">
-          <AppointmentForm patients={patients.map((p) => ({ id: p.id, label: `${p.firstName} ${p.lastName} · ${p.documentNumber}` }))} />
+          <AppointmentForm patients={patients.map((p) => ({ id: p.id, label: `${p.firstName} ${p.lastName} · ${p.documentNumber}` }))} professionals={user.role === "DENTIST" ? [] : pros.map((p) => ({ id: p.id, name: p.name }))} defaultDentistId={defaultDentistId} />
         </div>
       </div>
     </div>
