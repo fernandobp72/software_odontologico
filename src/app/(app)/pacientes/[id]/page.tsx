@@ -1,3 +1,4 @@
+import { docText } from "@/lib/patient-fields";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/dal";
@@ -36,7 +37,7 @@ export default async function PacientePage({ params }: PageProps<"/pacientes/[id
   const fmt = new Intl.DateTimeFormat("es-CO", { dateStyle: "medium", timeStyle: "short", timeZone: "America/Bogota" });
 
   const rows: [string, string | null][] = [
-    ["Documento", `${p.documentType} ${p.documentNumber}`],
+    ["Documento", docText(p.documentType, p.documentNumber)],
     ["Nacimiento", p.birthDate ? `${new Intl.DateTimeFormat("es-CO", { dateStyle: "long", timeZone: "UTC" }).format(p.birthDate)} (${ageText(p.birthDate)})` : null],
     ["Sexo", p.sex === "F" ? "Femenino" : p.sex === "M" ? "Masculino" : p.sex === "O" ? "Otro" : null],
     ["Celular", p.phone],

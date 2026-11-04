@@ -43,7 +43,7 @@ export default async function CajaPage() {
           <p className="text-sm font-semibold text-slate-900">Efectivo esperado en caja: {copFmt.format(session.openingAmount + cash)}</p>
 
           <div className="grid gap-6 xl:grid-cols-2 xl:items-start">
-            <PaymentForm patients={patients.map((p) => ({ id: p.id, label: `${p.firstName} ${p.lastName} · ${p.documentNumber}` }))} />
+            <PaymentForm patients={patients.filter((p) => p.documentType !== "PRE").map((p) => ({ id: p.id, label: `${p.firstName} ${p.lastName} · ${p.documentNumber}` }))} />
             <section className="space-y-2">
               <h2 className="section-title">Pagos de esta sesión</h2>
               <ul className="space-y-2">

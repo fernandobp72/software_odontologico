@@ -66,3 +66,10 @@ export const ageText = (birth: Date | null | undefined) => {
 // Un paciente puede eliminarse como «de prueba» solo durante su primera semana (después es historia clínica real).
 export const TEST_PATIENT_DAYS = 7;
 export const isRecentPatient = (createdAt: Date) => Date.now() - createdAt.getTime() <= TEST_PATIENT_DAYS * 86_400_000;
+
+// Paciente pre-registrado: alguien que llamó a pedir su primera cita y de quien solo se tiene el nombre y el celular.
+// Puede tener citas, pero la historia clínica, los cobros y las fórmulas esperan a que se completen sus datos.
+export const PRE_DOC = "PRE";
+export const isPreRegistered = (p: { documentType: string }) => p.documentType === PRE_DOC;
+export const docText = (type: string, number: string) => (type === PRE_DOC ? "Sin documento (por completar)" : `${type} ${number}`);
+export const PRE_BLOCK = "Faltan los datos del paciente (documento). Complétalos en «Editar» antes de registrar esto.";

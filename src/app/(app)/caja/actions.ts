@@ -1,5 +1,6 @@
 "use server";
 
+import { PRE_BLOCK, isPreRegistered } from "@/lib/patient-fields";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/lib/db";
@@ -65,8 +66,9 @@ export async function registerPayment(_: CashState, fd: FormData): Promise<CashS
   if (!parsed.success) return { error: parsed.error.issues[0].message };
   const d = parsed.data;
 
-  const patient = await db.patient.findFirst({ where: { id: d.patientId, clinicId: user.clinicId }, select: { id: true } });
+  const patient = await db.patient.findFirst({ where: { id: d.patientId, clinicId: user.clinicId }, select: { id: true, documentType: true } });
   if (!patient) return { error: "Paciente no encontrado" };
+  if (isPreRegistered(patient)) return { error: PRE_BLOCK };
   const session = await db.cashSession.findFirst({ where: { clinicId: user.clinicId, branchId: branch.id, closedAt: null } });
   if (!session) return { error: `No hay caja abierta en la sede ${branch.name}. Pide a recepción o administración que la abra.` };
 

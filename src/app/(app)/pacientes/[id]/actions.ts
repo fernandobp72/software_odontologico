@@ -9,7 +9,7 @@ import { consumeForProcedures } from "@/lib/supply-ops";
 import { CONDITIONS, SURFACES, VALID_TEETH } from "@/lib/catalogs";
 import { syncPlan } from "@/lib/plan";
 import { sealEvolution } from "@/lib/seal";
-import { isRecentPatient, TEST_PATIENT_DAYS } from "@/lib/patient-fields";
+import { PRE_BLOCK, isPreRegistered, isRecentPatient, TEST_PATIENT_DAYS } from "@/lib/patient-fields";
 
 const changeSchema = z.object({
   tooth: z.number().int().refine((t) => VALID_TEETH.has(t), "Diente inválido"),
@@ -73,6 +73,7 @@ export async function signEvolution(_: EvolutionState, formData: FormData): Prom
 
   const patient = await db.patient.findFirst({ where: { id: d.patientId, clinicId: user.clinicId } });
   if (!patient) return { error: "Paciente no encontrado" };
+  if (isPreRegistered(patient)) return { error: PRE_BLOCK };
 
   // Los ítems del plan marcados se cierran junto con la evolución, en una sola transacción.
   const itemIds = formData.getAll("doneItems").map(String);

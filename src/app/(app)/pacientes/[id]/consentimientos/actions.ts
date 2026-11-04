@@ -1,5 +1,6 @@
 "use server";
 
+import { PRE_BLOCK, isPreRegistered } from "@/lib/patient-fields";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/lib/db";
@@ -27,6 +28,7 @@ export async function signConsent(patientId: string, _: ConsentState, fd: FormDa
 
   const patient = await db.patient.findFirst({ where: { id: patientId, clinicId: user.clinicId } });
   if (!patient) return { error: "Paciente no encontrado" };
+  if (isPreRegistered(patient)) return { error: PRE_BLOCK };
   const dentist = await db.user.findUnique({ where: { id: user.id }, select: { name: true } });
   const template = CONSENT_TEMPLATES.find((t) => t.id === d.templateId);
   if (!template) return { error: "Plantilla inválida" };

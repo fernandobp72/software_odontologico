@@ -49,12 +49,12 @@ export async function updatePatient(patientId: string, _: EditState, formData: F
   const user = await requireUser();
   const parsed = patientSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { error: parsed.error.issues[0].message };
-  const current = await db.patient.findFirst({ where: { id: patientId, clinicId: user.clinicId }, select: { id: true } });
+  const current = await db.patient.findFirst({ where: { id: patientId, clinicId: user.clinicId }, select: { id: true, dataConsentAt: true } });
   if (!current) return { error: "Paciente no encontrado" };
   const data = dataFor(parsed.data);
   const clash = await db.patient.findFirst({ where: { clinicId: user.clinicId, documentType: data.documentType, documentNumber: data.documentNumber, id: { not: patientId } }, select: { id: true } });
   if (clash) return { error: "Ya existe otro paciente con ese documento" };
-  await db.patient.update({ where: { id: patientId }, data });
+  await db.patient.update({ where: { id: patientId }, data: { ...data, ...(!current.dataConsentAt && formData.get("consent") === "on" ? { dataConsentAt: new Date() } : {}) } });
   await db.auditLog.create({ data: { userId: user.id, action: "UPDATE", entity: "Patient", entityId: patientId } });
   revalidatePath(`/pacientes/${patientId}`, "layout");
   revalidatePath("/pacientes");

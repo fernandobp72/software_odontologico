@@ -1,5 +1,6 @@
 "use server";
 
+import { PRE_BLOCK, isPreRegistered } from "@/lib/patient-fields";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/lib/db";
@@ -21,8 +22,9 @@ export async function createInvoice(patientId: string, _: InvoiceState, fd: Form
   const itemIds = fd.getAll("itemIds").map(String);
   if (!itemIds.length) return { error: "Elige al menos un procedimiento" };
 
-  const patient = await db.patient.findFirst({ where: { id: patientId, clinicId: user.clinicId }, select: { id: true } });
+  const patient = await db.patient.findFirst({ where: { id: patientId, clinicId: user.clinicId }, select: { id: true, documentType: true } });
   if (!patient) return { error: "Paciente no encontrado" };
+  if (isPreRegistered(patient)) return { error: PRE_BLOCK };
 
   // Solo procedimientos realizados de este paciente que no estén ya en otra cuenta vigente.
   const items = await db.treatmentItem.findMany({

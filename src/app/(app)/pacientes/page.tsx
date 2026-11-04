@@ -1,3 +1,4 @@
+import { docText } from "@/lib/patient-fields";
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/dal";
@@ -36,7 +37,7 @@ export default async function PacientesPage({ searchParams }: PageProps<"/pacien
           <li key={p.id}>
             <Link href={`/pacientes/${p.id}`} className="card block hover:border-teal-700">
               <p className="text-lg font-semibold">{p.firstName} {p.lastName}</p>
-              <p className="muted">{p.documentType} {p.documentNumber}{p.phone ? ` · ${p.phone}` : ""}</p>
+              <p className="muted">{docText(p.documentType, p.documentNumber)}{p.phone ? ` · ${p.phone}` : ""}</p>
             </Link>
           </li>
         ))}

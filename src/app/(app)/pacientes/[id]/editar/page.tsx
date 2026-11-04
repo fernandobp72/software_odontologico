@@ -16,10 +16,11 @@ export default async function EditarPacientePage({ params }: PageProps<"/pacient
       <EditPatientForm
         patientId={p.id}
         values={{
-          documentType: p.documentType, documentNumber: p.documentNumber, firstName: p.firstName, middleName: s(p.middleName), lastName: p.lastName, secondLastName: s(p.secondLastName),
+          documentType: p.documentType === "PRE" ? "CC" : p.documentType, documentNumber: p.documentType === "PRE" ? "" : p.documentNumber, firstName: p.firstName, middleName: s(p.middleName), lastName: p.lastName, secondLastName: s(p.secondLastName),
           birthDate: birthInputValue(p.birthDate), sex: s(p.sex), phone: s(p.phone), email: s(p.email), address: s(p.address), city: s(p.city), eps: s(p.eps), regime: s(p.regime),
           occupation: s(p.occupation), companionName: s(p.companionName), companionPhone: s(p.companionPhone), companionKin: s(p.companionKin), allergies: s(p.allergies),
         }}
+        needsConsent={!p.dataConsentAt}
       />
     </div>
   );

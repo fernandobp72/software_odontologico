@@ -62,7 +62,7 @@ export default async function AgendaPage() {
           {appointments.length === 0 && <li className="card text-center text-slate-700">No hay citas próximas</li>}
         </ul>
         <div className="lg:sticky lg:top-8">
-          <AppointmentForm patients={patients.map((p) => ({ id: p.id, label: `${p.firstName} ${p.lastName} · ${p.documentNumber}` }))} professionals={user.role === "DENTIST" ? [] : pros.map((p) => ({ id: p.id, name: p.name }))} defaultDentistId={defaultDentistId} />
+          <AppointmentForm patients={patients.map((p) => ({ id: p.id, label: `${p.firstName} ${p.lastName} · ${p.documentType === "PRE" ? "sin documento" : p.documentNumber}` }))} professionals={user.role === "DENTIST" ? [] : pros.map((p) => ({ id: p.id, name: p.name }))} defaultDentistId={defaultDentistId} />
         </div>
       </div>
     </div>

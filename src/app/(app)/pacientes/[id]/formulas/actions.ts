@@ -1,5 +1,6 @@
 "use server";
 
+import { PRE_BLOCK, isPreRegistered } from "@/lib/patient-fields";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/lib/db";
@@ -46,6 +47,7 @@ export async function signPrescription(patientId: string, raw: unknown): Promise
 
   const got = await rxContextFor(patientId, user.clinicId);
   if (!got) return { error: "Paciente no encontrado" };
+  if (isPreRegistered(got.patient)) return { error: PRE_BLOCK };
   const flags = patientFlags(got.ctx);
 
   const items = d.items.map((it, i) => {
