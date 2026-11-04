@@ -6,6 +6,10 @@ export const hexOk = (v: string | null | undefined): v is string => !!v && /^#[0
 
 export const ICON_SIZES = [180, 192, 512] as const;
 
+// Versión del ícono para que el navegador lo vuelva a pedir cuando cambia el logo, el ícono propio o el color.
+export const iconVersion = (c: { logoUpdatedAt?: Date | null; appIconUpdatedAt?: Date | null; iconColor?: string | null }) =>
+  `${c.logoUpdatedAt?.getTime() ?? 0}-${c.appIconUpdatedAt?.getTime() ?? 0}${hexOk(c.iconColor) ? c.iconColor.slice(1) : ""}`;
+
 // Diente blanco para los consultorios que aún no suben logo (dibujado, sin texto: no depende de las fuentes del servidor).
 const TOOTH = (size: number, bg: string, scale: number) => {
   const s = size * scale;
@@ -16,15 +20,35 @@ const TOOTH = (size: number, bg: string, scale: number) => {
   );
 };
 
-// Ícono cuadrado de la app: el logo del consultorio centrado sobre un color, con margen. "maskable" deja más margen para que
-// Android pueda recortarlo en círculo o gota sin comerse el logo.
-export async function renderIcon(c: { logo: Uint8Array | Buffer | null; iconColor: string | null }, size: number, maskable: boolean) {
-  const bg = hexOk(c.iconColor) ? c.iconColor : c.logo ? "#ffffff" : DEFAULT_THEME;
-  if (!c.logo) return sharp(TOOTH(size, bg, maskable ? 0.56 : 0.72)).png().toBuffer();
+type Art = Uint8Array | Buffer | null;
+
+// Color de la esquina de una imagen: sirve de fondo cuando el ícono propio se achica para el recorte de Android.
+async function cornerColor(img: Buffer) {
+  const { data } = await sharp(img).resize(8, 8, { fit: "cover" }).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  const [r, g, b, a] = data;
+  return a < 250 ? "#ffffff" : `#${[r, g, b].map((x) => x.toString(16).padStart(2, "0")).join("")}`;
+}
+
+const onColor = (size: number, bg: string, layer: Buffer) =>
+  sharp({ create: { width: size, height: size, channels: 4, background: bg } }).composite([{ input: layer, gravity: "centre" }]).png({ compressionLevel: 9 }).toBuffer();
+
+// Ícono cuadrado de la app. Con ícono propio cuadrado ocupa todo el espacio; con una imagen no cuadrada (o solo el logo) se
+// centra con margen sobre un color. "maskable" deja más margen para que Android pueda recortarlo en círculo sin comerse nada.
+export async function renderIcon(c: { logo: Art; appIcon?: Art; iconColor: string | null }, size: number, maskable: boolean) {
+  const own = c.appIcon ? Buffer.from(c.appIcon) : null;
+  const art = own ?? (c.logo ? Buffer.from(c.logo) : null);
+  if (!art) return sharp(TOOTH(size, hexOk(c.iconColor) ? c.iconColor : DEFAULT_THEME, maskable ? 0.56 : 0.72)).png().toBuffer();
+
+  const { width = 1, height = 1 } = await sharp(art).metadata();
+  const square = own !== null && Math.abs(width / height - 1) < 0.1;
+  if (square) {
+    const bg = hexOk(c.iconColor) ? c.iconColor : await cornerColor(art);
+    const inner = maskable ? Math.round(size * 0.8) : size;
+    const layer = await sharp(art).resize(inner, inner, { fit: "cover" }).png().toBuffer();
+    return onColor(size, bg, layer);
+  }
+  const bg = hexOk(c.iconColor) ? c.iconColor : "#ffffff";
   const inner = Math.round(size * (maskable ? 0.56 : 0.72));
-  const logo = await sharp(Buffer.from(c.logo)).resize(inner, inner, { fit: "inside", background: { r: 0, g: 0, b: 0, alpha: 0 } }).png().toBuffer();
-  return sharp({ create: { width: size, height: size, channels: 4, background: bg } })
-    .composite([{ input: logo, gravity: "centre" }])
-    .png({ compressionLevel: 9 })
-    .toBuffer();
+  const layer = await sharp(art).resize(inner, inner, { fit: "inside", background: { r: 0, g: 0, b: 0, alpha: 0 } }).png().toBuffer();
+  return onColor(size, bg, layer);
 }

@@ -1,13 +1,40 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useActionState, useRef, useState } from "react";
 import { saveIconColor } from "./actions";
 
-export default function IconForm({ clinicId, v, color, logoSize }: { clinicId: string; v: string; color: string | null; logoSize: { w: number; h: number } | null }) {
+export default function IconForm({ clinicId, v, color, logoSize, ownSize }: { clinicId: string; v: string; color: string | null; logoSize: { w: number; h: number } | null; ownSize: { w: number; h: number } | null }) {
+  const router = useRouter();
+  const input = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+  const [up, setUp] = useState<{ ok?: string; error?: string }>();
   const [state, action, pending] = useActionState(saveIconColor, undefined);
   const [auto, setAuto] = useState(!color);
   const [picked, setPicked] = useState(color ?? "#2a7a4b");
-  const small = logoSize && Math.max(logoSize.w, logoSize.h) < 256;
+  const small = (ownSize ?? logoSize) && Math.max((ownSize ?? logoSize)!.w, (ownSize ?? logoSize)!.h) < 256;
+
+  async function send(file: File) {
+    setBusy(true); setUp(undefined);
+    const fd = new FormData();
+    fd.set("file", file);
+    try {
+      const res = await fetch("/api/clinica/icono", { method: "POST", body: fd });
+      const j = (await res.json()) as { ok?: boolean; error?: string; width?: number; height?: number; square?: boolean };
+      if (!res.ok || !j.ok) setUp({ error: j.error ?? "No se pudo subir el ícono" });
+      else { setUp({ ok: j.square ? `Listo: ${j.width}×${j.height} px.` : `Listo, pero la imagen no es cuadrada (${j.width}×${j.height} px): se centró con margen. Lo ideal es una imagen cuadrada de 512×512 px.` }); router.refresh(); }
+    } catch {
+      setUp({ error: "Sin conexión. Inténtalo de nuevo." });
+    } finally {
+      setBusy(false);
+      if (input.current) input.current.value = "";
+    }
+  }
+  async function remove() {
+    setBusy(true);
+    await fetch("/api/clinica/icono", { method: "DELETE" });
+    setBusy(false); setUp(undefined); router.refresh();
+  }
   return (
     <section className="card max-w-xl space-y-4">
       <div>
@@ -18,8 +45,19 @@ export default function IconForm({ clinicId, v, color, logoSize }: { clinicId: s
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={`/api/icono/${clinicId}/192?v=${v}`} alt="Ícono de la app" className="h-24 w-24 rounded-2xl border border-slate-300 shadow-sm" />
         <div className="text-sm text-slate-800">
-          {logoSize ? <p>Tu logo mide {logoSize.w}×{logoSize.h} px.{small ? " Es pequeño: el ícono puede verse borroso. Sube uno de al menos 512 px." : ""}</p> : <p>Aún no subes un logo: se usa un diente blanco sobre verde. Sube tu logo arriba y el ícono se actualiza.</p>}
+          {ownSize ? <p>Usas un ícono propio de {ownSize.w}×{ownSize.h} px.{small ? " Es pequeño: puede verse borroso. Sube uno de al menos 512 px." : ""}</p> : logoSize ? <p>Tu logo mide {logoSize.w}×{logoSize.h} px.{small ? " Es pequeño: el ícono puede verse borroso. Sube uno de al menos 512 px." : ""}</p> : <p>Aún no subes un logo: se usa un diente blanco sobre verde. Sube tu logo arriba y el ícono se actualiza.</p>}
         </div>
+      </div>
+      <div className="space-y-2 rounded-lg border border-slate-300 p-3">
+        <p className="text-sm font-semibold text-slate-900">Ícono propio (opcional)</p>
+        <p className="muted">Si tu logo es largo o trae texto, se ve pequeño en el celular. Sube aquí una imagen <strong>cuadrada</strong> (por ejemplo solo tu símbolo, de 512×512 px) y la app usará esa. Los recibos y documentos siguen usando tu logo.</p>
+        <div className="flex flex-wrap gap-2">
+          <button type="button" disabled={busy} onClick={() => input.current?.click()} className="btn-primary min-h-11">{busy ? "Procesando…" : ownSize ? "Cambiar ícono" : "Subir ícono propio"}</button>
+          {ownSize && <button type="button" disabled={busy} onClick={remove} className="btn-secondary min-h-11">Quitar y usar mi logo</button>}
+        </div>
+        <input ref={input} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) void send(f); }} />
+        {up?.ok && <p className="ok-text" role="status">{up.ok}</p>}
+        {up?.error && <p className="error-text" role="alert">{up.error}</p>}
       </div>
       <form action={action} className="space-y-3">
         <label className="flex min-h-11 cursor-pointer items-center gap-3 text-sm font-semibold text-slate-900">

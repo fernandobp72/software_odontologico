@@ -1,11 +1,11 @@
 import { db } from "@/lib/db";
-import { DEFAULT_THEME, hexOk } from "@/lib/app-icon";
+import { DEFAULT_THEME, hexOk, iconVersion } from "@/lib/app-icon";
 
 // Manifiesto de la app instalada de un consultorio: su nombre, su ícono y su color. El navegador lo lee al instalar.
 export async function GET(_: Request, ctx: RouteContext<"/api/manifiesto/[id]">) {
   const { id } = await ctx.params;
-  const c = await db.clinic.findFirst({ where: { id, system: false }, select: { id: true, name: true, iconColor: true, logoUpdatedAt: true } });
-  const v = c ? `${c.logoUpdatedAt?.getTime() ?? 0}${hexOk(c.iconColor) ? c.iconColor.slice(1) : ""}` : "0";
+  const c = await db.clinic.findFirst({ where: { id, system: false }, select: { id: true, name: true, iconColor: true, logoUpdatedAt: true, appIconUpdatedAt: true } });
+  const v = c ? iconVersion(c) : "0";
   const icon = (size: number, extra = "") => `/api/icono/${c?.id ?? "generico"}/${size}?v=${v}${extra}`;
   const short = (c?.name ?? "Odontología").trim();
   const body = {

@@ -84,6 +84,9 @@ model Clinic {
   logoUpdatedAt    DateTime?
   // Color de fondo del ícono de la app instalada (#RRGGBB). Sin color: blanco si hay logo, verde con un diente si no.
   iconColor        String?
+  // Ícono propio de la app instalada (opcional). Si no hay, el ícono se arma con el logo.
+  appIcon          Bytes?
+  appIconUpdatedAt DateTime?
   // WhatsApp Business propio del consultorio (API de Meta). El token se guarda cifrado.
   whatsappPhoneId  String?
   whatsappToken    String?

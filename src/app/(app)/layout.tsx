@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { hexOk } from "@/lib/app-icon";
+import { iconVersion } from "@/lib/app-icon";
 import { branchState, requireAnyUser } from "@/lib/dal";
 import { nounOf } from "@/lib/noun";
 import { supplyAlerts } from "@/lib/inventory-alerts";
@@ -13,7 +13,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const account = await requireAnyUser();
   if (account.clinic.system) return {};
   const c = account.clinic;
-  const v = `${c.logoUpdatedAt?.getTime() ?? 0}${hexOk(c.iconColor) ? c.iconColor.slice(1) : ""}`;
+  const v = iconVersion(c);
   return {
     manifest: `/api/manifiesto/${c.id}`,
     applicationName: c.name,

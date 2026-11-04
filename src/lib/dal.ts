@@ -12,7 +12,7 @@ export const requireAnyUser = cache(async () => {
   if (!session) redirect("/api/sesion/cerrar");
   const user = await db.user.findUnique({
     where: { id: session.userId },
-    select: { id: true, name: true, email: true, role: true, clinicId: true, active: true, isPlatformAdmin: true, clinic: { select: { id: true, name: true, status: true, trialEndsAt: true, system: true, noun: true, logoUpdatedAt: true, iconColor: true } } },
+    select: { id: true, name: true, email: true, role: true, clinicId: true, active: true, isPlatformAdmin: true, clinic: { select: { id: true, name: true, status: true, trialEndsAt: true, system: true, noun: true, logoUpdatedAt: true, appIconUpdatedAt: true, iconColor: true } } },
   });
   if (!user || !user.active) redirect("/api/sesion/cerrar");
   // Un consultorio suspendido no puede usar el sistema (los datos se conservan).
