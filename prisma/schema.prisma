@@ -352,8 +352,39 @@ model Consent {
   signature       String // PNG en data URL
   signedAt        DateTime @default(now())
   seal            String?  @unique // sello de integridad (HMAC) calculado al firmar
+  // Firma hecha por el paciente en su propio celular (QR o enlace). Vacíos si se firmó en el aparato del consultorio.
+  signMethod      String? // QR | ENLACE
+  signIp          String?
+  signAgent       String?
+  requestId       String?  @unique
 
   @@index([patientId, signedAt])
+}
+
+// Solicitud para que el paciente firme un consentimiento desde su celular. Guarda el texto exacto que verá; el enlace es secreto
+// (solo se guarda su huella), vence y se bloquea tras 5 intentos fallidos con el documento.
+model ConsentRequest {
+  id              String    @id @default(cuid())
+  clinicId        String
+  patientId       String
+  dentistId       String
+  templateId      String
+  templateVersion String
+  title           String
+  body            String
+  procedureNote   String?
+  signerName      String
+  signerDocument  String? // sus últimos 4 dígitos son la clave de acceso
+  signerRelation  String
+  method          String // QR | ENLACE
+  tokenHash       String    @unique
+  expiresAt       DateTime
+  failures        Int       @default(0)
+  consentId       String?
+  cancelledAt     DateTime?
+  createdAt       DateTime  @default(now())
+
+  @@index([patientId, createdAt])
 }
 
 // Foto fija del odontograma (p. ej. el inicial, que no cambia después).

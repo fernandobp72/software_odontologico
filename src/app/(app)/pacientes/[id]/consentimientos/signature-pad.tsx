@@ -5,9 +5,10 @@ import { useEffect, useRef, useState } from "react";
 // Lienzo de firma con puntero (dedo, lápiz o mouse). Deja el PNG en un input oculto.
 export default function SignaturePad({ name }: { name: string }) {
   const canvas = useRef<HTMLCanvasElement>(null);
-  const input = useRef<HTMLInputElement>(null);
   const drawing = useRef(false);
   const [empty, setEmpty] = useState(true);
+  // Controlado: React 19 limpia los campos del formulario tras una acción, y así la firma dibujada no se pierde si hay un error.
+  const [data, setData] = useState("");
 
   useEffect(() => {
     const c = canvas.current!;
@@ -44,12 +45,12 @@ export default function SignaturePad({ name }: { name: string }) {
   function up() {
     if (!drawing.current) return;
     drawing.current = false;
-    input.current!.value = canvas.current!.toDataURL("image/png");
+    setData(canvas.current!.toDataURL("image/png"));
   }
   function clear() {
     const c = canvas.current!;
     c.getContext("2d")!.clearRect(0, 0, c.width, c.height);
-    input.current!.value = "";
+    setData("");
     setEmpty(true);
   }
 
@@ -68,7 +69,7 @@ export default function SignaturePad({ name }: { name: string }) {
         aria-label="Área de firma"
         className="mt-2 h-40 w-full touch-none rounded-lg border-2 border-dashed border-slate-500 bg-white"
       />
-      <input ref={input} type="hidden" name={name} />
+      <input type="hidden" name={name} value={data} readOnly />
       {empty && <p className="muted mt-1">Firma con el dedo, el lápiz o el mouse dentro del recuadro.</p>}
     </div>
   );

@@ -15,5 +15,5 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!api|comprobante|verificar|verificar|confirmar|formulario|olvide|privacidad|registro|invitacion|restablecer|terminos|_next/static|_next/image|favicon.ico|manifest.webmanifest|icon.*).*)"],
+  matcher: ["/((?!api|comprobante|firmar|verificar|confirmar|formulario|olvide|privacidad|registro|invitacion|restablecer|terminos|_next/static|_next/image|favicon.ico|manifest.webmanifest|icon.*).*)"],
 };

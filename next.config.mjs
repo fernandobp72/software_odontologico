@@ -8,6 +8,7 @@ const nextConfig = {
     return [
       // Recibos compartidos: ni el navegador ni intermediarios guardan copia.
       { source: "/comprobante/:path*", headers: [{ key: "Cache-Control", value: "no-store" }] },
+      { source: "/firmar/:path*", headers: [{ key: "Cache-Control", value: "no-store" }] },
       {
         source: "/:path*",
         headers: [
