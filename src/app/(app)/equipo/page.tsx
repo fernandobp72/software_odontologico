@@ -4,13 +4,14 @@ import { requireUser } from "@/lib/dal";
 import { mailConfigured } from "@/lib/mailer";
 import { ROLE_LABEL } from "@/lib/roles";
 import { InviteForm, ResetButton } from "./forms";
+import { adminRevoke, authorizeNewSeal, setRequireSello } from "./sello-actions";
 import { revokeInvitation, setActive, setRole, setUserBranches, updatePerson } from "./actions";
 
 export default async function EquipoPage() {
   const user = await requireUser();
   if (user.role !== "ADMIN") return <p className="card">Solo el administrador puede ver esta sección.</p>;
   const [users, invitations, branches] = await Promise.all([
-    db.user.findMany({ where: { clinicId: user.clinicId }, orderBy: [{ active: "desc" }, { name: "asc" }], include: { userBranches: { select: { branchId: true } } } }),
+    db.user.findMany({ where: { clinicId: user.clinicId }, orderBy: [{ active: "desc" }, { name: "asc" }], include: { userBranches: { select: { branchId: true } }, signingCredentials: { orderBy: { serial: "asc" } }, signingGrants: { where: { usedAt: null, expiresAt: { gt: new Date() } }, orderBy: { createdAt: "desc" }, take: 1 } } }),
     db.invitation.findMany({ where: { clinicId: user.clinicId, acceptedAt: null, revokedAt: null, expiresAt: { gt: new Date() } }, orderBy: { createdAt: "desc" } }),
     db.branch.findMany({ where: { clinicId: user.clinicId, active: true }, orderBy: { createdAt: "asc" }, select: { id: true, name: true } }),
   ]);
@@ -23,6 +24,14 @@ export default async function EquipoPage() {
         <h1 className="page-title">Equipo</h1>
         <p className="muted">Quién trabaja en tu {nounOf(user.clinic.noun).name} y qué puede hacer. <strong>Administrador:</strong> todo, incluidos equipo, sedes, catálogo y ajustes. <strong>Odontólogo:</strong> atiende pacientes y escribe en la historia clínica. <strong>Recepción:</strong> agenda, caja y datos de contacto, sin acceso a la historia clínica.</p>
       </div>
+      <section className="card space-y-2">
+        <h2 className="section-title">Sello digital de los profesionales</h2>
+        <p className="muted">Cada odontólogo firma con su dispositivo (huella, rostro o clave). {user.clinic.requireSello ? "Hoy es obligatorio: quien no tenga sello activo no puede firmar." : "Hoy es opcional: quien lo crea firma con él; quien no, firma como antes."}</p>
+        <form action={setRequireSello.bind(null, !user.clinic.requireSello)}>
+          <button className={user.clinic.requireSello ? "btn-secondary min-h-10" : "btn-primary min-h-10"}>{user.clinic.requireSello ? "Dejar de exigirlo" : "Exigir el sello a todos"}</button>
+        </form>
+        {!user.clinic.requireSello && <p className="muted">Recomendación: actívalo cuando todos los profesionales ya hayan creado su sello.</p>}
+      </section>
       <InviteForm branches={branches} mailReady={mailReady} />
 
       {invitations.length > 0 && (
@@ -87,6 +96,29 @@ export default async function EquipoPage() {
                   <button className="btn-secondary min-h-10">Guardar sedes</button>
                 </form>
               )}
+              {u.role !== "RECEPTION" && u.active && (() => {
+                const act = u.signingCredentials.filter((c) => !c.revokedAt);
+                const grant = u.signingGrants[0];
+                return (
+                  <div className="space-y-2 rounded-lg border border-slate-300 p-3">
+                    <p className="text-sm font-semibold text-slate-900">Sello digital: {act.length ? `${act.length} dispositivo${act.length > 1 ? "s" : ""} activo${act.length > 1 ? "s" : ""}` : u.signingCredentials.length ? "sin dispositivos activos" : "todavía no lo ha creado"}</p>
+                    {act.map((c) => (
+                      <form key={c.id} action={adminRevoke.bind(null, c.id)} className="flex flex-wrap items-center justify-between gap-2 text-sm text-slate-900">
+                        <span>N.º {c.serial} · {c.label}{c.lastUsedAt ? ` · último uso ${fmt.format(c.lastUsedAt)}` : ""}</span>
+                        <button className="btn-danger min-h-9">Retirar</button>
+                      </form>
+                    ))}
+                    {!act.length && u.signingCredentials.length > 0 && (grant ? (
+                      <p className="muted">Autorización de sello nuevo {grant.startsAt > new Date() ? `disponible desde ${new Intl.DateTimeFormat("es-CO", { dateStyle: "medium", timeStyle: "short", timeZone: "America/Bogota" }).format(grant.startsAt)}` : "activa: la persona ya puede crearlo en Mi cuenta"}.</p>
+                    ) : (
+                      <form action={authorizeNewSeal.bind(null, u.id)}>
+                        <button className="btn-secondary min-h-10">Autorizar sello nuevo</button>
+                        <p className="muted mt-1">{u.id === user.id ? "Como eres el único administrador, se activará en 24 horas." : "Úsalo cuando esta persona perdió todos sus dispositivos."}</p>
+                      </form>
+                    ))}
+                  </div>
+                );
+              })()}
               <ResetButton userId={u.id} mailReady={mailReady} />
             </li>
           ))}

@@ -5,7 +5,8 @@ import { useMemo, useState, useTransition } from "react";
 import { alertsFor, searchDrugs, type Alert, type DraftWithAlerts, type Flags } from "@/lib/rx-rules";
 import { drugById, draftAdult, draftPediatric, quantityTextFor, VADEMECUM_VERSION, type Drug, type DraftItem, type Tag } from "@/lib/vademecum";
 import InvimaBadge from "./invima-badge";
-import { signPrescription } from "./actions";
+import { prepareRxSign, signPrescription } from "./actions";
+import { useSello } from "../../../sello-client";
 
 type Item = DraftWithAlerts & { key: string; override: string };
 type Initial = { items: DraftWithAlerts[]; excluded: { name: string; reason: string }[]; notes: string[]; reasons: string[] };
@@ -76,17 +77,23 @@ export default function RxEditor({
     }));
   }
 
+  const { confirm, dialog } = useSello();
+
   function sign() {
     setError(undefined);
     const d = diagnoses.find((x) => x.code === dx);
     start(async () => {
-      const res = await signPrescription(patientId, {
+      const payload = {
         diagnosisCode: dx || undefined, diagnosisText: d?.description, weightKg: w, notes: notes || undefined,
         items: items.map((i) => ({
           drugId: i.drugId, name: i.name, concentration: i.concentration, form: i.form, route: i.route, dose: i.dose, frequency: i.frequency,
           duration: i.duration, quantity: i.quantity, quantityText: i.quantityText, instructions: i.instructions || undefined, override: i.override || undefined,
         })),
-      });
+      };
+      // Sello digital: el profesional confirma con su dispositivo o clave antes de firmar.
+      const c = await confirm(await prepareRxSign(patientId, payload));
+      if (c.error) return setError(c.error);
+      const res = await signPrescription(patientId, payload, c.proof);
       if (res?.error) setError(res.error);
       else if (res?.id) router.push(`/formula/${res.id}`);
     });
@@ -96,6 +103,7 @@ export default function RxEditor({
 
   return (
     <div className="space-y-4">
+      {dialog}
       <section className="card space-y-3">
         <h2 className="section-title">Nueva fórmula médica</h2>
         {initial.reasons.length > 0 ? (

@@ -1,6 +1,7 @@
 import "server-only";
 import { createHash, createHmac } from "node:crypto";
 import { db } from "./db";
+import { checkSignature, contentHash, type SignatureCheck } from "./signing";
 
 // Sello de integridad de los documentos que se firman (evolución, consentimiento, fórmula).
 // Al firmar se calcula un HMAC-SHA256 del contenido con una clave que solo conoce el servidor y se guarda aparte.
@@ -34,6 +35,22 @@ const evolutionMaterial = (e: { id: string; patientId: string; dentistId: string
 const consentMaterial = (c: { id: string; patientId: string; dentistId: string; templateId: string; templateVersion: string; title: string; body: string; procedureNote: string | null; signerName: string; signerDocument: string | null; signerRelation: string; witnessName: string | null; signature: string; signedAt: Date; signMethod?: string | null; signIp?: string | null; signAgent?: string | null; signDevice?: string | null; signReadSec?: number | null }) =>
   ({ id: c.id, patientId: c.patientId, dentistId: c.dentistId, templateId: c.templateId, templateVersion: c.templateVersion, title: c.title, body: c.body, procedureNote: c.procedureNote, signerName: c.signerName, signerDocument: c.signerDocument, signerRelation: c.signerRelation, witnessName: c.witnessName, signature: createHash("sha256").update(c.signature).digest("hex"), signedAt: c.signedAt, ...(c.signMethod ? { signMethod: c.signMethod, signIp: c.signIp ?? null, signAgent: c.signAgent ?? null, ...(c.signDevice ? { signDevice: c.signDevice, signReadSec: c.signReadSec ?? null } : {}) } : {}) });
 
+// Lo que el profesional firma con su dispositivo (sin id ni fecha, que aún no existen al firmar).
+export const evolutionSignHash = (e: { patientId: string; dentistId: string; reason: string | null; diagnosisCode: string | null; procedureCode: string | null; note: string }) =>
+  contentHash("Evolution", { patientId: e.patientId, dentistId: e.dentistId, reason: e.reason || null, diagnosisCode: e.diagnosisCode || null, procedureCode: e.procedureCode || null, note: e.note });
+
+export const rxSignHash = (r: { patientId: string; dentistId: string; diagnosisCode: string | null; diagnosisText: string | null; weightKg: unknown; notes: string | null; items: { position?: number; name: string; concentration: string; form: string; route: string; dose: string; frequency: string; duration: string; quantity: number; quantityText: string; instructions: string | null; override: string | null }[] }) =>
+  contentHash("Prescription", {
+    patientId: r.patientId, dentistId: r.dentistId, diagnosisCode: r.diagnosisCode || null, diagnosisText: r.diagnosisText || null, weightKg: r.weightKg == null ? null : Number(r.weightKg), notes: r.notes || null,
+    items: [...r.items].sort((a, b) => (a.position ?? 0) - (b.position ?? 0)).map((i) => ({ name: i.name, concentration: i.concentration, form: i.form, route: i.route, dose: i.dose, frequency: i.frequency, duration: i.duration, quantity: i.quantity, quantityText: i.quantityText, instructions: i.instructions || null, override: i.override || null })),
+  });
+
+// Si el documento se firmó con sello, la prueba entra en el sello de integridad (así no se puede quitar ni cambiar después).
+async function proMaterial(docKind: "Evolution" | "Prescription", docId: string) {
+  const s = await db.proSignature.findUnique({ where: { docKind_docId: { docKind, docId } } });
+  return s ? { pro: { hash: s.contentHash, cred: s.credentialId, method: s.method, gen: s.generation, sig: createHash("sha256").update(JSON.stringify(s.assertion ?? null)).digest("hex") } } : {};
+}
+
 type RxRow = Awaited<ReturnType<typeof loadRx>>;
 const loadRx = (where: { id: string } | { seal: string }) =>
   db.prescription.findUnique({ where, include: { items: { orderBy: { position: "asc" } }, dentist: { select: { name: true, licenseNumber: true } }, clinic: { select: { name: true } } } });
@@ -47,7 +64,7 @@ const rxMaterial = (r: NonNullable<RxRow>) => ({
 // Se llaman justo después de crear el documento firmado.
 export async function sealEvolution(id: string) {
   const e = await db.evolution.findUniqueOrThrow({ where: { id } });
-  await db.evolution.update({ where: { id }, data: { seal: compute("Evolution", evolutionMaterial(e)) } });
+  await db.evolution.update({ where: { id }, data: { seal: compute("Evolution", { ...evolutionMaterial(e), ...(await proMaterial("Evolution", id)) }) } });
 }
 export async function sealConsent(id: string) {
   const c = await db.consent.findUniqueOrThrow({ where: { id } });
@@ -56,7 +73,7 @@ export async function sealConsent(id: string) {
 export async function sealPrescription(id: string) {
   const r = await loadRx({ id });
   if (!r) throw new Error("Fórmula no encontrada");
-  await db.prescription.update({ where: { id }, data: { seal: compute("Prescription", rxMaterial(r)) } });
+  await db.prescription.update({ where: { id }, data: { seal: compute("Prescription", { ...rxMaterial(r), ...(await proMaterial("Prescription", id)) }) } });
 }
 
 export type SealCheck = {
@@ -68,6 +85,7 @@ export type SealCheck = {
   license: string | null;
   clinic: string;
   voided: boolean;
+  pro?: SignatureCheck; // firma del profesional con su dispositivo
 };
 
 // Verificación pública: no devuelve datos del paciente, solo quién firmó, cuándo y si el contenido sigue intacto.
@@ -79,8 +97,8 @@ export async function verifySeal(seal: string): Promise<SealCheck | null> {
     db.consent.findUnique({ where: { seal }, include: { dentist: who, patient: { select: { clinic: { select: { name: true } } } } } }),
     loadRx({ seal }),
   ]);
-  if (ev) return { kind: "Evolution", intact: compute("Evolution", evolutionMaterial(ev)) === seal, signedAt: ev.signedAt, number: null, signer: ev.dentist.name, license: ev.dentist.licenseNumber, clinic: ev.patient.clinic.name, voided: false };
+  if (ev) return { kind: "Evolution", pro: await checkSignature("Evolution", ev.id, evolutionSignHash(ev)), intact: compute("Evolution", { ...evolutionMaterial(ev), ...(await proMaterial("Evolution", ev.id)) }) === seal, signedAt: ev.signedAt, number: null, signer: ev.dentist.name, license: ev.dentist.licenseNumber, clinic: ev.patient.clinic.name, voided: false };
   if (co) return { kind: "Consent", intact: compute("Consent", consentMaterial(co)) === seal, signedAt: co.signedAt, number: null, signer: co.dentist.name, license: co.dentist.licenseNumber, clinic: co.patient.clinic.name, voided: false };
-  if (rx) return { kind: "Prescription", intact: compute("Prescription", rxMaterial(rx)) === seal, signedAt: rx.issuedAt, number: rx.number, signer: rx.dentist.name, license: rx.dentist.licenseNumber, clinic: rx.clinic.name, voided: !!rx.voidedAt };
+  if (rx) return { kind: "Prescription", pro: await checkSignature("Prescription", rx.id, rxSignHash(rx)), intact: compute("Prescription", { ...rxMaterial(rx), ...(await proMaterial("Prescription", rx.id)) }) === seal, signedAt: rx.issuedAt, number: rx.number, signer: rx.dentist.name, license: rx.dentist.licenseNumber, clinic: rx.clinic.name, voided: !!rx.voidedAt };
   return null;
 }

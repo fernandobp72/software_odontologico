@@ -24,6 +24,8 @@ export default async function PacientePage({ params }: PageProps<"/pacientes/[id
     db.odontogramSnapshot.findUnique({ where: { patientId_kind: { patientId: p.id, kind: "INITIAL" } } }),
     db.diagnosis.findMany({ where: { patientId: p.id, status: "ACTIVE" }, select: { code: true, tooth: true } }),
   ]);
+  const sigs = await db.proSignature.findMany({ where: { docKind: "Evolution", docId: { in: evolutions.map((e) => e.id) } }, include: { credential: { select: { serial: true, label: true, compromisedSince: true } } } });
+  const sigOf = new Map(sigs.map((x) => [x.docId, x]));
   const pending = openItemsRaw.filter((i) => i.tooth).map((i) => ({ tooth: i.tooth as number, surfaces: i.surfaces ?? "" }));
   const openItems = openItemsRaw.map((i) => ({
     id: i.id, name: i.name, tooth: i.tooth, surfaces: i.surfaces, material: i.material, procedureCode: i.procedureCode,
@@ -97,6 +99,14 @@ export default async function PacientePage({ params }: PageProps<"/pacientes/[id
             {evolutions.map((e) => (
               <article key={e.id} className="card">
                 <p className="muted">{fmt.format(e.signedAt)} · {e.dentist.name}{e.diagnosisCode ? ` · ${e.diagnosisCode}` : ""}{e.procedureCode ? ` · CUPS ${e.procedureCode}` : ""} · <SealMark seal={e.seal} /></p>
+                {(() => {
+                  const sg = sigOf.get(e.id);
+                  if (!sg) return null;
+                  const bad = sg.credential?.compromisedSince && sg.signedAt >= sg.credential.compromisedSince;
+                  return bad
+                    ? <p className="text-xs font-semibold text-red-800">⚠ Firmada con un dispositivo que el profesional reportó como perdido o robado (desde {fmt.format(sg.credential!.compromisedSince!)}). En revisión.</p>
+                    : <p className="text-xs text-slate-700">🔐 Firmada con el sello digital del profesional{sg.credential ? ` · N.º ${sg.credential.serial}` : ""}{sg.method === "PIN" ? " (clave de firma)" : ""}</p>;
+                })()}
                 {e.reason && <p className="font-semibold">{e.reason}</p>}
                 <p className="whitespace-pre-wrap">{e.note}</p>
               </article>

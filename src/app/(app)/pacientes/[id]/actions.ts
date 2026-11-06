@@ -8,7 +8,8 @@ import { branchState, requireClinician, requireUser } from "@/lib/dal";
 import { consumeForProcedures } from "@/lib/supply-ops";
 import { CONDITIONS, SURFACES, VALID_TEETH } from "@/lib/catalogs";
 import { syncPlan } from "@/lib/plan";
-import { sealEvolution } from "@/lib/seal";
+import { evolutionSignHash, sealEvolution } from "@/lib/seal";
+import { prepareSign, recordSignature, resolveProof, type SignPrep } from "@/lib/signing";
 import { PRE_BLOCK, isPreRegistered, isRecentPatient, TEST_PATIENT_DAYS } from "@/lib/patient-fields";
 
 const changeSchema = z.object({
@@ -65,6 +66,17 @@ const evolutionSchema = z.object({
 
 export type EvolutionState = { error?: string; ok?: boolean } | undefined;
 
+const evHash = (userId: string, d: z.infer<typeof evolutionSchema>) =>
+  evolutionSignHash({ patientId: d.patientId, dentistId: userId, reason: d.reason || null, diagnosisCode: d.diagnosisCode || null, procedureCode: d.procedureCode || null, note: d.note });
+
+// Paso previo a firmar: valida y devuelve lo que debe confirmar el profesional con su sello (huella, rostro o clave).
+export async function prepareEvolutionSign(fd: FormData): Promise<SignPrep | { error: string }> {
+  const user = await requireClinician();
+  const parsed = evolutionSchema.safeParse(Object.fromEntries(fd));
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+  return prepareSign(user, evHash(user.id, parsed.data));
+}
+
 export async function signEvolution(_: EvolutionState, formData: FormData): Promise<EvolutionState> {
   const user = await requireClinician();
   const parsed = evolutionSchema.safeParse(Object.fromEntries(formData));
@@ -74,6 +86,11 @@ export async function signEvolution(_: EvolutionState, formData: FormData): Prom
   const patient = await db.patient.findFirst({ where: { id: d.patientId, clinicId: user.clinicId } });
   if (!patient) return { error: "Paciente no encontrado" };
   if (isPreRegistered(patient)) return { error: PRE_BLOCK };
+
+  // Sello digital del profesional: si tiene uno (o el consultorio lo exige), debe confirmarlo; la prueba queda atada a este contenido.
+  const hash = evHash(user.id, d);
+  const proof = await resolveProof(user, hash, String(formData.get("proof") ?? ""));
+  if (!proof.ok) return { error: proof.error };
 
   // Los ítems del plan marcados se cierran junto con la evolución, en una sola transacción.
   const itemIds = formData.getAll("doneItems").map(String);
@@ -95,6 +112,7 @@ export async function signEvolution(_: EvolutionState, formData: FormData): Prom
         note: d.note,
       },
     });
+    if (proof.result) await recordSignature({ userId: user.id, docKind: "Evolution", docId: ev.id, hash, result: proof.result }, tx);
     if (items.length) {
       await tx.treatmentItem.updateMany({
         where: { id: { in: items.map((i) => i.id) } },

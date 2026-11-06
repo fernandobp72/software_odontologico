@@ -4,7 +4,8 @@ import { useActionState, useEffect, useRef, useState } from "react";
 import { CIE10, CUPS, NOTE_TEMPLATES } from "@/lib/catalogs";
 import { applyDictation, isUndoCommand } from "@/lib/dictation";
 import { buildEvolutionText, replaceBlock, type DoneItem } from "@/lib/evolution-text";
-import { signEvolution, type EvolutionState } from "./actions";
+import { prepareEvolutionSign, signEvolution, type EvolutionState } from "./actions";
+import { useSello } from "../../sello-client";
 import VoiceButton from "./voice-button";
 
 export default function EvolutionForm({ patientId, openItems = [] }: { patientId: string; openItems?: DoneItem[] }) {
@@ -17,7 +18,12 @@ export default function EvolutionForm({ patientId, openItems = [] }: { patientId
   const block = useRef(""); // texto que redactó el sistema, para reemplazarlo sin tocar lo que escribas
   const autoDx = useRef("");
   const autoProc = useRef("");
+  const { confirm, dialog } = useSello();
   const [state, action, pending] = useActionState(async (prev: EvolutionState, fd: FormData) => {
+    // Sello digital: primero se prepara lo que firma el dispositivo y el profesional lo confirma.
+    const c = await confirm(await prepareEvolutionSign(fd));
+    if (c.error) return { error: c.error };
+    fd.set("proof", c.proof ?? "");
     const res = await signEvolution(prev, fd);
     if (res?.ok) {
       setNote("");
@@ -83,6 +89,7 @@ export default function EvolutionForm({ patientId, openItems = [] }: { patientId
 
   return (
     <form action={action} className="card space-y-4">
+      {dialog}
       <h2 className="section-title">Nueva evolución</h2>
       <input type="hidden" name="patientId" value={patientId} />
       <label className="label">Motivo de consulta<input name="reason" className="field" /></label>

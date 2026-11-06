@@ -38,6 +38,15 @@ export default async function VerificarPage({ params }: PageProps<"/verificar/[s
           <div className="flex justify-between gap-4"><dt>Consultorio</dt><dd className="font-semibold">{r.clinic}</dd></div>
         </dl>
       )}
+      {r?.pro?.present && (
+        <div className={`card ${r.pro.valid ? (r.pro.compromised ? "border-amber-600" : "border-green-300") : "border-red-300"}`}>
+          {r.pro.valid && !r.pro.compromised && <p className="font-semibold text-green-800">✓ Firmado con el sello digital del profesional{r.pro.method === "PASSKEY" ? ": la prueba criptográfica de su dispositivo es válida" : " (clave de firma)"}.</p>}
+          {r.pro.valid && r.pro.compromised && <p className="font-semibold text-amber-900">⚠ Firmado con un dispositivo que el profesional reportó como perdido o robado. Documento en revisión.</p>}
+          {!r.pro.valid && <p role="alert" className="font-semibold text-red-800">⚠ La firma del profesional NO coincide con el contenido actual.</p>}
+          <p className="muted mt-1">Dispositivo N.º {r.pro.serial ?? "—"}{r.pro.generation ? ` · sello reexpedido ${r.pro.generation} vez` : ""}{r.pro.revoked && !r.pro.compromised ? " · ese dispositivo se retiró después de esta firma" : ""}</p>
+        </div>
+      )}
+      {r && r.pro && !r.pro.present && <p className="muted">Este documento se firmó con la sesión del profesional, sin sello de dispositivo.</p>}
       <p className="muted">El sello prueba que el contenido no cambió desde la firma. No reemplaza una firma digital certificada.</p>
     </main>
   );

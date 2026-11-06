@@ -4,7 +4,8 @@ import { PRE_BLOCK, isPreRegistered } from "@/lib/patient-fields";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { sealPrescription } from "@/lib/seal";
+import { rxSignHash, sealPrescription } from "@/lib/seal";
+import { prepareSign, recordSignature, resolveProof, type SignPrep } from "@/lib/signing";
 import { requireClinician } from "@/lib/dal";
 import { rxContextFor } from "@/lib/rx-context";
 import { alertsFor, patientFlags } from "@/lib/rx-rules";
@@ -34,9 +35,23 @@ const schema = z.object({
   items: z.array(item).min(1, "Agrega al menos un medicamento").max(15),
 });
 
+const rxHash = (userId: string, patientId: string, d: z.infer<typeof schema>) =>
+  rxSignHash({
+    patientId, dentistId: userId, diagnosisCode: d.diagnosisCode || null, diagnosisText: d.diagnosisText || null, weightKg: d.weightKg, notes: d.notes || null,
+    items: d.items.map((it, i) => ({ position: i, name: it.name, concentration: it.concentration, form: it.form, route: it.route, dose: it.dose, frequency: it.frequency, duration: it.duration, quantity: it.quantity, quantityText: it.quantityText, instructions: it.instructions || null, override: it.override || null })),
+  });
+
+// Paso previo a firmar: devuelve lo que debe confirmar el profesional con su sello.
+export async function prepareRxSign(patientId: string, raw: unknown): Promise<SignPrep | { error: string }> {
+  const user = await requireClinician();
+  const parsed = schema.safeParse(raw);
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+  return prepareSign(user, rxHash(user.id, patientId, parsed.data));
+}
+
 // La fórmula firmada no se edita. Las alertas se vuelven a calcular aquí con los antecedentes guardados:
 // si hay una de bloqueo, solo se firma con un motivo escrito por el odontólogo.
-export async function signPrescription(patientId: string, raw: unknown): Promise<RxState> {
+export async function signPrescription(patientId: string, raw: unknown, proofRaw?: string): Promise<RxState> {
   const user = await requireClinician();
   const parsed = schema.safeParse(raw);
   if (!parsed.success) return { error: parsed.error.issues[0].message };
@@ -58,9 +73,13 @@ export async function signPrescription(patientId: string, raw: unknown): Promise
   const missing = items.find((x) => x.blocked && !x.it.override);
   if (missing) return { error: `${missing.it.name}: tiene una alerta de bloqueo. Escribe el motivo por el que la formulas de todas formas, o quítalo.` };
 
+  const hash = rxHash(user.id, patientId, d);
+  const proof = await resolveProof(user, hash, proofRaw);
+  if (!proof.ok) return { error: proof.error };
+
   const rx = await db.$transaction(async (tx) => {
     const last = await tx.prescription.aggregate({ where: { clinicId: user.clinicId }, _max: { number: true } });
-    return tx.prescription.create({
+    const created = await tx.prescription.create({
       data: {
         clinicId: user.clinicId, number: (last._max.number ?? 0) + 1, patientId, dentistId: user.id,
         diagnosisCode: d.diagnosisCode || null, diagnosisText: d.diagnosisText || null, weightKg: d.weightKg, notes: d.notes || null, vademecum: VADEMECUM_VERSION,
@@ -73,6 +92,8 @@ export async function signPrescription(patientId: string, raw: unknown): Promise
         },
       },
     });
+    if (proof.result) await recordSignature({ userId: user.id, docKind: "Prescription", docId: created.id, hash, result: proof.result }, tx);
+    return created;
   });
   await sealPrescription(rx.id);
   await db.auditLog.create({ data: { userId: user.id, action: "SIGN", entity: "Prescription", entityId: rx.id } });

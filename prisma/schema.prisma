@@ -68,6 +68,7 @@ enum DiagnosisStatus {
 }
 
 model Clinic {
+  requireSello     Boolean           @default(false) // exige firmar con el sello digital del profesional
   id               String            @id @default(cuid())
   name             String
   nit              String?
@@ -141,6 +142,90 @@ model User {
   prescriptions       Prescription[]
   passwordResets      PasswordReset[]
   userBranches        UserBranch[]
+  // Sello digital del profesional: cuántas veces se le ha reexpedido tras perder todos sus dispositivos.
+  sealGeneration      Int                  @default(0)
+  signingCredentials  SigningCredential[]
+  signingGrants       SigningGrant[]       @relation("GrantFor")
+  proSignatures       ProSignature[]
+}
+
+// Cada dispositivo o llave con que un profesional puede firmar (como un sello físico: puede tener varios y se reporta si se pierde).
+model SigningCredential {
+  id               String         @id @default(cuid())
+  userId           String
+  user             User           @relation(fields: [userId], references: [id])
+  serial           Int // número del sello dentro del profesional (1, 2, 3…)
+  generation       Int            @default(0) // reexpedición del sello a la que pertenece
+  kind             String // PASSKEY | PIN
+  label            String
+  credentialId     String?        @unique
+  publicKey        Bytes?
+  counter          Int            @default(0)
+  transports       String?
+  deviceType       String?
+  backedUp         Boolean        @default(false)
+  pinHash          String?
+  pinFailures      Int            @default(0)
+  pinLockedUntil   DateTime?
+  createdAt        DateTime       @default(now())
+  lastUsedAt       DateTime?
+  revokedAt        DateTime?
+  revokedReason    String? // LOST | CHANGED | ADMIN
+  revokedById      String?
+  compromisedSince DateTime? // desde cuándo se sospecha que otra persona pudo usarlo
+  signatures       ProSignature[]
+
+  @@unique([userId, serial])
+  @@index([userId])
+}
+
+// Reto de un solo uso para registrar o firmar con un dispositivo.
+model SigningChallenge {
+  id          String    @id @default(cuid())
+  userId      String
+  purpose     String // REGISTER | SIGN
+  challenge   String // lo que firma el dispositivo (base64url)
+  contentHash String?
+  expiresAt   DateTime
+  usedAt      DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([userId])
+}
+
+// Autorización del administrador para que el profesional obtenga un sello nuevo cuando perdió todos los anteriores.
+model SigningGrant {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation("GrantFor", fields: [userId], references: [id])
+  createdById String
+  createdAt   DateTime  @default(now())
+  startsAt    DateTime  @default(now())
+  expiresAt   DateTime
+  usedAt      DateTime?
+
+  @@index([userId])
+}
+
+// Firma de un profesional sobre un documento: quién, con qué credencial, qué contenido (hash) y la prueba criptográfica.
+model ProSignature {
+  id           String             @id @default(cuid())
+  userId       String
+  user         User               @relation(fields: [userId], references: [id])
+  credentialId String?
+  credential   SigningCredential? @relation(fields: [credentialId], references: [id])
+  docKind      String // Evolution | Prescription
+  docId        String
+  method       String // PASSKEY | PIN | SESSION
+  contentHash  String
+  assertion    Json?
+  generation   Int                @default(0)
+  ip           String?
+  agent        String?
+  signedAt     DateTime           @default(now())
+
+  @@unique([docKind, docId])
+  @@index([userId])
 }
 
 model Patient {

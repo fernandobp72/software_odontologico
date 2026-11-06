@@ -18,6 +18,12 @@ export default async function PerfilPage() {
       </dl>
       <ProfileForm key={`${user.name}${me.phone}`} name={user.name} phone={me.phone} license={me.licenseNumber} clinical={!user.clinic.system && user.role !== "RECEPTION"} />
       <EmailForm key={me.email} email={me.email} />
+      {!user.clinic.system && user.role !== "RECEPTION" && (
+        <a href="/perfil/sello" className="card flex max-w-md items-center justify-between gap-3 no-underline">
+          <span><span className="block font-semibold text-slate-900">Mi sello digital</span><span className="muted">Firma tus evoluciones y fórmulas con tu huella o clave. Reporta si pierdes un dispositivo.</span></span>
+          <span aria-hidden className="text-teal-800">→</span>
+        </a>
+      )}
       <PasswordForm />
     </div>
   );
