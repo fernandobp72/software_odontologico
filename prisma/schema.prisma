@@ -68,46 +68,49 @@ enum DiagnosisStatus {
 }
 
 model Clinic {
-  requireSello     Boolean           @default(false) // exige firmar con el sello digital del profesional
-  id               String            @id @default(cuid())
-  name             String
-  nit              String?
-  address          String?
-  phone            String?
+  requireSello        Boolean           @default(false) // exige firmar con el sello digital del profesional
+  id                  String            @id @default(cuid())
+  name                String
+  nit                 String?
+  address             String?
+  phone               String?
   // ACTIVE | TRIAL | SUSPENDED. Lo cambia el dueño de la plataforma.
-  status           String            @default("ACTIVE")
+  status              String            @default("ACTIVE")
   // Consultorio interno que solo guarda la cuenta del dueño de la plataforma: no es un cliente y no tiene pacientes.
-  system           Boolean           @default(false)
+  system              Boolean           @default(false)
   // Cómo llama la organización a su centro en la interfaz: consultorio | clinica | centro
-  noun             String            @default("consultorio")
+  noun                String            @default("consultorio")
   // Logo ya optimizado por el servidor (WebP, máximo 512 px). Se sirve en /api/logo/<id>
-  logo             Bytes?
-  logoUpdatedAt    DateTime?
+  logo                Bytes?
+  logoUpdatedAt       DateTime?
   // Color de fondo del ícono de la app instalada (#RRGGBB). Sin color: blanco si hay logo, verde con un diente si no.
-  iconColor        String?
+  iconColor           String?
   // Ícono propio de la app instalada (opcional). Si no hay, el ícono se arma con el logo.
-  appIcon          Bytes?
-  appIconUpdatedAt DateTime?
+  appIcon             Bytes?
+  appIconUpdatedAt    DateTime?
   // WhatsApp Business propio del consultorio (API de Meta). El token se guarda cifrado.
-  whatsappPhoneId  String?
-  whatsappToken    String?
-  whatsappTemplate String?
-  whatsappLang     String?
-  whatsappAuto     Boolean           @default(false)
-  trialEndsAt      DateTime?
-  termsAcceptedAt  DateTime?
-  termsVersion     String?
-  createdAt        DateTime          @default(now())
-  users            User[]
-  patients         Patient[]
-  appointments     Appointment[]
-  cashSessions     CashSession[]
-  payments         Payment[]
-  invoices         Invoice[]
-  invitations      Invitation[]
-  branches         Branch[]
-  clinicProcedures ClinicProcedure[]
-  prescriptions    Prescription[]
+  whatsappPhoneId     String?
+  whatsappToken       String?
+  whatsappTemplate    String?
+  whatsappLang        String?
+  whatsappAuto        Boolean           @default(false)
+  whatsappButtons     Boolean           @default(false) // plantilla con botones Confirmar / No podré asistir (respuestas por webhook)
+  whatsappAppSecret   String? // secreto de la app de Meta (cifrado) para validar el webhook
+  whatsappVerifyToken String? // clave que Meta devuelve al verificar el webhook
+  trialEndsAt         DateTime?
+  termsAcceptedAt     DateTime?
+  termsVersion        String?
+  createdAt           DateTime          @default(now())
+  users               User[]
+  patients            Patient[]
+  appointments        Appointment[]
+  cashSessions        CashSession[]
+  payments            Payment[]
+  invoices            Invoice[]
+  invitations         Invitation[]
+  branches            Branch[]
+  clinicProcedures    ClinicProcedure[]
+  prescriptions       Prescription[]
 }
 
 model User {

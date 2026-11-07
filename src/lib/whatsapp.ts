@@ -39,7 +39,14 @@ export function cloudConfig(c: { whatsappAuto: boolean; whatsappPhoneId: string 
 
 // Envío automático con la API de WhatsApp Cloud (Meta) del propio consultorio. Requiere una plantilla de mensaje aprobada
 // cuyo cuerpo use cinco variables: {{1}} nombre, {{2}} consultorio, {{3}} fecha, {{4}} hora, {{5}} enlace.
-export async function sendCloudTemplate(cfg: CloudConfig, to: string, p: ReminderParams): Promise<{ ok: boolean; error?: string }> {
+// Con `buttons`, la plantilla lleva dos botones de respuesta rápida (Confirmar / No podré asistir) y solo 4 variables
+// ({{1}} nombre, {{2}} consultorio, {{3}} fecha, {{4}} hora); cada botón lleva escondida la clave de la cita.
+export async function sendCloudTemplate(cfg: CloudConfig, to: string, p: ReminderParams, buttons?: { token: string }): Promise<{ ok: boolean; error?: string }> {
+  const bodyVars = buttons ? [p.nombre, p.clinica, p.fecha, p.hora] : [p.nombre, p.clinica, p.fecha, p.hora, p.enlace];
+  const components: unknown[] = [{ type: "body", parameters: bodyVars.map((text) => ({ type: "text", text })) }];
+  if (buttons) {
+    (["C", "X"] as const).forEach((k, i) => components.push({ type: "button", sub_type: "quick_reply", index: String(i), parameters: [{ type: "payload", payload: `${k}:${buttons.token}` }] }));
+  }
   const res = await fetch(`https://graph.facebook.com/${apiVersion()}/${cfg.phoneId}/messages`, {
     method: "POST",
     headers: { Authorization: `Bearer ${cfg.token}`, "Content-Type": "application/json" },
@@ -50,7 +57,7 @@ export async function sendCloudTemplate(cfg: CloudConfig, to: string, p: Reminde
       template: {
         name: cfg.template,
         language: { code: cfg.lang },
-        components: [{ type: "body", parameters: [p.nombre, p.clinica, p.fecha, p.hora, p.enlace].map((text) => ({ type: "text", text })) }],
+        components,
       },
     }),
   });
@@ -70,3 +77,24 @@ export async function checkCloud(phoneId: string, token: string): Promise<{ ok: 
     return { ok: false, error: "No se pudo conectar con Meta" };
   }
 }
+
+// Credenciales para RESPONDER a un paciente (no depende de que el envío automático esté activo).
+export function replyConfig(c: { whatsappPhoneId: string | null; whatsappToken: string | null }): CloudConfig | null {
+  if (!c.whatsappPhoneId || !c.whatsappToken) return null;
+  const token = decryptSecret(c.whatsappToken);
+  return token ? { phoneId: c.whatsappPhoneId, token, template: "", lang: "es" } : null;
+}
+
+async function graphSend(cfg: CloudConfig, body: Record<string, unknown>) {
+  try {
+    const res = await fetch(`https://graph.facebook.com/${apiVersion()}/${cfg.phoneId}/messages`, { method: "POST", headers: { Authorization: `Bearer ${cfg.token}`, "Content-Type": "application/json" }, body: JSON.stringify({ messaging_product: "whatsapp", to: body.to, ...body }) });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+// Mensajes dentro de la ventana de 24 h que abre el paciente al tocar un botón.
+export const sendWaText = (cfg: CloudConfig, to: string, text: string) => graphSend(cfg, { to, type: "text", text: { body: text } });
+export const sendWaButtons = (cfg: CloudConfig, to: string, text: string, buttons: { id: string; title: string }[]) =>
+  graphSend(cfg, { to, type: "interactive", interactive: { type: "button", body: { text }, action: { buttons: buttons.map((b) => ({ type: "reply", reply: { id: b.id, title: b.title.slice(0, 20) } })) } } });

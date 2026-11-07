@@ -42,7 +42,7 @@ export async function POST(req: Request) {
     if (!cfg || !to) continue;
     const token = await ensureToken(a.id, a.confirmToken);
     const params = reminderParams(a, a.patient.firstName, a.branch.name === "Sede principal" ? a.clinic.name : `${a.clinic.name} - ${a.branch.name}`, `${root}/confirmar/${token}`);
-    const r = await sendCloudTemplate(cfg, to, params);
+    const r = await sendCloudTemplate(cfg, to, params, a.clinic.whatsappButtons && a.clinic.whatsappAppSecret ? { token } : undefined);
     await db.reminder.create({ data: { appointmentId: a.id, channel: "CLOUD", status: r.ok ? "SENT" : "FAILED", error: r.error ?? null } });
     if (r.ok) sent++;
     else failed++;

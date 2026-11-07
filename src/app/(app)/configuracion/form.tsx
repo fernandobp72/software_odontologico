@@ -26,7 +26,7 @@ export default function ClinicForm({ clinic }: { clinic: { name: string; noun: s
   );
 }
 
-export type WaInfo = { phoneId: string | null; hasToken: boolean; template: string | null; lang: string | null; auto: boolean };
+export type WaInfo = { phoneId: string | null; hasToken: boolean; template: string | null; lang: string | null; auto: boolean; buttons: boolean; hasSecret: boolean; verifyToken: string | null; webhook: string };
 
 export function WhatsappForm({ wa, noun }: { wa: WaInfo; noun: string }) {
   const [state, action, pending] = useActionState(saveWhatsapp, undefined);
@@ -48,6 +48,25 @@ export function WhatsappForm({ wa, noun }: { wa: WaInfo; noun: string }) {
           <label className="label">Plantilla aprobada<input name="template" defaultValue={wa.template ?? ""} placeholder="recordatorio_cita" className="field" /></label>
           <label className="label">Idioma de la plantilla<input name="lang" defaultValue={wa.lang ?? ""} placeholder="es" className="field" /></label>
         </div>
+        <fieldset className="space-y-3 rounded-lg border border-slate-300 p-3">
+          <label className="flex min-h-11 cursor-pointer items-center gap-3 text-sm font-semibold text-slate-900">
+            <input type="checkbox" name="buttons" defaultChecked={wa.buttons} className="h-5 w-5 accent-teal-700" />
+            Recordatorio con botones «Confirmar» y «No podré asistir» (el paciente responde sin salir de WhatsApp; al cancelar se le pide confirmar)
+          </label>
+          <label className="label">Secreto de la app de Meta (solo con botones)
+            <input name="appSecret" type="password" autoComplete="off" placeholder={wa.hasSecret ? "Guardado (déjalo vacío para conservarlo)" : "Configuración de la app → Básica → Secreto"} className="field" />
+          </label>
+          {wa.buttons && wa.verifyToken && (
+            <div className="space-y-1 text-sm text-slate-900">
+              <p className="font-semibold">Pega esto en Meta → WhatsApp → Configuración → Webhook:</p>
+              <p className="muted">URL de devolución de llamada</p>
+              <code className="block break-all rounded bg-slate-100 p-2 text-xs">{wa.webhook}</code>
+              <p className="muted">Token de verificación</p>
+              <code className="block break-all rounded bg-slate-100 p-2 text-xs">{wa.verifyToken}</code>
+              <p className="muted">Y suscríbete al campo «messages».</p>
+            </div>
+          )}
+        </fieldset>
         <label className="flex min-h-11 cursor-pointer items-center gap-3 text-sm font-semibold text-slate-900">
           <input type="checkbox" name="auto" defaultChecked={wa.auto} className="h-5 w-5 accent-teal-700" />
           Enviar los recordatorios automáticamente (a quienes autorizaron)
@@ -60,7 +79,8 @@ export function WhatsappForm({ wa, noun }: { wa: WaInfo; noun: string }) {
         </div>
       </form>
       <p className="muted">
-        La plantilla debe ser de categoría <em>Utilidad</em>, en español, con este cuerpo: «Hola {"{{1}}"}, te recordamos tu cita en {"{{2}}"} el {"{{3}}"} a las {"{{4}}"}. Confirma o cancela aquí: {"{{5}}"}». El token se guarda cifrado y no se vuelve a mostrar. Antes de guardar se comprueba con Meta.
+        Plantilla <em>sin botones</em> (categoría Utilidad, español): «Hola {"{{1}}"}, te recordamos tu cita en {"{{2}}"} el {"{{3}}"} a las {"{{4}}"}. Confirma o cancela aquí: {"{{5}}"}».
+        <br />Plantilla <em>con botones</em>: cuerpo «Hola {"{{1}}"}, te recordamos tu cita en {"{{2}}"} el {"{{3}}"} a las {"{{4}}"}.» y dos botones de <strong>respuesta rápida</strong>: «Confirmar» y «No podré asistir». Escribe aquí el nombre de esa plantilla. El token y el secreto se guardan cifrados y no se vuelven a mostrar.
       </p>
     </section>
   );

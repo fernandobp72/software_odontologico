@@ -4,8 +4,9 @@ import { respond } from "./actions";
 
 export const metadata = { title: "Confirmar cita", robots: { index: false } };
 
-export default async function ConfirmarPage({ params }: PageProps<"/confirmar/[token]">) {
+export default async function ConfirmarPage({ params, searchParams }: PageProps<"/confirmar/[token]">) {
   const { token } = await params;
+  const askCancel = (await searchParams).cancelar === "1";
   const a = await db.appointment.findUnique({ where: { confirmToken: token }, include: { clinic: true, patient: { select: { firstName: true } } } });
   const fmt = new Intl.DateTimeFormat("es-CO", { weekday: "long", day: "numeric", month: "long", hour: "numeric", minute: "2-digit", timeZone: "America/Bogota" });
 
@@ -26,10 +27,18 @@ export default async function ConfirmarPage({ params }: PageProps<"/confirmar/[t
             {a.status === "CONFIRMED" && <p className="ok-text">Tu cita está confirmada. ¡Te esperamos!</p>}
             {a.status === "CANCELLED" && <p className="error-text">Cancelaste esta cita. Comunícate con tu odontólogo para reprogramar.</p>}
             {(a.status === "SCHEDULED" || a.status === "CONFIRMED") && (
-              <div className="space-y-2">
-                {a.status === "SCHEDULED" && <form action={respond.bind(null, token, "CONFIRMED")}><button className="btn-primary w-full">Confirmar mi cita</button></form>}
-                <form action={respond.bind(null, token, "CANCELLED")}><button className="btn-danger w-full">No podré asistir</button></form>
-              </div>
+              askCancel ? (
+                <div className="space-y-2">
+                  <p className="font-semibold text-slate-900">¿Seguro que quieres cancelar tu cita?</p>
+                  <form action={respond.bind(null, token, "CANCELLED")}><button className="btn-danger w-full">Sí, cancelar mi cita</button></form>
+                  <a href={`/confirmar/${token}`} className="btn-secondary block w-full text-center no-underline">No, mantener mi cita</a>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {a.status === "SCHEDULED" && <form action={respond.bind(null, token, "CONFIRMED")}><button className="btn-primary w-full">Confirmar mi cita</button></form>}
+                  <a href={`/confirmar/${token}?cancelar=1`} className="btn-danger block w-full text-center no-underline">No podré asistir</a>
+                </div>
+              )
             )}
           </>
         )}

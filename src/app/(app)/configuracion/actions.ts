@@ -5,6 +5,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/dal";
 import { encryptSecret, decryptSecret } from "@/lib/secrets";
+import { newToken } from "@/lib/tokens";
 import { checkCloud } from "@/lib/whatsapp";
 
 export type ClinicState = { error?: string; ok?: boolean } | undefined;
@@ -35,6 +36,7 @@ const waSchema = z.object({
   phoneId: z.string().trim().regex(/^\d{5,25}$/, "El identificador del número son solo dígitos"),
   token: z.string().trim().max(1000).optional(),
   template: z.string().trim().regex(/^[a-z0-9_]{1,512}$/, "El nombre de la plantilla va en minúsculas, números y guiones bajos").optional().or(z.literal("")),
+  appSecret: z.string().trim().max(200).optional(),
   lang: z.string().trim().regex(/^[a-z]{2}(_[A-Z]{2})?$/, "Idioma inválido (ej. es o es_CO)").optional().or(z.literal("")),
 });
 
@@ -45,8 +47,10 @@ export async function saveWhatsapp(_: WaState, fd: FormData): Promise<WaState> {
   const parsed = waSchema.safeParse(Object.fromEntries(fd));
   if (!parsed.success) return { error: parsed.error.issues[0].message };
   const d = parsed.data;
-  const current = await db.clinic.findUniqueOrThrow({ where: { id: user.clinicId }, select: { whatsappToken: true } });
+  const current = await db.clinic.findUniqueOrThrow({ where: { id: user.clinicId }, select: { whatsappToken: true, whatsappAppSecret: true, whatsappVerifyToken: true } });
   const auto = fd.get("auto") === "on";
+  const buttons = fd.get("buttons") === "on";
+  if (buttons && !d.appSecret && !current.whatsappAppSecret) return { error: "Para usar los botones pega el «Secreto de la app» de Meta (Configuración de la app → Básica): sirve para comprobar que las respuestas vienen de WhatsApp." };
   if (!d.token && !current.whatsappToken) return { error: "Pega el token de acceso de WhatsApp Business" };
 
   // Antes de guardar se comprueba con Meta que el número y el token funcionan.
@@ -57,7 +61,7 @@ export async function saveWhatsapp(_: WaState, fd: FormData): Promise<WaState> {
 
   await db.clinic.update({
     where: { id: user.clinicId },
-    data: { whatsappPhoneId: d.phoneId, whatsappTemplate: d.template || null, whatsappLang: d.lang || null, whatsappAuto: auto, ...(d.token ? { whatsappToken: encryptSecret(d.token) } : {}) },
+    data: { whatsappPhoneId: d.phoneId, whatsappTemplate: d.template || null, whatsappLang: d.lang || null, whatsappAuto: auto, whatsappButtons: buttons, ...(buttons && !current.whatsappVerifyToken ? { whatsappVerifyToken: newToken() } : {}), ...(d.appSecret ? { whatsappAppSecret: encryptSecret(d.appSecret) } : {}), ...(d.token ? { whatsappToken: encryptSecret(d.token) } : {}) },
   });
   await db.auditLog.create({ data: { userId: user.id, action: "WHATSAPP_CONFIG", entity: "Clinic", entityId: user.clinicId } });
   revalidatePath("/configuracion");
@@ -68,7 +72,7 @@ export async function saveWhatsapp(_: WaState, fd: FormData): Promise<WaState> {
 export async function clearWhatsapp(): Promise<void> {
   const user = await requireUser();
   if (user.role !== "ADMIN") return;
-  await db.clinic.update({ where: { id: user.clinicId }, data: { whatsappPhoneId: null, whatsappToken: null, whatsappTemplate: null, whatsappLang: null, whatsappAuto: false } });
+  await db.clinic.update({ where: { id: user.clinicId }, data: { whatsappPhoneId: null, whatsappToken: null, whatsappTemplate: null, whatsappLang: null, whatsappAuto: false, whatsappButtons: false, whatsappAppSecret: null, whatsappVerifyToken: null } });
   await db.auditLog.create({ data: { userId: user.id, action: "WHATSAPP_REMOVE", entity: "Clinic", entityId: user.clinicId } });
   revalidatePath("/configuracion");
   revalidatePath("/recordatorios");
