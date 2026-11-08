@@ -5,6 +5,7 @@ import { branchProfessionals } from "@/lib/professionals";
 import { addDays, addMonths, dayStart, hhmm, isYmd, longDay, monthGrid, monthStart, monthTitle, shortRange, startOfWeek, ymd } from "@/lib/calendar";
 import DayList, { type DayAppointment } from "./day-list";
 import NewAppointmentFab from "./new-fab";
+import ScrollLock from "./scroll-lock";
 import { STATUS } from "./status";
 
 type View = "mes" | "semana" | "dia";
@@ -72,12 +73,13 @@ export default async function AgendaPage({ searchParams }: { searchParams: Promi
   ];
 
   // Navegación.
-  const href = (o: { vista?: View; fecha?: string; pro?: string }) => {
+  const href = (o: { vista?: View; fecha?: string; pro?: string; abrir?: boolean }) => {
     const q = new URLSearchParams();
     q.set("vista", o.vista ?? view);
     q.set("fecha", o.fecha ?? selected);
     const p = o.pro ?? proId;
     if (p) q.set("pro", p);
+    if (o.abrir) q.set("abrir", "1");
     return `/agenda?${q}`;
   };
   const step = (dir: 1 | -1) => {
@@ -87,6 +89,8 @@ export default async function AgendaPage({ searchParams }: { searchParams: Promi
   };
   const title = view === "mes" ? monthTitle(selected) : view === "semana" ? shortRange(weekStart, addDays(weekStart, 6)) : longDay(selected);
   const dayItems = byDay.get(selected) ?? [];
+  // En celular y pantallas medianas el día se abre como una hoja inferior; en pantalla ancha es un panel lateral fijo.
+  const sheet = one(sp.abrir) === "1" && view !== "dia";
   const pill = (on: boolean) => (on ? "border-teal-700 bg-teal-50 text-teal-900" : "border-slate-400 bg-white text-slate-900");
 
   return (
@@ -135,6 +139,9 @@ export default async function AgendaPage({ searchParams }: { searchParams: Promi
         </ul>
       </div>
 
+      {sheet && (<><Link href={href({})} scroll={false} aria-label="Cerrar el día" className="fixed inset-0 z-[35] bg-slate-900/50 xl:hidden" /><ScrollLock /></>)}
+      <div className={view === "dia" ? "space-y-4" : "space-y-4 xl:grid xl:grid-cols-[minmax(0,1fr)_26rem] xl:items-start xl:gap-4 xl:space-y-0"}>
+        <div className="space-y-4">
       {view === "mes" && (
         <div className="card overflow-hidden p-0">
           <div className="grid grid-cols-7 border-b border-slate-300 bg-slate-50 text-center text-xs font-semibold text-slate-800">
@@ -147,7 +154,7 @@ export default async function AgendaPage({ searchParams }: { searchParams: Promi
               const isToday = d === today;
               const isSel = d === selected;
               return (
-                <Link key={d} href={href({ fecha: d })} aria-label={`${longDay(d)}: ${list.length} ${list.length === 1 ? "cita" : "citas"}`} aria-current={isSel ? "date" : undefined}
+                <Link key={d} href={href({ fecha: d, abrir: true })} scroll={false} aria-label={`${longDay(d)}: ${list.length} ${list.length === 1 ? "cita" : "citas"}`} aria-current={isSel ? "date" : undefined}
                   className={`min-h-16 border-b border-r border-slate-200 p-1 text-left hover:bg-teal-50 sm:min-h-28 sm:p-1.5 ${inMonth ? "bg-white" : "bg-slate-50 text-slate-500"} ${isSel ? "outline outline-2 -outline-offset-2 outline-teal-700" : ""}`}>
                   <div className="flex items-center justify-between">
                     <span className={`inline-flex h-6 min-w-6 items-center justify-center rounded-full px-1 text-xs font-semibold ${isToday ? "bg-teal-700 text-white" : ""}`}>{Number(d.slice(8))}</span>
@@ -170,18 +177,18 @@ export default async function AgendaPage({ searchParams }: { searchParams: Promi
       )}
 
       {view === "semana" && (
-        <div className="grid gap-2 lg:grid-cols-7">
+        <div className="grid gap-2 sm:grid-cols-2">
           {Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)).map((d, i) => {
             const list = byDay.get(d) ?? [];
             return (
               <div key={d} className={`card space-y-2 p-2 ${d === selected ? "outline outline-2 outline-teal-700" : ""}`}>
-                <Link href={href({ fecha: d })} className="flex items-baseline justify-between">
+                <Link href={href({ fecha: d, abrir: true })} scroll={false} className="flex items-baseline justify-between">
                   <span className={`text-sm font-bold ${d === today ? "text-teal-800" : "text-slate-900"}`}>{WEEKDAYS[i]} {Number(d.slice(8))}</span>
                   <span className="text-xs text-slate-700">{list.length} {list.length === 1 ? "cita" : "citas"}</span>
                 </Link>
                 {list.length === 0 && <p className="text-xs text-slate-600">Libre</p>}
                 {list.map((a) => (
-                  <Link key={a.id} href={href({ fecha: d })} className={`block rounded border-l-4 px-2 py-1 text-xs ${STATUS[a.status].chip}`}>
+                  <Link key={a.id} href={href({ fecha: d, abrir: true })} scroll={false} className={`block rounded border-l-4 px-2 py-1 text-xs ${STATUS[a.status].chip}`}>
                     <span className="font-semibold">{hhmm(a.startsAt)}</span> {a.patient.firstName} {a.patient.lastName}
                     {pros.length > 1 && <span className="block text-[11px] opacity-80">{a.dentist.name}</span>}
                   </Link>
@@ -191,11 +198,17 @@ export default async function AgendaPage({ searchParams }: { searchParams: Promi
           })}
         </div>
       )}
-
-      <section aria-label="Citas del día" className="space-y-3">
-        <h2 className="section-title first-letter:uppercase">{longDay(selected)}{dayItems.length > 0 && <span className="ml-2 text-sm font-normal text-slate-700">{dayItems.length} {dayItems.length === 1 ? "cita" : "citas"}</span>}</h2>
-        <DayList items={dayItems} showPro={pros.length > 1} now={now} />
+        </div>
+      <section aria-label="Citas del día" className={view === "dia" ? "space-y-3" : `${sheet ? "fixed inset-x-0 bottom-0 z-40 flex max-h-[85dvh] flex-col rounded-t-2xl bg-slate-50 shadow-2xl" : "hidden"} xl:sticky xl:top-4 xl:z-auto xl:flex xl:max-h-[calc(100dvh-2rem)] xl:flex-col xl:rounded-none xl:bg-transparent xl:shadow-none`}>
+        <div className={view === "dia" ? "" : "flex items-center justify-between gap-2 border-b border-slate-300 px-4 py-3 xl:border-0 xl:px-0 xl:pt-0"}>
+          <h2 className="section-title first-letter:uppercase">{longDay(selected)}{dayItems.length > 0 && <span className="ml-2 text-sm font-normal text-slate-700">{dayItems.length} {dayItems.length === 1 ? "cita" : "citas"}</span>}</h2>
+          {view !== "dia" && <Link href={href({})} scroll={false} aria-label="Cerrar" className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg text-2xl text-slate-700 hover:bg-slate-200 xl:hidden">×</Link>}
+        </div>
+        <div className={view === "dia" ? "" : "overflow-y-auto px-4 pb-6 pt-3 xl:px-0 xl:pb-0"}>
+          <DayList items={dayItems} showPro={pros.length > 1} now={now} />
+        </div>
       </section>
+      </div>
 
       <NewAppointmentFab
         patients={patients.map((p) => ({ id: p.id, label: `${p.firstName} ${p.lastName} · ${p.documentType === "PRE" ? "sin documento" : p.documentNumber}` }))}
