@@ -6,12 +6,20 @@ import { createAppointment } from "./actions";
 
 const DURATIONS: [number, string][] = [[15, "15 minutos"], [20, "20 minutos"], [30, "30 minutos"], [45, "45 minutos"], [60, "1 hora"], [90, "1 hora 30 minutos"], [120, "2 horas"]];
 
-export default function AppointmentForm({ patients, professionals, defaultDentistId }: { patients: { id: string; label: string }[]; professionals: { id: string; name: string }[]; defaultDentistId: string | null }) {
+export default function AppointmentForm({ patients, professionals, defaultDentistId, defaultDate, onClose }: { patients: { id: string; label: string }[]; professionals: { id: string; name: string }[]; defaultDentistId: string | null; defaultDate?: string; onClose?: () => void }) {
   const [state, action, pending] = useActionState(createAppointment, undefined);
   const [isNew, setIsNew] = useState(false);
+  if (state?.ok && onClose) {
+    return (
+      <div className="space-y-3">
+        <p className="ok-text">Cita creada{state.newPatient ? <> y ficha de {state.newPatient.name} creada. <Link href={`/pacientes/${state.newPatient.id}/editar`} className="font-semibold underline">Completar datos</Link></> : ""}.</p>
+        <button type="button" onClick={onClose} className="btn-primary w-full">Listo</button>
+      </div>
+    );
+  }
   return (
-    <form action={action} className="card space-y-3">
-      <h2 className="section-title">Nueva cita</h2>
+    <form action={action} className={onClose ? "space-y-3" : "card space-y-3"}>
+      {!onClose && <h2 className="section-title">Nueva cita</h2>}
       <div className="flex gap-2" role="group" aria-label="Tipo de paciente">
         <button type="button" aria-pressed={!isNew} onClick={() => setIsNew(false)} className={`min-h-11 flex-1 rounded-lg border px-3 text-sm font-semibold ${!isNew ? "border-teal-700 bg-teal-50 text-teal-900" : "border-slate-400 bg-white text-slate-900"}`}>Ya es paciente</button>
         <button type="button" aria-pressed={isNew} onClick={() => setIsNew(true)} className={`min-h-11 flex-1 rounded-lg border px-3 text-sm font-semibold ${isNew ? "border-teal-700 bg-teal-50 text-teal-900" : "border-slate-400 bg-white text-slate-900"}`}>Paciente nuevo</button>
@@ -39,7 +47,7 @@ export default function AppointmentForm({ patients, professionals, defaultDentis
           </select>
         </label>
       )}
-      <label className="label">Fecha y hora<input name="startsAt" type="datetime-local" required className="field" /></label>
+      <label className="label">Fecha y hora<input name="startsAt" type="datetime-local" required defaultValue={defaultDate ? `${defaultDate}T08:00` : undefined} className="field" /></label>
       <label className="label">Duración
         <select name="minutes" defaultValue={30} className="field">
           {DURATIONS.map(([m, label]) => <option key={m} value={m}>{label}</option>)}
