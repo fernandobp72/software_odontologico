@@ -80,3 +80,41 @@ export async function setStatus(id: string, status: "CONFIRMED" | "ATTENDED" | "
   await db.appointment.updateMany({ where: { id, clinicId: user.clinicId, branchId: { in: branches.map((b) => b.id) } }, data: { status } });
   revalidatePath("/agenda");
 }
+
+const rescheduleSchema = z.object({
+  startsAt: z.string().min(1, "Elige fecha y hora"),
+  minutes: z.coerce.number().int().min(10).max(240),
+});
+
+export type RescheduleState = { error?: string; ok?: boolean } | undefined;
+
+// Cambia la fecha y hora de una cita: valida cruces con el mismo profesional, la vuelve a dejar
+// «Programada» y borra los recordatorios previos para que el aviso salga con el nuevo horario.
+export async function rescheduleAppointment(id: string, _: RescheduleState, formData: FormData): Promise<RescheduleState> {
+  const { user, branches } = await requireBranch();
+  const parsed = rescheduleSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+  const a = await db.appointment.findFirst({ where: { id, clinicId: user.clinicId, branchId: { in: branches.map((b) => b.id) } } });
+  if (!a) return { error: "Cita no encontrada" };
+  if (a.status === "ATTENDED") return { error: "Una cita atendida no se puede reprogramar" };
+
+  const startsAt = new Date(parsed.data.startsAt);
+  if (Number.isNaN(startsAt.getTime())) return { error: "Fecha no válida" };
+  if (startsAt.getTime() < Date.now() - 60_000) return { error: "Elige una fecha y hora futuras" };
+  const endsAt = new Date(startsAt.getTime() + parsed.data.minutes * 60_000);
+
+  const overlap = await db.appointment.findFirst({
+    where: { id: { not: a.id }, dentistId: a.dentistId, status: { notIn: ["CANCELLED", "NO_SHOW"] }, startsAt: { lt: endsAt }, endsAt: { gt: startsAt } },
+  });
+  if (overlap) return { error: a.dentistId === user.id ? "Ya tienes una cita en ese horario" : "Ese profesional ya tiene una cita en ese horario" };
+
+  await db.$transaction([
+    db.appointment.update({ where: { id: a.id }, data: { startsAt, endsAt, status: "SCHEDULED" } }),
+    db.reminder.deleteMany({ where: { appointmentId: a.id } }),
+    db.auditLog.create({ data: { userId: user.id, action: "RESCHEDULE", entity: "Appointment", entityId: a.id, detail: `de ${a.startsAt.toISOString()} a ${startsAt.toISOString()}` } }),
+  ]);
+  revalidatePath("/agenda");
+  revalidatePath("/recordatorios");
+  revalidatePath(`/pacientes/${a.patientId}`);
+  return { ok: true };
+}

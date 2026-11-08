@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { markReminderSent, prepareManualReminder } from "./actions";
 
 // Abre WhatsApp con el mensaje ya escrito y registra el envío.
-export default function SendButton({ appointmentId, phone, text }: { appointmentId: string; phone: string; text: string }) {
+export default function SendButton({ appointmentId, phone, text, label = "Enviar por WhatsApp" }: { appointmentId: string; phone: string; text: string; label?: string }) {
   const [pending, start] = useTransition();
   const [error, setError] = useState<string>();
 
@@ -20,7 +20,7 @@ export default function SendButton({ appointmentId, phone, text }: { appointment
 
   return (
     <div>
-      <button type="button" onClick={send} disabled={pending} className="btn-primary min-h-10">{pending ? "Abriendo…" : "Enviar por WhatsApp"}</button>
+      <button type="button" onClick={send} disabled={pending} className="btn-primary min-h-10">{pending ? "Abriendo…" : label}</button>
       {error && <p role="alert" className="error-text mt-1">{error}</p>}
     </div>
   );
