@@ -4,7 +4,8 @@ import sharp from "sharp";
 export const DEFAULT_THEME = "#2a7a4b";
 export const hexOk = (v: string | null | undefined): v is string => !!v && /^#[0-9a-fA-F]{6}$/.test(v);
 
-export const ICON_SIZES = [180, 192, 512] as const;
+// 32: pestaña del navegador; 180: iPhone; 192 y 512: app instalada.
+export const ICON_SIZES = [32, 180, 192, 512] as const;
 
 // Versión del ícono para que el navegador lo vuelva a pedir cuando cambia el logo, el ícono propio o el color.
 export const iconVersion = (c: { logoUpdatedAt?: Date | null; appIconUpdatedAt?: Date | null; iconColor?: string | null }) =>

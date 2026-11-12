@@ -9,6 +9,7 @@ import { logout } from "../login/actions";
 import { BottomNav, SideNav } from "./nav";
 
 // App instalada del consultorio: su nombre y su ícono (en iPhone se toman de aquí al «Añadir a pantalla de inicio»).
+// El mismo ícono va en la pestaña del navegador (32 px) para que se vea igual que la app instalada.
 export async function generateMetadata(): Promise<Metadata> {
   const account = await requireAnyUser();
   if (account.clinic.system) return {};
@@ -17,7 +18,13 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     manifest: `/api/manifiesto/${c.id}`,
     applicationName: c.name,
-    icons: { icon: [{ url: `/api/icono/${c.id}/192?v=${v}`, sizes: "192x192", type: "image/png" }], apple: [{ url: `/api/icono/${c.id}/180?v=${v}`, sizes: "180x180", type: "image/png" }] },
+    icons: {
+      icon: [
+        { url: `/api/icono/${c.id}/32?v=${v}`, sizes: "32x32", type: "image/png" },
+        { url: `/api/icono/${c.id}/192?v=${v}`, sizes: "192x192", type: "image/png" },
+      ],
+      apple: [{ url: `/api/icono/${c.id}/180?v=${v}`, sizes: "180x180", type: "image/png" }],
+    },
     appleWebApp: { capable: true, title: c.name.length > 14 ? c.name.slice(0, 14).trim() : c.name, statusBarStyle: "default" },
   };
 }

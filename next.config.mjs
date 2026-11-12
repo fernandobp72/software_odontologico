@@ -4,6 +4,10 @@ const nextConfig = {
   // Solo desarrollo: permite abrir el servidor local por 127.0.0.1 (el navegador integrado a veces no abre localhost).
   allowedDevOrigins: ["127.0.0.1"],
   // Cabeceras de seguridad: sin marcos ajenos, sin adivinar tipos, HTTPS siempre y permisos de sensores limitados (micrófono propio para el dictado).
+  // Los navegadores piden /favicon.ico por su cuenta (PDF, páginas sin <head>): se responde con el ícono genérico de la app.
+  async rewrites() {
+    return [{ source: "/favicon.ico", destination: "/api/icono/generico/32" }];
+  },
   async headers() {
     return [
       // Recibos compartidos: ni el navegador ni intermediarios guardan copia.
