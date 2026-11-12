@@ -6,6 +6,7 @@ import { ROLE_LABEL } from "@/lib/roles";
 import { InviteForm, ResetButton } from "./forms";
 import { adminRevoke, authorizeNewSeal, setRequireSello } from "./sello-actions";
 import { revokeInvitation, setActive, setRole, setUserBranches, updatePerson } from "./actions";
+import ConfirmButton from "@/app/confirm-button";
 
 export default async function EquipoPage() {
   const user = await requireUser();
@@ -41,7 +42,7 @@ export default async function EquipoPage() {
             {invitations.map((i) => (
               <li key={i.id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-sm text-slate-900">
                 <span>{i.email} · {ROLE_LABEL[i.role]} · vence {fmt.format(i.expiresAt)}</span>
-                <form action={revokeInvitation.bind(null, i.id)}><button className="btn-danger min-h-10">Revocar</button></form>
+                <form action={revokeInvitation.bind(null, i.id)}><ConfirmButton className="btn-danger min-h-10" confirmLabel="Sí, revocar">Revocar</ConfirmButton></form>
               </li>
             ))}
           </ul>
@@ -78,7 +79,7 @@ export default async function EquipoPage() {
                   <button className="btn-secondary">Cambiar</button>
                 </form>
                 {u.id !== user.id && (
-                  <form action={setActive.bind(null, u.id, !u.active)}><button className={u.active ? "btn-danger" : "btn-secondary"}>{u.active ? "Desactivar" : "Reactivar"}</button></form>
+                  <form action={setActive.bind(null, u.id, !u.active)}>{u.active ? <ConfirmButton confirmLabel="Sí, desactivar">Desactivar</ConfirmButton> : <button className="btn-secondary">Reactivar</button>}</form>
                 )}
               </div>
               {u.role === "ADMIN" ? (
@@ -105,7 +106,7 @@ export default async function EquipoPage() {
                     {act.map((c) => (
                       <form key={c.id} action={adminRevoke.bind(null, c.id)} className="flex flex-wrap items-center justify-between gap-2 text-sm text-slate-900">
                         <span>N.º {c.serial} · {c.label}{c.lastUsedAt ? ` · último uso ${fmt.format(c.lastUsedAt)}` : ""}</span>
-                        <button className="btn-danger min-h-9">Retirar</button>
+                        <ConfirmButton className="btn-danger min-h-9" confirmLabel="Sí, retirar">Retirar</ConfirmButton>
                       </form>
                     ))}
                     {!act.length && u.signingCredentials.length > 0 && (grant ? (

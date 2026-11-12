@@ -5,6 +5,7 @@ import { requirePlatformAdmin } from "@/lib/dal";
 import { mailConfigured } from "@/lib/mailer";
 import { extendTrial, setClinicStatus, supportRevokeInvitation } from "../actions";
 import { DeleteClinic, UserSupport } from "./support";
+import ConfirmButton from "@/app/confirm-button";
 
 const STATUS: Record<string, { label: string; cls: string }> = {
   ACTIVE: { label: "Activo", cls: "bg-green-100 text-green-900" },
@@ -52,7 +53,7 @@ export default async function ClientePage({ params }: PageProps<"/plataforma/[id
 
       <div className="flex flex-wrap gap-2">
         {c.status !== "ACTIVE" && <form action={setClinicStatus.bind(null, c.id, "ACTIVE")}><button className="btn-primary min-h-10">Activar</button></form>}
-        {c.status !== "SUSPENDED" && <form action={setClinicStatus.bind(null, c.id, "SUSPENDED")}><button className="btn-danger min-h-10">Suspender</button></form>}
+        {c.status !== "SUSPENDED" && <form action={setClinicStatus.bind(null, c.id, "SUSPENDED")}><ConfirmButton className="btn-danger min-h-10" confirmLabel="Sí, suspender">Suspender</ConfirmButton></form>}
         <form action={extendTrial.bind(null, c.id, 15)}><button className="btn-secondary min-h-10">Dar 15 días de prueba</button></form>
       </div>
 

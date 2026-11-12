@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState, useEffect, useRef, useState } from "react";
 import { CIE10, CUPS, NOTE_TEMPLATES } from "@/lib/catalogs";
 import { applyDictation, isUndoCommand } from "@/lib/dictation";
@@ -8,7 +9,11 @@ import { prepareEvolutionSign, signEvolution, type EvolutionState } from "./acti
 import { useSello } from "../../sello-client";
 import VoiceButton from "./voice-button";
 
-export default function EvolutionForm({ patientId, openItems = [] }: { patientId: string; openItems?: DoneItem[] }) {
+type AttendingAppointment = { id: string; time: string; reason: string | null };
+
+// Con «appointment» (cita de hoy o la que llega desde «Atender»), la evolución se liga a la cita: el motivo viene precargado
+// y al firmar la cita queda como atendida.
+export default function EvolutionForm({ patientId, openItems = [], appointment = null }: { patientId: string; openItems?: DoneItem[]; appointment?: AttendingAppointment | null }) {
   const [note, setNote] = useState("");
   const [checked, setChecked] = useState<string[]>([]);
   const [dx, setDx] = useState("");
@@ -92,7 +97,13 @@ export default function EvolutionForm({ patientId, openItems = [] }: { patientId
       {dialog}
       <h2 className="section-title">Nueva evolución</h2>
       <input type="hidden" name="patientId" value={patientId} />
-      <label className="label">Motivo de consulta<input name="reason" className="field" /></label>
+      {appointment && !state?.ok && (
+        <>
+          <input type="hidden" name="appointmentId" value={appointment.id} />
+          <p className="rounded-lg border border-teal-700 bg-teal-50 px-3 py-2 text-sm text-slate-900">Atendiendo la cita del <strong>{appointment.time}</strong>. Al firmar, la cita queda como atendida.</p>
+        </>
+      )}
+      <label className="label">Motivo de consulta<input key={state?.ok ? "limpio" : "cita"} name="reason" defaultValue={state?.ok ? "" : appointment?.reason ?? ""} className="field" /></label>
       {openItems.length > 0 && (
         <fieldset>
           <legend className="label">Procedimientos del plan realizados hoy</legend>
@@ -135,7 +146,12 @@ export default function EvolutionForm({ patientId, openItems = [] }: { patientId
       </div>
 
       {state?.error && <p role="alert" className="error-text">{state.error}</p>}
-      {state?.ok && <p className="ok-text">Evolución firmada</p>}
+      {state?.ok && (
+        <div role="status" className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-teal-700 bg-teal-50 px-3 py-2">
+          <p className="ok-text">Evolución firmada{state.attended ? " y cita marcada como atendida" : ""}.</p>
+          <Link href={`/agenda?paciente=${patientId}`} className="btn-primary min-h-10">Agendar control</Link>
+        </div>
+      )}
       <button disabled={pending} className="btn-primary w-full md:w-auto">
         {pending ? "Firmando…" : "Firmar evolución"}
       </button>

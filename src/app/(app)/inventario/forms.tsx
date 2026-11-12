@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import { SUPPLY_CATALOG, SUPPLY_CATEGORIES, SUPPLY_UNITS } from "@/lib/supplies-catalog";
 import { unitLabel } from "@/lib/inventory";
 import { addFromCatalog, addKitLine, upgradeOldItems, consumeStock, createItem, discardExpired, receiveStock, removeKitLine, saveItem } from "./actions";
+import ConfirmButton from "@/app/confirm-button";
 
 const Msg = ({ s }: { s: { error?: string; ok?: string } | undefined }) => (
   <>
@@ -63,7 +64,7 @@ export function ConsumeForm({ itemId, unit, pack }: { itemId: string; unit: stri
 export function DiscardButton({ itemId }: { itemId: string }) {
   return (
     <form action={discardExpired.bind(null, itemId)}>
-      <button className="btn-danger min-h-11">Retirar lo vencido</button>
+      <ConfirmButton className="btn-danger min-h-11" confirmLabel="Sí, retirar lo vencido">Retirar lo vencido</ConfirmButton>
     </form>
   );
 }

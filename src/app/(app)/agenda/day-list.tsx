@@ -5,6 +5,7 @@ import SendButton from "../recordatorios/send-button";
 import RescheduleButton from "./item-actions";
 import { setStatus } from "./actions";
 import { STATUS } from "./status";
+import ConfirmButton from "@/app/confirm-button";
 
 export type DayAppointment = {
   id: string; patientId: string; startsAt: Date; endsAt: Date; reason: string | null; status: string;
@@ -17,7 +18,7 @@ export type DayAppointment = {
 const placeName = (clinic: string, b: string) => (b === "Sede principal" ? clinic : `${clinic} - ${b}`);
 const localInput = new Intl.DateTimeFormat("sv-SE", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", timeZone: "America/Bogota" });
 
-export default function DayList({ items, showPro, now }: { items: DayAppointment[]; showPro: boolean; now: Date }) {
+export default function DayList({ items, showPro, now, canAttend = false }: { items: DayAppointment[]; showPro: boolean; now: Date; canAttend?: boolean }) {
   if (items.length === 0) return <p className="card text-center text-slate-700">No hay citas este día</p>;
   return (
     <ul className="space-y-3">
@@ -41,10 +42,12 @@ export default function DayList({ items, showPro, now }: { items: DayAppointment
             {a.patient.phone && <p className="muted">{a.patient.phone}</p>}
             {a.reason && <p className="muted">{a.reason}</p>}
             <div className="mt-3 flex flex-wrap gap-2">
+              {/* Atender: abre la ficha con la evolución ligada a esta cita; al firmarla, la cita queda atendida. */}
+              {canAttend && open && <Link href={`/pacientes/${a.patientId}?cita=${a.id}`} className="btn-primary">Atender</Link>}
               {a.status !== "CONFIRMED" && open && <form action={setStatus.bind(null, a.id, "CONFIRMED")}><button className="btn-secondary">Confirmar</button></form>}
-              {a.status !== "ATTENDED" && <form action={setStatus.bind(null, a.id, "ATTENDED")}><button className="btn-secondary">Atendida</button></form>}
-              {overdue && <form action={setStatus.bind(null, a.id, "NO_SHOW")}><button className="btn-secondary">No asistió</button></form>}
-              {a.status !== "CANCELLED" && a.status !== "ATTENDED" && <form action={setStatus.bind(null, a.id, "CANCELLED")}><button className="btn-danger">Cancelar</button></form>}
+              {a.status !== "ATTENDED" && <form action={setStatus.bind(null, a.id, "ATTENDED")}><ConfirmButton className="btn-secondary" confirmClassName="btn-primary" confirmLabel="Sí, marcar atendida">Atendida</ConfirmButton></form>}
+              {overdue && <form action={setStatus.bind(null, a.id, "NO_SHOW")}><ConfirmButton className="btn-secondary" confirmLabel="Sí, no asistió">No asistió</ConfirmButton></form>}
+              {a.status !== "CANCELLED" && a.status !== "ATTENDED" && <form action={setStatus.bind(null, a.id, "CANCELLED")}><ConfirmButton confirmLabel="Sí, cancelar cita">Cancelar</ConfirmButton></form>}
               {a.status !== "ATTENDED" && <RescheduleButton id={a.id} current={localInput.format(a.startsAt).replace(" ", "T")} minutes={minutes} />}
             </div>
             {open && !overdue && (

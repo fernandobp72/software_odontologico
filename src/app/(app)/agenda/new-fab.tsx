@@ -1,11 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { PatientOption } from "@/lib/patient-fields";
 import AppointmentForm from "./form";
 
 // Botón flotante «+» (abajo a la derecha) que abre el formulario de nueva cita.
-export default function NewAppointmentFab(props: { patients: { id: string; label: string }[]; professionals: { id: string; name: string }[]; defaultDentistId: string | null; defaultDate: string }) {
-  const [open, setOpen] = useState(false);
+// Con «autoOpen» (desde la ficha del paciente: «Agendar») el formulario se abre de una vez con el paciente elegido.
+export default function NewAppointmentFab({ autoOpen = false, initialPatient = null, ...props }: { autoOpen?: boolean; initialPatient?: PatientOption | null; professionals: { id: string; name: string }[]; defaultDentistId: string | null; defaultDate: string }) {
+  const [open, setOpen] = useState(autoOpen);
+  const [seed, setSeed] = useState(initialPatient);
   const [round, setRound] = useState(0);
 
   useEffect(() => {
@@ -19,7 +22,14 @@ export default function NewAppointmentFab(props: { patients: { id: string; label
     };
   }, [open]);
 
-  const close = () => { setOpen(false); setRound((r) => r + 1); };
+  const close = () => {
+    setOpen(false); setRound((r) => r + 1); setSeed(null);
+    // Quita «paciente» de la dirección para que al recargar no se vuelva a abrir.
+    if (autoOpen) {
+      const u = new URL(window.location.href);
+      if (u.searchParams.has("paciente")) { u.searchParams.delete("paciente"); window.history.replaceState(null, "", u); }
+    }
+  };
 
   return (
     <>
@@ -34,7 +44,7 @@ export default function NewAppointmentFab(props: { patients: { id: string; label
               <h2 className="section-title">Nueva cita</h2>
               <button type="button" onClick={close} aria-label="Cerrar" className="min-h-11 min-w-11 rounded-lg text-2xl text-slate-700 hover:bg-slate-100">×</button>
             </div>
-            <AppointmentForm key={round} {...props} onClose={close} />
+            <AppointmentForm key={round} {...props} initialPatient={seed} onClose={close} />
           </div>
         </div>
       )}

@@ -9,21 +9,38 @@ import EvolutionForm from "./evolution-form";
 import DeleteTestPatient from "./delete-test";
 import SealMark from "@/app/seal-mark";
 import { ageText, isRecentPatient } from "@/lib/patient-fields";
+import { ymd } from "@/lib/calendar";
+import Link from "next/link";
+import { STATUS } from "../../agenda/status";
 
-export default async function PacientePage({ params }: PageProps<"/pacientes/[id]">) {
+export default async function PacientePage({ params, searchParams }: PageProps<"/pacientes/[id]">) {
   const user = await requireUser();
   const { id } = await params;
+  const { cita } = await searchParams;
   const p = await db.patient.findFirst({ where: { id, clinicId: user.clinicId } });
   if (!p) notFound();
 
   const canEdit = user.role !== "RECEPTION";
-  const [allFindings, evolutions, openItemsRaw, initialSnap, activeDx] = await Promise.all([
+  const now = new Date();
+  const [allFindings, evolutions, openItemsRaw, initialSnap, activeDx, appts] = await Promise.all([
     db.toothFinding.findMany({ where: { patientId: p.id }, orderBy: { createdAt: "asc" } }),
     db.evolution.findMany({ where: { patientId: p.id }, orderBy: { signedAt: "desc" }, include: { dentist: { select: { name: true } } }, take: 50 }),
     db.treatmentItem.findMany({ where: { status: { in: ["PLANNED", "IN_PROGRESS"] }, plan: { patientId: p.id, status: { in: ["DRAFT", "PRESENTED", "ACCEPTED", "IN_PROGRESS"] } } }, orderBy: [{ phase: "asc" }, { createdAt: "asc" }] }),
     db.odontogramSnapshot.findUnique({ where: { patientId_kind: { patientId: p.id, kind: "INITIAL" } } }),
     db.diagnosis.findMany({ where: { patientId: p.id, status: "ACTIVE" }, select: { code: true, tooth: true } }),
+    db.appointment.findMany({ where: { patientId: p.id, clinicId: user.clinicId }, orderBy: { startsAt: "desc" }, include: { dentist: { select: { name: true } }, branch: { select: { name: true } } }, take: 200 }),
   ]);
+  // Citas del paciente: la próxima, el historial y cuántas veces no asistió o canceló.
+  const isOpenAppt = (a: { status: string }) => a.status === "SCHEDULED" || a.status === "CONFIRMED";
+  const nextAppt = appts.filter((a) => isOpenAppt(a) && a.endsAt >= now).at(-1) ?? null;
+  const pastAppts = appts.filter((a) => a !== nextAppt && a.startsAt < now);
+  const noShows = appts.filter((a) => a.status === "NO_SHOW").length;
+  const cancelled = appts.filter((a) => a.status === "CANCELLED").length;
+  // Cita que se está atendiendo: la que llega desde «Atender» en la agenda o, si no, la de hoy que siga abierta.
+  const citaId = typeof cita === "string" ? cita : "";
+  const attending = canEdit
+    ? appts.find((a) => a.id === citaId && isOpenAppt(a)) ?? appts.find((a) => isOpenAppt(a) && ymd(a.startsAt) === ymd(now)) ?? null
+    : null;
   const sigs = await db.proSignature.findMany({ where: { docKind: "Evolution", docId: { in: evolutions.map((e) => e.id) } }, include: { credential: { select: { serial: true, label: true, compromisedSince: true } } } });
   const sigOf = new Map(sigs.map((x) => [x.docId, x]));
   const pending = openItemsRaw.filter((i) => i.tooth).map((i) => ({ tooth: i.tooth as number, surfaces: i.surfaces ?? "" }));
@@ -70,6 +87,31 @@ export default async function PacientePage({ params }: PageProps<"/pacientes/[id
           <button className="btn-secondary min-h-10">{p.whatsappOptInAt ? "Retirar" : "Registrar autorización"}</button>
         </form>
       </div>
+      <section className="card space-y-3" aria-label="Citas">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="section-title">Citas</h2>
+          <Link href={`/agenda?paciente=${p.id}`} className="btn-secondary min-h-10">Agendar</Link>
+        </div>
+        {nextAppt ? (
+          <p className="rounded-lg bg-teal-50 px-3 py-2 text-sm text-slate-900"><span className="font-semibold">Próxima:</span> {fmt.format(nextAppt.startsAt)} · {nextAppt.dentist.name}{nextAppt.reason ? ` · ${nextAppt.reason}` : ""} <span className={`ml-1 rounded-full px-2 py-0.5 text-xs font-semibold ${STATUS[nextAppt.status].cls}`}>{STATUS[nextAppt.status].label}</span></p>
+        ) : <p className="muted">Sin cita próxima.</p>}
+        {(noShows > 0 || cancelled > 0) && (
+          <p className={`text-sm font-semibold ${noShows ? "text-amber-900" : "text-slate-800"}`}>{noShows ? `No asistió ${noShows} ${noShows === 1 ? "vez" : "veces"}` : ""}{noShows && cancelled ? " · " : ""}{cancelled ? `${cancelled} ${cancelled === 1 ? "cancelada" : "canceladas"}` : ""}</p>
+        )}
+        {pastAppts.length > 0 && (
+          <details>
+            <summary className="cursor-pointer text-sm font-semibold text-teal-800">Citas anteriores ({pastAppts.length}{appts.length >= 200 ? "+" : ""})</summary>
+            <ul className="mt-2 divide-y divide-slate-200">
+              {pastAppts.map((a) => (
+                <li key={a.id} className="flex items-start justify-between gap-3 py-2 text-sm">
+                  <span className="min-w-0 text-slate-900">{fmt.format(a.startsAt)}<span className="block text-xs text-slate-700">{a.dentist.name}{a.reason ? ` · ${a.reason}` : ""}</span></span>
+                  <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold ${STATUS[a.status].cls}`}>{STATUS[a.status].label}</span>
+                </li>
+              ))}
+            </ul>
+          </details>
+        )}
+      </section>
       {user.role === "ADMIN" && isRecentPatient(p.createdAt) && <DeleteTestPatient patientId={p.id} documentNumber={p.documentNumber} />}
     </>
   );
@@ -82,7 +124,7 @@ export default async function PacientePage({ params }: PageProps<"/pacientes/[id
           <details className="card p-0 lg:hidden">
             <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 marker:hidden">
               <span className="min-w-0 text-sm text-slate-900">
-                {p.allergies ? <span className="font-semibold text-red-700">⚠ Alergias: {p.allergies}</span> : <span className="font-semibold">Datos del paciente</span>}
+                {p.allergies ? <span className="font-semibold text-red-700">⚠ Alergias: {p.allergies}</span> : <span className="font-semibold">Datos y citas del paciente</span>}
               </span>
               <span className="shrink-0 text-sm font-semibold text-teal-800">Ver ▾</span>
             </summary>
@@ -93,7 +135,7 @@ export default async function PacientePage({ params }: PageProps<"/pacientes/[id
         </aside>
         <div className="min-w-0 space-y-6 lg:col-span-2">
           <Odontogram patientId={p.id} findings={findings} canEdit={canEdit} initial={initialSnap ? (initialSnap.data as unknown as { tooth: number; surface: string | null; condition: ConditionKey }[]) : null} planned={pending} />
-          {canEdit && <EvolutionForm patientId={p.id} openItems={openItems} />}
+          {canEdit && <EvolutionForm patientId={p.id} openItems={openItems} appointment={attending ? { id: attending.id, time: fmt.format(attending.startsAt), reason: attending.reason } : null} />}
           <section className="space-y-3">
             <h2 className="section-title">Evoluciones</h2>
             {evolutions.map((e) => (

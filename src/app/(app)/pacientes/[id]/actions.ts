@@ -64,7 +64,7 @@ const evolutionSchema = z.object({
   note: z.string().trim().min(5, "Escribe la evolución"),
 });
 
-export type EvolutionState = { error?: string; ok?: boolean } | undefined;
+export type EvolutionState = { error?: string; ok?: boolean; attended?: boolean } | undefined;
 
 const evHash = (userId: string, d: z.infer<typeof evolutionSchema>) =>
   evolutionSignHash({ patientId: d.patientId, dentistId: userId, reason: d.reason || null, diagnosisCode: d.diagnosisCode || null, procedureCode: d.procedureCode || null, note: d.note });
@@ -119,7 +119,12 @@ export async function signEvolution(_: EvolutionState, formData: FormData): Prom
         data: { status: "DONE", doneAt: new Date(), doneById: user.id, evolutionId: ev.id },
       });
     }
-    return ev;
+    // Cita que se estaba atendiendo: queda como atendida con la misma firma.
+    const appointmentId = String(formData.get("appointmentId") ?? "");
+    const attended = appointmentId
+      ? (await tx.appointment.updateMany({ where: { id: appointmentId, patientId: patient.id, clinicId: user.clinicId, status: { in: ["SCHEDULED", "CONFIRMED"] } }, data: { status: "ATTENDED" } })).count > 0
+      : false;
+    return { ...ev, attended };
   });
   await sealEvolution(evolution.id);
   // Kits de inventario: lo que gastan los procedimientos hechos se descuenta solo. Nunca interrumpe la historia clínica.
@@ -135,7 +140,8 @@ export async function signEvolution(_: EvolutionState, formData: FormData): Prom
   });
   revalidatePath(`/pacientes/${patient.id}`);
   revalidatePath(`/pacientes/${patient.id}/plan`);
-  return { ok: true };
+  if (evolution.attended) revalidatePath("/agenda");
+  return { ok: true, attended: evolution.attended };
 }
 
 export type DeleteState = { error?: string } | undefined;

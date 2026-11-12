@@ -1,6 +1,7 @@
 "use client";
 
 import DocLink from "@/app/doc-link";
+import PatientPicker from "../patient-picker";
 import { useActionState } from "react";
 import { METHODS } from "@/lib/cartera";
 import { closeSession, openSession, registerPayment } from "./actions";
@@ -37,7 +38,7 @@ export function CloseForm({ sessionId }: { sessionId: string }) {
   );
 }
 
-export function PaymentForm({ patients, fixedPatientId, suggested }: { patients?: { id: string; label: string }[]; fixedPatientId?: string; suggested?: number }) {
+export function PaymentForm({ fixedPatientId, suggested }: { fixedPatientId?: string; suggested?: number }) {
   const [state, action, pending] = useActionState(registerPayment, undefined);
   return (
     <form action={action} key={state?.receiptId ?? "form"} className="card space-y-3">
@@ -45,12 +46,7 @@ export function PaymentForm({ patients, fixedPatientId, suggested }: { patients?
       {fixedPatientId ? (
         <input type="hidden" name="patientId" value={fixedPatientId} />
       ) : (
-        <label className="label">Paciente
-          <select name="patientId" required className="field" defaultValue="">
-            <option value="" disabled>Selecciona…</option>
-            {patients?.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
-          </select>
-        </label>
+        <PatientPicker />
       )}
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="label">Valor recibido (COP)
