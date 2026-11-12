@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { requireUser } from "@/lib/dal";
 import { setBranchActive } from "./actions";
 import { CreateBranchForm, EditBranchForm } from "./forms";
+import ConfirmButton from "@/app/confirm-button";
 
 export default async function SedesPage() {
   const user = await requireUser();
@@ -24,7 +25,7 @@ export default async function SedesPage() {
             <EditBranchForm b={b} />
             {b.active ? (
               activeCount > 1 && b.cashSessions.length === 0 ? (
-                <form action={setBranchActive.bind(null, b.id, false)}><button className="btn-danger">Desactivar sede</button></form>
+                <form action={setBranchActive.bind(null, b.id, false)}><ConfirmButton confirmLabel="Sí, desactivar sede">Desactivar sede</ConfirmButton></form>
               ) : (
                 <p className="muted">{b.cashSessions.length > 0 ? "Cierra la caja de esta sede para poder desactivarla." : "Debe quedar al menos una sede activa."}</p>
               )

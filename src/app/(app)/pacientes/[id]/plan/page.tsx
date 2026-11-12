@@ -5,6 +5,8 @@ import { pendingSuggestions } from "@/lib/suggest-apply";
 import { getCatalog } from "@/lib/catalog";
 import { deleteDiagnosis, deleteItem, deletePlan, resolveDiagnosis, setItemStatus, setPlanStatus } from "./actions";
 import { AutoGenerate, DiagnosisEditForm, DiagnosisForm, ItemEditForm, ItemForm, PlanForm, SuggestionCard } from "./forms";
+import ConfirmButton from "@/app/confirm-button";
+import DocLink from "@/app/doc-link";
 
 const cop = new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 });
 const PLAN_STATUS: Record<string, string> = { DRAFT: "Borrador", PRESENTED: "Presentado", ACCEPTED: "Aceptado", IN_PROGRESS: "En curso", COMPLETED: "Completado", CANCELLED: "Cancelado" };
@@ -61,7 +63,7 @@ export default async function PlanPage({ params }: PageProps<"/pacientes/[id]/pl
                 <summary className="cursor-pointer text-sm font-semibold text-teal-800">Modificar o eliminar</summary>
                 <div className="mt-3 space-y-3">
                   <DiagnosisEditForm d={{ id: d.id, code: d.code, tooth: d.tooth, note: d.note }} />
-                  <form action={deleteDiagnosis.bind(null, d.id)}><button className="btn-danger min-h-10">Eliminar diagnóstico</button></form>
+                  <form action={deleteDiagnosis.bind(null, d.id)}><ConfirmButton className="btn-danger min-h-10" confirmLabel="Sí, eliminar diagnóstico">Eliminar diagnóstico</ConfirmButton></form>
                 </div>
               </details>
             </li>
@@ -97,11 +99,12 @@ export default async function PlanPage({ params }: PageProps<"/pacientes/[id]/pl
                   <p className="muted">{PLAN_STATUS[plan.status]} · creado {fmt.format(plan.createdAt)}{plan.acceptedAt ? ` · aceptado ${fmt.format(plan.acceptedAt)}` : ""}</p>
                 </div>
                 <div className="flex flex-wrap gap-2">
+                  {items.length > 0 && <DocLink href={`/presupuesto/${plan.id}`} title="Presupuesto" className="btn-secondary">Presupuesto para el paciente</DocLink>}
                   {plan.status === "DRAFT" && <form action={setPlanStatus.bind(null, plan.id, "PRESENTED")}><button className="btn-secondary">Presentar al paciente</button></form>}
                   {(plan.status === "DRAFT" || plan.status === "PRESENTED") && <form action={setPlanStatus.bind(null, plan.id, "ACCEPTED")}><button className="btn-primary">Paciente acepta</button></form>}
-                  {!closed && <form action={setPlanStatus.bind(null, plan.id, "CANCELLED")}><button className="btn-danger">Cancelar plan</button></form>}
+                  {!closed && <form action={setPlanStatus.bind(null, plan.id, "CANCELLED")}><ConfirmButton confirmLabel="Sí, cancelar el plan">Cancelar plan</ConfirmButton></form>}
                   {["DRAFT", "PRESENTED"].includes(plan.status) && !plan.items.some((x) => x.status === "DONE") && (
-                    <form action={deletePlan.bind(null, plan.id)}><button className="btn-secondary">Eliminar plan</button></form>
+                    <form action={deletePlan.bind(null, plan.id)}><ConfirmButton className="btn-secondary" confirmLabel="Sí, eliminar el plan">Eliminar plan</ConfirmButton></form>
                   )}
                 </div>
               </div>
@@ -132,7 +135,7 @@ export default async function PlanPage({ params }: PageProps<"/pacientes/[id]/pl
                             <div className="mt-2 flex flex-wrap gap-2">
                               {i.status === "PLANNED" && <form action={setItemStatus.bind(null, i.id, "IN_PROGRESS")}><button className="btn-secondary min-h-10">Iniciar</button></form>}
                               <form action={setItemStatus.bind(null, i.id, "DONE")}><button className="btn-primary min-h-10">Marcar realizado</button></form>
-                              <form action={setItemStatus.bind(null, i.id, "CANCELLED")}><button className="btn-danger min-h-10">Cancelar</button></form>
+                              <form action={setItemStatus.bind(null, i.id, "CANCELLED")}><ConfirmButton className="btn-danger min-h-10" confirmLabel="Sí, cancelar procedimiento">Cancelar</ConfirmButton></form>
                             </div>
                           )}
                           {!closed && (i.status === "PLANNED" || i.status === "IN_PROGRESS") && (
@@ -140,7 +143,7 @@ export default async function PlanPage({ params }: PageProps<"/pacientes/[id]/pl
                               <summary className="cursor-pointer text-sm font-semibold text-teal-800">Modificar o eliminar</summary>
                               <div className="mt-3 space-y-3">
                                 <ItemEditForm catalog={catalog} item={{ id: i.id, name: i.name, phase: i.phase, tooth: i.tooth, surfaces: i.surfaces, quantity: i.quantity, unitPrice: i.unitPrice, notes: i.notes, material: i.material, pending: i.name === "Restauración definitiva (por definir)" }} />
-                                <form action={deleteItem.bind(null, i.id)}><button className="btn-danger min-h-10">Eliminar procedimiento</button></form>
+                                <form action={deleteItem.bind(null, i.id)}><ConfirmButton className="btn-danger min-h-10" confirmLabel="Sí, eliminar procedimiento">Eliminar procedimiento</ConfirmButton></form>
                               </div>
                             </details>
                           )}

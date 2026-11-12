@@ -3,10 +3,12 @@
 import Link from "next/link";
 import { useActionState, useState } from "react";
 import { createAppointment } from "./actions";
+import type { PatientOption } from "@/lib/patient-fields";
+import PatientPicker from "../patient-picker";
 
 const DURATIONS: [number, string][] = [[15, "15 minutos"], [20, "20 minutos"], [30, "30 minutos"], [45, "45 minutos"], [60, "1 hora"], [90, "1 hora 30 minutos"], [120, "2 horas"]];
 
-export default function AppointmentForm({ patients, professionals, defaultDentistId, defaultDate, onClose }: { patients: { id: string; label: string }[]; professionals: { id: string; name: string }[]; defaultDentistId: string | null; defaultDate?: string; onClose?: () => void }) {
+export default function AppointmentForm({ initialPatient = null, professionals, defaultDentistId, defaultDate, onClose }: { initialPatient?: PatientOption | null; professionals: { id: string; name: string }[]; defaultDentistId: string | null; defaultDate?: string; onClose?: () => void }) {
   const [state, action, pending] = useActionState(createAppointment, undefined);
   const [isNew, setIsNew] = useState(false);
   if (state?.ok && onClose) {
@@ -32,12 +34,7 @@ export default function AppointmentForm({ patients, professionals, defaultDentis
           <p className="muted">Se crea la ficha solo con nombre y celular. Los demás datos y la autorización de datos se completan cuando llegue.</p>
         </>
       ) : (
-        <label className="label">Paciente
-          <select name="patientId" required className="field" defaultValue="">
-            <option value="" disabled>Selecciona…</option>
-            {patients.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
-          </select>
-        </label>
+        <PatientPicker initial={initialPatient} withPre />
       )}
       {professionals.length > 0 && (
         <label className="label">Profesional

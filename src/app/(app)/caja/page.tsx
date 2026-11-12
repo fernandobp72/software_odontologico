@@ -11,9 +11,8 @@ export default async function CajaPage() {
   const session = await db.cashSession.findFirst({ where: { clinicId: user.clinicId, branchId: branch.id, closedAt: null }, include: { openedBy: { select: { name: true } } } });
   const fmt = new Intl.DateTimeFormat("es-CO", { dateStyle: "medium", timeStyle: "short", timeZone: "America/Bogota" });
 
-  const [payments, patients, history] = await Promise.all([
+  const [payments, history] = await Promise.all([
     session ? db.payment.findMany({ where: { sessionId: session.id }, orderBy: { number: "desc" }, include: { patient: { select: { firstName: true, lastName: true } }, receivedBy: { select: { name: true } } } }) : Promise.resolve([]),
-    session ? db.patient.findMany({ where: { clinicId: user.clinicId }, orderBy: { lastName: "asc" }, take: 500 }) : Promise.resolve([]),
     db.cashSession.findMany({ where: { clinicId: user.clinicId, branchId: branch.id, closedAt: { not: null } }, orderBy: { closedAt: "desc" }, take: 8, include: { openedBy: { select: { name: true } } } }),
   ]);
 
@@ -43,7 +42,7 @@ export default async function CajaPage() {
           <p className="text-sm font-semibold text-slate-900">Efectivo esperado en caja: {copFmt.format(session.openingAmount + cash)}</p>
 
           <div className="grid gap-6 xl:grid-cols-2 xl:items-start">
-            <PaymentForm patients={patients.filter((p) => p.documentType !== "PRE").map((p) => ({ id: p.id, label: `${p.firstName} ${p.lastName} · ${p.documentNumber}` }))} />
+            <PaymentForm />
             <section className="space-y-2">
               <h2 className="section-title">Pagos de esta sesión</h2>
               <ul className="space-y-2">

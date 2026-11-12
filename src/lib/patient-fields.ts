@@ -73,3 +73,11 @@ export const PRE_DOC = "PRE";
 export const isPreRegistered = (p: { documentType: string }) => p.documentType === PRE_DOC;
 export const docText = (type: string, number: string) => (type === PRE_DOC ? "Sin documento (por completar)" : `${type} ${number}`);
 export const PRE_BLOCK = "Faltan los datos del paciente (documento). Complétalos en «Editar» antes de registrar esto.";
+
+// Opción de paciente para los buscadores (agenda, caja): nombre visible y, debajo, documento y celular.
+export type PatientOption = { id: string; label: string; detail: string };
+export const patientOption = (p: { id: string; firstName: string; lastName: string; documentType: string; documentNumber: string; phone: string | null }): PatientOption => ({
+  id: p.id,
+  label: `${p.firstName} ${p.lastName}`.trim(),
+  detail: [p.documentType === PRE_DOC ? "sin documento" : `${p.documentType} ${p.documentNumber}`, p.phone].filter(Boolean).join(" · "),
+});

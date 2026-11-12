@@ -7,6 +7,7 @@ import ClinicLogo from "../clinic-logo";
 import BranchSwitcher from "./branch-switcher";
 import { logout } from "../login/actions";
 import { BottomNav, SideNav } from "./nav";
+import ConnectionBanner from "./connection-banner";
 
 // App instalada del consultorio: su nombre y su ícono (en iPhone se toman de aquí al «Añadir a pantalla de inicio»).
 // El mismo ícono va en la pestaña del navegador (32 px) para que se vea igual que la app instalada.
@@ -97,6 +98,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           </p>
         )}
         {branches.length > 1 && branch && <div className="border-b border-slate-300 bg-white px-4 py-2 md:hidden"><BranchSwitcher branches={branches} activeId={branch.id} /></div>}
+        <ConnectionBanner />
         <main className="mx-auto w-full max-w-7xl p-4 md:p-8">{children}</main>
       </div>
       <BottomNav moreAlert={!!inv && inv.red + inv.yellow > 0} />

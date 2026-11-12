@@ -7,6 +7,7 @@ import DayList, { type DayAppointment } from "./day-list";
 import NewAppointmentFab from "./new-fab";
 import ScrollLock from "./scroll-lock";
 import { STATUS } from "./status";
+import { patientOption } from "@/lib/patient-fields";
 
 type View = "mes" | "semana" | "dia";
 const VIEWS: [View, string][] = [["mes", "Mes"], ["semana", "Semana"], ["dia", "Día"]];
@@ -31,14 +32,15 @@ export default async function AgendaPage({ searchParams }: { searchParams: Promi
   const first = view === "mes" ? monthDays[0] : view === "semana" ? weekStart : selected;
   const last = view === "mes" ? monthDays[monthDays.length - 1] : view === "semana" ? addDays(weekStart, 6) : selected;
 
-  const [rows, patients] = await Promise.all([
+  const pacienteParam = one(sp.paciente);
+  const [rows, seedPatient] = await Promise.all([
     db.appointment.findMany({
       where: { clinicId: user.clinicId, branchId: branch.id, ...(proId ? { dentistId: proId } : {}), startsAt: { gte: dayStart(first), lt: dayStart(addDays(last, 1)) } },
       include: { patient: { select: { firstName: true, lastName: true, phone: true, whatsappOptInAt: true } }, dentist: { select: { name: true } }, clinic: { select: { name: true } }, branch: { select: { name: true } }, reminders: { where: { status: "SENT" }, select: { id: true }, take: 1 } },
       orderBy: { startsAt: "asc" },
       take: 2000,
     }),
-    db.patient.findMany({ where: { clinicId: user.clinicId }, orderBy: { lastName: "asc" }, take: 500 }),
+    pacienteParam ? db.patient.findFirst({ where: { id: pacienteParam, clinicId: user.clinicId } }) : Promise.resolve(null),
   ]);
   const appointments: DayAppointment[] = rows;
   const defaultDentistId = user.role === "DENTIST" ? user.id : pros.some((p) => p.id === user.id) ? user.id : null;
@@ -205,13 +207,15 @@ export default async function AgendaPage({ searchParams }: { searchParams: Promi
           {view !== "dia" && <Link href={href({})} scroll={false} aria-label="Cerrar" className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg text-2xl text-slate-700 hover:bg-slate-200 xl:hidden">×</Link>}
         </div>
         <div className={view === "dia" ? "" : "overflow-y-auto px-4 pb-6 pt-3 xl:px-0 xl:pb-0"}>
-          <DayList items={dayItems} showPro={pros.length > 1} now={now} />
+          <DayList items={dayItems} showPro={pros.length > 1} now={now} canAttend={user.role !== "RECEPTION"} />
         </div>
       </section>
       </div>
 
       <NewAppointmentFab
-        patients={patients.map((p) => ({ id: p.id, label: `${p.firstName} ${p.lastName} · ${p.documentType === "PRE" ? "sin documento" : p.documentNumber}` }))}
+        key={seedPatient?.id ?? "fab"}
+        autoOpen={!!seedPatient}
+        initialPatient={seedPatient ? patientOption(seedPatient) : null}
         professionals={user.role === "DENTIST" ? [] : pros.map((p) => ({ id: p.id, name: p.name }))}
         defaultDentistId={defaultDentistId}
         defaultDate={selected < today ? today : selected}
