@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { requireUser } from "@/lib/dal";
 import Link from "next/link";
 import PatientTabs from "./tabs";
+import DocLink from "@/app/doc-link";
 import { ageText, docText, isPreRegistered } from "@/lib/patient-fields";
 
 export default async function PatientLayout({ children, params }: LayoutProps<"/pacientes/[id]">) {
@@ -17,7 +18,10 @@ export default async function PatientLayout({ children, params }: LayoutProps<"/
           <h1 className="page-title">{p.firstName} {p.lastName}</h1>
           <p className="muted">{docText(p.documentType, p.documentNumber)}{ageText(p.birthDate) ? ` · ${ageText(p.birthDate)}` : ""}</p>
         </div>
-        <Link href={`/pacientes/${id}/editar`} className="shrink-0 rounded-lg border border-slate-500 bg-white px-3 py-1.5 text-sm font-semibold text-slate-900 hover:bg-slate-100">Editar</Link>
+        <div className="flex shrink-0 flex-wrap justify-end gap-2">
+          {user.role !== "RECEPTION" && <DocLink href={`/historia-clinica/${id}`} title="Historia clínica completa" className="rounded-lg border border-slate-500 bg-white px-3 py-1.5 text-sm font-semibold text-slate-900 hover:bg-slate-100">Imprimir historia</DocLink>}
+          <Link href={`/pacientes/${id}/editar`} className="rounded-lg border border-slate-500 bg-white px-3 py-1.5 text-sm font-semibold text-slate-900 hover:bg-slate-100">Editar</Link>
+        </div>
       </div>
       {(isPreRegistered(p) || !p.dataConsentAt) && (
         <div role="status" className="rounded-lg border border-amber-500 bg-amber-50 p-3 text-sm text-amber-950">

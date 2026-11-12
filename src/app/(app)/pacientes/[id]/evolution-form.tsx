@@ -100,7 +100,7 @@ export default function EvolutionForm({ patientId, openItems = [], appointment =
       {appointment && !state?.ok && (
         <>
           <input type="hidden" name="appointmentId" value={appointment.id} />
-          <p className="rounded-lg border border-teal-700 bg-teal-50 px-3 py-2 text-sm text-slate-900">Atendiendo la cita del <strong>{appointment.time}</strong>. Al firmar, la cita queda como atendida.</p>
+          <p className="rounded-lg border border-teal-700 bg-teal-50 px-3 py-2 text-sm text-slate-900">Atendiendo la cita del <strong>{appointment.time}</strong> · Al firmar, la cita queda como atendida.</p>
         </>
       )}
       <label className="label">Motivo de consulta<input key={state?.ok ? "limpio" : "cita"} name="reason" defaultValue={state?.ok ? "" : appointment?.reason ?? ""} className="field" /></label>

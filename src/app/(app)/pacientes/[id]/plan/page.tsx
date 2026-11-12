@@ -6,6 +6,7 @@ import { getCatalog } from "@/lib/catalog";
 import { deleteDiagnosis, deleteItem, deletePlan, resolveDiagnosis, setItemStatus, setPlanStatus } from "./actions";
 import { AutoGenerate, DiagnosisEditForm, DiagnosisForm, ItemEditForm, ItemForm, PlanForm, SuggestionCard } from "./forms";
 import ConfirmButton from "@/app/confirm-button";
+import DocLink from "@/app/doc-link";
 
 const cop = new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 });
 const PLAN_STATUS: Record<string, string> = { DRAFT: "Borrador", PRESENTED: "Presentado", ACCEPTED: "Aceptado", IN_PROGRESS: "En curso", COMPLETED: "Completado", CANCELLED: "Cancelado" };
@@ -98,6 +99,7 @@ export default async function PlanPage({ params }: PageProps<"/pacientes/[id]/pl
                   <p className="muted">{PLAN_STATUS[plan.status]} · creado {fmt.format(plan.createdAt)}{plan.acceptedAt ? ` · aceptado ${fmt.format(plan.acceptedAt)}` : ""}</p>
                 </div>
                 <div className="flex flex-wrap gap-2">
+                  {items.length > 0 && <DocLink href={`/presupuesto/${plan.id}`} title="Presupuesto" className="btn-secondary">Presupuesto para el paciente</DocLink>}
                   {plan.status === "DRAFT" && <form action={setPlanStatus.bind(null, plan.id, "PRESENTED")}><button className="btn-secondary">Presentar al paciente</button></form>}
                   {(plan.status === "DRAFT" || plan.status === "PRESENTED") && <form action={setPlanStatus.bind(null, plan.id, "ACCEPTED")}><button className="btn-primary">Paciente acepta</button></form>}
                   {!closed && <form action={setPlanStatus.bind(null, plan.id, "CANCELLED")}><ConfirmButton confirmLabel="Sí, cancelar el plan">Cancelar plan</ConfirmButton></form>}
