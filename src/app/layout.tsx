@@ -15,6 +15,15 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Software Odontológico",
   description: "Gestión clínica odontológica",
+  // Ícono genérico (diente sobre verde) para las páginas fuera de la sesión: ingreso, registro, firma, recibos. Dentro de la
+  // app lo reemplaza el ícono del consultorio (ver (app)/layout.tsx).
+  icons: {
+    icon: [
+      { url: "/api/icono/generico/32", sizes: "32x32", type: "image/png" },
+      { url: "/api/icono/generico/192", sizes: "192x192", type: "image/png" },
+    ],
+    apple: [{ url: "/api/icono/generico/180", sizes: "180x180", type: "image/png" }],
+  },
 };
 
 // viewport-fit=cover permite usar las áreas seguras de iPhone (muesca y barra inferior) para que la barra de navegación no quede tapada.
