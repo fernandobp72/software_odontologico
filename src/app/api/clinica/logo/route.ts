@@ -1,17 +1,7 @@
 import { db } from "@/lib/db";
 import { currentUser } from "@/lib/dal";
+import { sameOrigin } from "@/lib/http";
 import { LOGO_MAX_INPUT, processLogo } from "@/lib/logo";
-
-function sameOrigin(req: Request) {
-  const origin = req.headers.get("origin");
-  if (!origin) return false;
-  const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host");
-  try {
-    return new URL(origin).host === host;
-  } catch {
-    return false;
-  }
-}
 
 async function admin(req: Request) {
   if (!sameOrigin(req)) return { error: Response.json({ error: "Origen no permitido" }, { status: 403 }) };

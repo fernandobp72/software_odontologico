@@ -4,16 +4,12 @@ import { revalidatePath } from "next/cache";
 import { randomBytes } from "node:crypto";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { requireUser } from "@/lib/dal";
+import { requireAdminUser } from "@/lib/dal";
 import { applyReferencePrices } from "@/lib/reference-prices";
 
 export type CatalogState = { error?: string; ok?: boolean } | undefined;
 
-async function requireAdmin() {
-  const user = await requireUser();
-  if (user.role !== "ADMIN") throw new Error("Solo el administrador puede cambiar el catálogo");
-  return user;
-}
+const requireAdmin = () => requireAdminUser("Solo el administrador puede cambiar el catálogo");
 
 const price = z.coerce.number().int("Usa un valor entero en pesos").min(0).max(100_000_000);
 const materialsSchema = z

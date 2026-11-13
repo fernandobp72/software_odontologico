@@ -34,6 +34,13 @@ export async function requireClinician() {
   return user;
 }
 
+// Solo el administrador del consultorio; `message` explica qué acción se le niega.
+export async function requireAdminUser(message: string) {
+  const user = await requireUser();
+  if (user.role !== "ADMIN") throw new Error(message);
+  return user;
+}
+
 // Variante sin redirección para route handlers: devuelve null si no hay sesión válida.
 export async function currentUser() {
   const session = await readSession();

@@ -1,19 +1,9 @@
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { currentUser } from "@/lib/dal";
+import { sameOrigin } from "@/lib/http";
 import { IMAGE_KINDS, MAX_BYTES, sniff } from "@/lib/images";
 import { VALID_TEETH } from "@/lib/catalogs";
-
-function sameOrigin(req: Request) {
-  const origin = req.headers.get("origin");
-  if (!origin) return false;
-  const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host");
-  try {
-    return new URL(origin).host === host;
-  } catch {
-    return false;
-  }
-}
 
 const meta = z.object({
   kind: z.enum(Object.keys(IMAGE_KINDS) as [keyof typeof IMAGE_KINDS, ...(keyof typeof IMAGE_KINDS)[]]),

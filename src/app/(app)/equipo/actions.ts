@@ -3,18 +3,14 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { requireUser } from "@/lib/dal";
+import { requireAdminUser } from "@/lib/dal";
 import { hashToken, newToken } from "@/lib/tokens";
 import { mailConfigured } from "@/lib/mailer";
 import { sendInviteEmail, sendResetEmail } from "@/lib/mail-links";
 
 export type TeamState = { error?: string; ok?: boolean; token?: string; kind?: "invite" | "reset"; emailed?: string } | undefined;
 
-async function requireAdmin() {
-  const user = await requireUser();
-  if (user.role !== "ADMIN") throw new Error("Solo el administrador puede gestionar el equipo");
-  return user;
-}
+const requireAdmin = () => requireAdminUser("Solo el administrador puede gestionar el equipo");
 
 const ROLES = ["ADMIN", "DENTIST", "RECEPTION"] as const;
 const ROLE_NAMES = { ADMIN: "administrador", DENTIST: "odontólogo", RECEPTION: "recepción" } as const;

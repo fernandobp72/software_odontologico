@@ -3,15 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { requireUser } from "@/lib/dal";
+import { requireAdminUser } from "@/lib/dal";
 
 export type BranchState = { error?: string; ok?: boolean } | undefined;
 
-async function requireAdmin() {
-  const user = await requireUser();
-  if (user.role !== "ADMIN") throw new Error("Solo el administrador puede gestionar las sedes");
-  return user;
-}
+const requireAdmin = () => requireAdminUser("Solo el administrador puede gestionar las sedes");
 
 const schema = z.object({
   name: z.string().trim().min(2, "Escribe el nombre de la sede").max(80),
