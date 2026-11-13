@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
-import { requireClinician } from "@/lib/dal";
+import { requireClinicalAuthor } from "@/lib/dal";
 import { ASSESSMENT_SECTIONS, type AssessmentData } from "@/lib/assessment";
 import { INTAKE_DAYS } from "@/lib/intake";
 import { hashToken, newToken } from "@/lib/tokens";
@@ -10,7 +10,7 @@ import { hashToken, newToken } from "@/lib/tokens";
 export type AssessmentState = { error?: string; ok?: boolean } | undefined;
 
 export async function saveAssessment(patientId: string, _: AssessmentState, formData: FormData): Promise<AssessmentState> {
-  const user = await requireClinician();
+  const user = await requireClinicalAuthor();
   const patient = await db.patient.findFirst({ where: { id: patientId, clinicId: user.clinicId }, select: { id: true } });
   if (!patient) return { error: "Paciente no encontrado" };
 
@@ -44,7 +44,7 @@ export async function saveAssessment(patientId: string, _: AssessmentState, form
 
 // El enlace se devuelve una sola vez: en la base solo queda su hash.
 export async function createIntakeLink(patientId: string): Promise<{ token?: string; error?: string }> {
-  const user = await requireClinician();
+  const user = await requireClinicalAuthor();
   const patient = await db.patient.findFirst({ where: { id: patientId, clinicId: user.clinicId }, select: { id: true } });
   if (!patient) return { error: "Paciente no encontrado" };
   // Un solo enlace vigente por paciente: los anteriores sin enviar se anulan.
@@ -59,7 +59,7 @@ export async function createIntakeLink(patientId: string): Promise<{ token?: str
 }
 
 export async function revokeIntakeLink(patientId: string): Promise<void> {
-  const user = await requireClinician();
+  const user = await requireClinicalAuthor();
   await db.intakeForm.updateMany({ where: { patientId, clinicId: user.clinicId, submittedAt: null, revokedAt: null }, data: { revokedAt: new Date() } });
   revalidatePath(`/pacientes/${patientId}/historia`);
 }

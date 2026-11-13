@@ -20,10 +20,10 @@ export default async function HistoriaClinicaPage({ params }: PageProps<"/histor
 
   const [assessment, findings, diagnoses, plans, evolutions, consents, prescriptions] = await Promise.all([
     db.assessment.findFirst({ where: { patientId: p.id }, orderBy: { createdAt: "desc" }, include: { author: { select: { name: true } } } }),
-    db.toothFinding.findMany({ where: { patientId: p.id }, orderBy: { createdAt: "asc" } }),
-    db.diagnosis.findMany({ where: { patientId: p.id }, orderBy: [{ status: "asc" }, { createdAt: "desc" }], include: { dentist: { select: { name: true } } } }),
+    db.toothFinding.findMany({ where: { patientId: p.id }, orderBy: { createdAt: "asc" }, include: { author: { select: { name: true } } } }),
+    db.diagnosis.findMany({ where: { patientId: p.id }, orderBy: [{ status: "asc" }, { createdAt: "desc" }], include: { dentist: { select: { name: true } }, closedBy: { select: { name: true } } } }),
     db.treatmentPlan.findMany({ where: { patientId: p.id }, orderBy: { createdAt: "desc" }, include: { items: { orderBy: [{ phase: "asc" }, { createdAt: "asc" }] } } }),
-    db.evolution.findMany({ where: { patientId: p.id }, orderBy: { signedAt: "asc" }, include: { dentist: { select: { name: true, licenseNumber: true } } } }),
+    db.evolution.findMany({ where: { patientId: p.id }, orderBy: { signedAt: "asc" }, include: { dentist: { select: { name: true, licenseNumber: true } }, corrects: { select: { signedAt: true, dentist: { select: { name: true } } } } } }),
     db.consent.findMany({ where: { patientId: p.id }, orderBy: { signedAt: "asc" }, select: { id: true, title: true, signedAt: true, signerName: true, signerRelation: true, seal: true, dentist: { select: { name: true } } } }),
     db.prescription.findMany({ where: { patientId: p.id }, orderBy: { issuedAt: "asc" }, include: { items: { orderBy: { position: "asc" } }, dentist: { select: { name: true } } } }),
   ]);
@@ -33,8 +33,8 @@ export default async function HistoriaClinicaPage({ params }: PageProps<"/histor
   const fmtDay = new Intl.DateTimeFormat("es-CO", { dateStyle: "long", timeZone: "America/Bogota" });
   const data = (assessment?.data ?? null) as AssessmentData | null;
   const cop = copTotal(data);
-  const latest = new Map<string, { tooth: number; surface: string | null; condition: ConditionKey }>();
-  for (const f of findings) latest.set(`${f.tooth}|${f.surface ?? ""}`, { tooth: f.tooth, surface: f.surface, condition: f.condition });
+  const latest = new Map<string, { tooth: number; surface: string | null; condition: ConditionKey; at: Date; by: string | null }>();
+  for (const f of findings) latest.set(`${f.tooth}|${f.surface ?? ""}`, { tooth: f.tooth, surface: f.surface, condition: f.condition, at: f.createdAt, by: f.author?.name ?? null });
   const current = [...latest.values()].filter((f) => f.condition !== "HEALTHY").sort((a, b) => a.tooth - b.tooth);
   const value = (v: string | string[] | undefined) => (Array.isArray(v) ? v.join(", ") : v ?? "");
   const cie = (code: string) => CIE10.find((c) => c.code === code)?.label;
@@ -98,7 +98,7 @@ export default async function HistoriaClinicaPage({ params }: PageProps<"/histor
       <Section title="Odontograma actual">
         {current.length ? (
           <ul className="grid gap-x-6 text-sm sm:grid-cols-2">
-            {current.map((f) => <li key={`${f.tooth}${f.surface}`}>Diente {f.tooth}{f.surface ? ` (${f.surface})` : ""}: {CONDITIONS[f.condition].label}</li>)}
+            {current.map((f) => <li key={`${f.tooth}${f.surface}`}>Diente {f.tooth}{f.surface ? ` (${f.surface})` : ""}: {CONDITIONS[f.condition].label} <span className="text-xs text-slate-700">· {fmtDay.format(f.at)}{f.by ? `, ${f.by}` : ""}</span></li>)}
           </ul>
         ) : <p className="text-sm">Sin hallazgos registrados.</p>}
       </Section>
@@ -107,7 +107,7 @@ export default async function HistoriaClinicaPage({ params }: PageProps<"/histor
         {diagnoses.length ? (
           <ul className="space-y-1 text-sm">
             {diagnoses.map((d) => (
-              <li key={d.id}>{d.code} {d.description || cie(d.code) || ""}{d.tooth ? ` · diente ${d.tooth}` : ""} · {d.status === "ACTIVE" ? "activo" : `resuelto${d.resolvedAt ? ` el ${fmtDay.format(d.resolvedAt)}` : ""}`} · {fmtDay.format(d.createdAt)}, {d.dentist.name}</li>
+              <li key={d.id}>{d.code} {d.description || cie(d.code) || ""}{d.tooth ? ` · diente ${d.tooth}` : ""} · {fmtDay.format(d.createdAt)}, {d.dentist.name} · {DX_STATUS[d.status] ?? d.status}{d.resolvedAt ? ` el ${fmtDay.format(d.resolvedAt)}` : ""}{d.closedBy ? ` por ${d.closedBy.name}` : ""}{d.closeReason ? ` (motivo: ${d.closeReason})` : ""}</li>
             ))}
           </ul>
         ) : <p className="text-sm">Sin diagnósticos registrados.</p>}
@@ -133,7 +133,8 @@ export default async function HistoriaClinicaPage({ params }: PageProps<"/histor
               <li key={e.id} className="break-inside-avoid border-l-2 border-slate-300 pl-3">
                 <p className="font-semibold">{fmt.format(e.signedAt)} · {e.dentist.name}{e.dentist.licenseNumber ? ` (RP ${e.dentist.licenseNumber})` : ""}</p>
                 <p className="text-xs text-slate-700">{[e.diagnosisCode ? `CIE-10 ${e.diagnosisCode}` : null, e.procedureCode ? `CUPS ${e.procedureCode}` : null].filter(Boolean).join(" · ")}{e.seal ? <> · Sello <SealMark seal={e.seal} /></> : null}</p>
-                {e.reason && <p><span className="font-semibold">Motivo:</span> {e.reason}</p>}
+                {e.corrects && <p className="font-semibold">Nota aclaratoria a la evolución del {fmt.format(e.corrects.signedAt)} de {e.corrects.dentist.name}</p>}
+                {e.reason && !e.corrects && <p><span className="font-semibold">Motivo:</span> {e.reason}</p>}
                 <p className="whitespace-pre-wrap">{e.note}</p>
               </li>
             ))}
@@ -171,6 +172,7 @@ export default async function HistoriaClinicaPage({ params }: PageProps<"/histor
   );
 }
 
+const DX_STATUS: Record<string, string> = { ACTIVE: "activo", RESOLVED: "resuelto", REPLACED: "corregido", VOIDED: "anulado" };
 const ITEM_STATUS: Record<string, string> = { PLANNED: "pendiente", IN_PROGRESS: "en curso", DONE: "realizado", CANCELLED: "cancelado" };
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {

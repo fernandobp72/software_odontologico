@@ -1,11 +1,12 @@
 import { docText } from "@/lib/patient-fields";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
-import { requireUser } from "@/lib/dal";
-import type { ConditionKey } from "@/lib/catalogs";
+import { canWriteClinical, requireUser } from "@/lib/dal";
+import { CONDITIONS, type ConditionKey } from "@/lib/catalogs";
 import { setWhatsappOptIn } from "../../recordatorios/actions";
 import Odontogram from "./odontogram";
 import EvolutionForm from "./evolution-form";
+import CorrectionForm from "./correction-form";
 import DeleteTestPatient from "./delete-test";
 import SealMark from "@/app/seal-mark";
 import { ageText, isRecentPatient } from "@/lib/patient-fields";
@@ -20,11 +21,14 @@ export default async function PacientePage({ params, searchParams }: PageProps<"
   const p = await db.patient.findFirst({ where: { id, clinicId: user.clinicId } });
   if (!p) notFound();
 
-  const canEdit = user.role !== "RECEPTION";
+  const canEdit = canWriteClinical(user);
   const now = new Date();
   const [allFindings, evolutions, openItemsRaw, initialSnap, activeDx, appts] = await Promise.all([
-    db.toothFinding.findMany({ where: { patientId: p.id }, orderBy: { createdAt: "asc" } }),
-    db.evolution.findMany({ where: { patientId: p.id }, orderBy: { signedAt: "desc" }, include: { dentist: { select: { name: true } } }, take: 50 }),
+    db.toothFinding.findMany({ where: { patientId: p.id }, orderBy: { createdAt: "asc" }, include: { author: { select: { name: true } } } }),
+    db.evolution.findMany({
+      where: { patientId: p.id }, orderBy: { signedAt: "desc" }, take: 50,
+      include: { dentist: { select: { name: true } }, corrects: { select: { signedAt: true, dentist: { select: { name: true } } } }, corrections: { select: { signedAt: true, dentist: { select: { name: true } } }, orderBy: { signedAt: "asc" } } },
+    }),
     db.treatmentItem.findMany({ where: { status: { in: ["PLANNED", "IN_PROGRESS"] }, plan: { patientId: p.id, status: { in: ["DRAFT", "PRESENTED", "ACCEPTED", "IN_PROGRESS"] } } }, orderBy: [{ phase: "asc" }, { createdAt: "asc" }] }),
     db.odontogramSnapshot.findUnique({ where: { patientId_kind: { patientId: p.id, kind: "INITIAL" } } }),
     db.diagnosis.findMany({ where: { patientId: p.id, status: "ACTIVE" }, select: { code: true, tooth: true } }),
@@ -53,6 +57,8 @@ export default async function PacientePage({ params, searchParams }: PageProps<"
   const latest = new Map<string, { tooth: number; surface: string | null; condition: ConditionKey }>();
   for (const f of allFindings) latest.set(`${f.tooth}|${f.surface ?? ""}`, { tooth: f.tooth, surface: f.surface, condition: f.condition });
   const findings = [...latest.values()].filter((f) => f.condition !== "HEALTHY");
+  // Quién marcó qué en el odontograma, lo más reciente primero.
+  const findingLog = allFindings.slice(-80).reverse();
   const fmt = new Intl.DateTimeFormat("es-CO", { dateStyle: "medium", timeStyle: "short", timeZone: "America/Bogota" });
 
   const rows: [string, string | null][] = [
@@ -135,6 +141,16 @@ export default async function PacientePage({ params, searchParams }: PageProps<"
         </aside>
         <div className="min-w-0 space-y-6 lg:col-span-2">
           <Odontogram patientId={p.id} findings={findings} canEdit={canEdit} initial={initialSnap ? (initialSnap.data as unknown as { tooth: number; surface: string | null; condition: ConditionKey }[]) : null} planned={pending} />
+          {findingLog.length > 0 && (
+            <details className="card">
+              <summary className="cursor-pointer text-sm font-semibold text-slate-900">Historial de cambios del odontograma</summary>
+              <ul className="mt-2 divide-y divide-slate-200 text-sm text-slate-800">
+                {findingLog.map((f) => (
+                  <li key={f.id} className="py-1.5">Diente {f.tooth}{f.surface ? ` (${f.surface})` : ""}: {CONDITIONS[f.condition].label} <span className="text-xs text-slate-700">· {fmt.format(f.createdAt)} · {f.author?.name ?? "sin autor registrado"}</span></li>
+                ))}
+              </ul>
+            </details>
+          )}
           {canEdit && <EvolutionForm patientId={p.id} openItems={openItems} appointment={attending ? { id: attending.id, time: fmt.format(attending.startsAt), reason: attending.reason } : null} />}
           <section className="space-y-3">
             <h2 className="section-title">Evoluciones</h2>
@@ -149,8 +165,11 @@ export default async function PacientePage({ params, searchParams }: PageProps<"
                     ? <p className="text-xs font-semibold text-red-800">⚠ Firmada con un dispositivo que el profesional reportó como perdido o robado (desde {fmt.format(sg.credential!.compromisedSince!)}). En revisión.</p>
                     : <p className="text-xs text-slate-700">🔐 Firmada con el sello digital del profesional{sg.credential ? ` · N.º ${sg.credential.serial}` : ""}{sg.method === "PIN" ? " (clave de firma)" : ""}</p>;
                 })()}
-                {e.reason && <p className="font-semibold">{e.reason}</p>}
+                {e.corrects && <p className="text-sm font-semibold text-amber-900">Nota aclaratoria a la evolución del {fmt.format(e.corrects.signedAt)} de {e.corrects.dentist.name}</p>}
+                {e.corrections.length > 0 && <p className="text-sm font-semibold text-amber-900">Tiene {e.corrections.length === 1 ? "una nota aclaratoria" : `${e.corrections.length} notas aclaratorias`}: {e.corrections.map((c) => `${fmt.format(c.signedAt)} (${c.dentist.name})`).join(", ")}</p>}
+                {e.reason && !e.corrects && <p className="font-semibold">{e.reason}</p>}
                 <p className="whitespace-pre-wrap">{e.note}</p>
+                {canEdit && !e.corrects && <CorrectionForm patientId={p.id} evolutionId={e.id} author={e.dentist.name} />}
               </article>
             ))}
             {evolutions.length === 0 && <p className="card text-center text-slate-700">Sin evoluciones</p>}

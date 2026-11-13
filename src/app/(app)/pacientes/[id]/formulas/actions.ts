@@ -6,7 +6,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { rxSignHash, sealPrescription } from "@/lib/seal";
 import { prepareSign, recordSignature, resolveProof, type SignPrep } from "@/lib/signing";
-import { requireClinician } from "@/lib/dal";
+import { requireClinicalAuthor } from "@/lib/dal";
 import { rxContextFor } from "@/lib/rx-context";
 import { alertsFor, patientFlags } from "@/lib/rx-rules";
 import { VADEMECUM_VERSION, drugById } from "@/lib/vademecum";
@@ -43,7 +43,7 @@ const rxHash = (userId: string, patientId: string, d: z.infer<typeof schema>) =>
 
 // Paso previo a firmar: devuelve lo que debe confirmar el profesional con su sello.
 export async function prepareRxSign(patientId: string, raw: unknown): Promise<SignPrep | { error: string }> {
-  const user = await requireClinician();
+  const user = await requireClinicalAuthor();
   const parsed = schema.safeParse(raw);
   if (!parsed.success) return { error: parsed.error.issues[0].message };
   return prepareSign(user, rxHash(user.id, patientId, parsed.data));
@@ -52,7 +52,7 @@ export async function prepareRxSign(patientId: string, raw: unknown): Promise<Si
 // La fórmula firmada no se edita. Las alertas se vuelven a calcular aquí con los antecedentes guardados:
 // si hay una de bloqueo, solo se firma con un motivo escrito por el odontólogo.
 export async function signPrescription(patientId: string, raw: unknown, proofRaw?: string): Promise<RxState> {
-  const user = await requireClinician();
+  const user = await requireClinicalAuthor();
   const parsed = schema.safeParse(raw);
   if (!parsed.success) return { error: parsed.error.issues[0].message };
   const d = parsed.data;
@@ -102,7 +102,7 @@ export async function signPrescription(patientId: string, raw: unknown, proofRaw
 }
 
 export async function voidPrescription(id: string, reason: string): Promise<RxState> {
-  const user = await requireClinician();
+  const user = await requireClinicalAuthor();
   const why = reason.trim();
   if (why.length < 5) return { error: "Escribe el motivo de la anulación" };
   const rx = await db.prescription.findFirst({ where: { id, clinicId: user.clinicId } });

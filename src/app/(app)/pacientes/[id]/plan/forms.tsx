@@ -4,7 +4,7 @@ import { useActionState, useEffect, useRef, useState, useTransition } from "reac
 import { useRouter } from "next/navigation";
 import { CIE10, PHASES, SURFACES, QUADRANTS } from "@/lib/catalogs";
 import { defaultMaterial, priceFor, type CatalogEntry } from "@/lib/catalog";
-import { addDiagnosis, addItem, createPlan, generateFromFindings, updateDiagnosis, updateItem } from "./actions";
+import { addDiagnosis, addItem, createPlan, generateFromFindings, updateDiagnosis, updateItem, voidDiagnosis } from "./actions";
 
 const TEETH = QUADRANTS.flat().sort((a, b) => a - b);
 
@@ -163,9 +163,23 @@ export function DiagnosisEditForm({ d }: { d: { id: string; code: string; tooth:
         </label>
       </div>
       <label className="label">Nota<input name="note" defaultValue={d.note ?? ""} maxLength={300} className="field" /></label>
+      <label className="label">Motivo de la corrección (opcional)<input name="reason" maxLength={300} placeholder="Ej. se confirmó con la radiografía" className="field" /></label>
+      <p className="muted">El diagnóstico actual no se borra: queda en el historial como reemplazado, con su autor, y el corregido queda a tu nombre.</p>
       {state?.error && <p role="alert" className="error-text">{state.error}</p>}
-      {state?.ok && <p className="ok-text">Guardado</p>}
-      <button disabled={pending} className="btn-secondary">{pending ? "Guardando…" : "Guardar cambios"}</button>
+      {state?.ok && <p className="ok-text">Corrección guardada</p>}
+      <button disabled={pending} className="btn-secondary">{pending ? "Guardando…" : "Guardar corrección"}</button>
+    </form>
+  );
+}
+
+export function DiagnosisVoidForm({ id }: { id: string }) {
+  const [state, action, pending] = useActionState(voidDiagnosis.bind(null, id), undefined);
+  return (
+    <form action={action} className="space-y-3 border-t border-slate-200 pt-3">
+      <label className="label">Motivo de la anulación<input name="reason" required minLength={5} maxLength={300} placeholder="Ej. se registró en el paciente equivocado" className="field" /></label>
+      <p className="muted">Úsalo solo si el diagnóstico fue un error. Queda en el historial como anulado, con tu nombre y el motivo.</p>
+      {state?.error && <p role="alert" className="error-text">{state.error}</p>}
+      <button disabled={pending} className="btn-danger min-h-10">{pending ? "Anulando…" : "Anular diagnóstico"}</button>
     </form>
   );
 }

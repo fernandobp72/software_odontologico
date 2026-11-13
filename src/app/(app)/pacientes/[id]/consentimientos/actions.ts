@@ -10,7 +10,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { sealConsent } from "@/lib/seal";
 import { CONSTANCIA_DAYS, constanciaAfterSigning, emailConstancia, issueConstancia } from "@/lib/constancia";
-import { requireClinician } from "@/lib/dal";
+import { requireClinicalAuthor } from "@/lib/dal";
 import { CONSENT_TEMPLATES, CONSENT_VERSION, buildConsentBody } from "@/lib/consents";
 
 export type ConsentState = { error?: string; ok?: boolean } | undefined;
@@ -27,7 +27,7 @@ const schema = z.object({
 });
 
 export async function signConsent(patientId: string, _: ConsentState, fd: FormData): Promise<ConsentState> {
-  const user = await requireClinician();
+  const user = await requireClinicalAuthor();
   const parsed = schema.safeParse(Object.fromEntries(fd));
   if (!parsed.success) return { error: parsed.error.issues[0].message };
   const d = parsed.data;
@@ -77,7 +77,7 @@ const digitsOf = (v: string | null | undefined) => (v ?? "").replace(/\D/g, "");
 const requestSchema = schema.omit({ signature: true, witnessName: true }).extend({ method: z.enum(["QR", "ENLACE"]) });
 
 export async function requestConsentSignature(patientId: string, _: RequestState, fd: FormData): Promise<RequestState> {
-  const user = await requireClinician();
+  const user = await requireClinicalAuthor();
   const parsed = requestSchema.safeParse(Object.fromEntries(fd));
   if (!parsed.success) return { error: parsed.error.issues[0].message };
   const d = parsed.data;
@@ -117,7 +117,7 @@ export async function requestConsentSignature(patientId: string, _: RequestState
 }
 
 export async function cancelConsentRequest(requestId: string): Promise<void> {
-  const user = await requireClinician();
+  const user = await requireClinicalAuthor();
   const r = await db.consentRequest.updateMany({ where: { id: requestId, clinicId: user.clinicId, consentId: null, cancelledAt: null }, data: { cancelledAt: new Date() } });
   if (r.count) await db.auditLog.create({ data: { userId: user.id, action: "CONSENT_REQUEST_CANCEL", entity: "ConsentRequest", entityId: requestId } });
   revalidatePath("/pacientes", "layout");
@@ -129,7 +129,7 @@ export type ConstanciaResult = { error?: string; ok?: string; link?: string; wha
 
 // Cada envío crea un enlace nuevo y el anterior deja de servir.
 export async function sendConstancia(consentId: string, channel: "correo" | "whatsapp" | "enlace"): Promise<ConstanciaResult> {
-  const user = await requireClinician();
+  const user = await requireClinicalAuthor();
   const c = await db.consent.findFirst({
     where: { id: consentId, patient: { clinicId: user.clinicId } },
     select: { id: true, title: true, patientId: true, patient: { select: { firstName: true, phone: true, email: true, clinic: { select: { name: true } } } } },

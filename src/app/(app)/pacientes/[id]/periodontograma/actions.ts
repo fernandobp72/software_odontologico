@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { requireClinician } from "@/lib/dal";
+import { requireClinicalAuthor } from "@/lib/dal";
 import { VALID_TEETH } from "@/lib/catalogs";
 import { hasData, summarize, type Perio } from "@/lib/perio";
 
@@ -26,7 +26,7 @@ const schema = z.record(z.string(), tooth).refine((d) => Object.keys(d).every((k
 export type PerioState = { error?: string; ok?: boolean };
 
 export async function savePerio(patientId: string, input: unknown): Promise<PerioState> {
-  const user = await requireClinician();
+  const user = await requireClinicalAuthor();
   const parsed = schema.safeParse(input);
   if (!parsed.success) return { error: parsed.error.issues[0].message };
   const data: Perio = Object.fromEntries(Object.entries(parsed.data).filter(([, t]) => hasData(t)));

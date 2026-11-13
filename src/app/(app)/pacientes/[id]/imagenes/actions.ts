@@ -2,13 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
-import { requireClinician } from "@/lib/dal";
+import { requireClinicalAuthor } from "@/lib/dal";
 
 export type ImageState = { error?: string; ok?: boolean } | undefined;
 
 // La interpretación se escribe una sola vez y queda firmada con fecha (anexo de la historia clínica).
 export async function interpretImage(imageId: string, _: ImageState, fd: FormData): Promise<ImageState> {
-  const user = await requireClinician();
+  const user = await requireClinicalAuthor();
   const text = String(fd.get("interpretation") ?? "").trim();
   if (text.length < 10) return { error: "Escribe la interpretación (mínimo 10 caracteres)" };
   const img = await db.clinicalImage.findFirst({ where: { id: imageId, patient: { clinicId: user.clinicId }, interpretation: null, voidedAt: null }, select: { id: true, patientId: true } });
@@ -22,7 +22,7 @@ export async function interpretImage(imageId: string, _: ImageState, fd: FormDat
 
 // Los archivos no se borran: se anulan con motivo y dejan de mostrarse en la galería.
 export async function voidImage(imageId: string, fd: FormData): Promise<void> {
-  const user = await requireClinician();
+  const user = await requireClinicalAuthor();
   const reason = String(fd.get("reason") ?? "").trim();
   if (reason.length < 5) return;
   const img = await db.clinicalImage.findFirst({ where: { id: imageId, patient: { clinicId: user.clinicId }, voidedAt: null }, select: { id: true, patientId: true } });

@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { branchState, requireClinician } from "@/lib/dal";
+import { branchState, requireClinicalAuthor } from "@/lib/dal";
 import { consumeForProcedures } from "@/lib/supply-ops";
 import { syncPlan } from "@/lib/plan";
 import { applySuggestions } from "@/lib/suggest-apply";
@@ -28,7 +28,7 @@ const toothField = z.preprocess((v) => (v === "" || v == null ? null : Number(v)
 const diagnosisSchema = z.object({ code: z.string().regex(/^[A-Z]\d{2}(\.\d{1,2})?$/, "Código CIE-10 inválido"), tooth: toothField });
 
 export async function addDiagnosis(patientId: string, _: FormState, fd: FormData): Promise<FormState> {
-  const user = await requireClinician();
+  const user = await requireClinicalAuthor();
   if (!(await ownPatient(patientId, user.clinicId))) return { error: "Paciente no encontrado" };
   const parsed = diagnosisSchema.safeParse({ code: String(fd.get("code") ?? "").trim().toUpperCase(), tooth: fd.get("tooth") });
   if (!parsed.success) return { error: parsed.error.issues[0].message };
@@ -42,17 +42,17 @@ export async function addDiagnosis(patientId: string, _: FormState, fd: FormData
 }
 
 export async function resolveDiagnosis(id: string) {
-  const user = await requireClinician();
-  const d = await db.diagnosis.findFirst({ where: { id, patient: { clinicId: user.clinicId } } });
+  const user = await requireClinicalAuthor();
+  const d = await db.diagnosis.findFirst({ where: { id, status: "ACTIVE", patient: { clinicId: user.clinicId } } });
   if (!d) return;
-  await db.diagnosis.update({ where: { id }, data: { status: "RESOLVED", resolvedAt: new Date() } });
+  await db.diagnosis.update({ where: { id }, data: { status: "RESOLVED", resolvedAt: new Date(), closedById: user.id } });
   await audit(user.id, "RESOLVE", "Diagnosis", id);
   revalidatePath(`/pacientes/${d.patientId}/plan`);
 }
 
 // ---- Plan de tratamiento ----
 export async function createPlan(patientId: string, _: FormState, fd: FormData): Promise<FormState> {
-  const user = await requireClinician();
+  const user = await requireClinicalAuthor();
   if (!(await ownPatient(patientId, user.clinicId))) return { error: "Paciente no encontrado" };
   const title = String(fd.get("title") ?? "").trim() || "Plan de tratamiento";
   const plan = await db.treatmentPlan.create({ data: { patientId, dentistId: user.id, title: title.slice(0, 120) } });
@@ -73,7 +73,7 @@ const itemSchema = z.object({
 });
 
 export async function addItem(patientId: string, _: FormState, fd: FormData): Promise<FormState> {
-  const user = await requireClinician();
+  const user = await requireClinicalAuthor();
   const parsed = itemSchema.safeParse(Object.fromEntries(fd));
   if (!parsed.success) return { error: parsed.error.issues[0].message };
   const d = parsed.data;
@@ -98,7 +98,7 @@ export async function addItem(patientId: string, _: FormState, fd: FormData): Pr
 }
 
 export async function setItemStatus(itemId: string, status: "PLANNED" | "IN_PROGRESS" | "DONE" | "CANCELLED") {
-  const user = await requireClinician();
+  const user = await requireClinicalAuthor();
   const item = await db.treatmentItem.findFirst({ where: { id: itemId, plan: { patient: { clinicId: user.clinicId } } }, include: { plan: true } });
   if (!item) return;
   await db.treatmentItem.update({
@@ -120,7 +120,7 @@ export async function setItemStatus(itemId: string, status: "PLANNED" | "IN_PROG
 }
 
 export async function setPlanStatus(planId: string, status: "PRESENTED" | "ACCEPTED" | "CANCELLED") {
-  const user = await requireClinician();
+  const user = await requireClinicalAuthor();
   const plan = await db.treatmentPlan.findFirst({ where: { id: planId, patient: { clinicId: user.clinicId } } });
   if (!plan) return;
   await db.treatmentPlan.update({
@@ -134,7 +134,7 @@ export async function setPlanStatus(planId: string, status: "PRESENTED" | "ACCEP
 
 // ---- Sugerencias automáticas a partir de los hallazgos ----
 export async function generateFromFindings(patientId: string, auto: boolean): Promise<{ diagnoses?: number; items?: number; error?: string }> {
-  const user = await requireClinician();
+  const user = await requireClinicalAuthor();
   if (!(await ownPatient(patientId, user.clinicId))) return { error: "Paciente no encontrado" };
   const r = await applySuggestions({ patientId, clinicId: user.clinicId, userId: user.id, auto });
   if (r.diagnoses || r.items) await audit(user.id, auto ? "AUTO_PLAN" : "SYNC_PLAN", "Patient", patientId);
@@ -143,30 +143,49 @@ export async function generateFromFindings(patientId: string, auto: boolean): Pr
   return r;
 }
 
-// ---- Editar y eliminar ----
+// ---- Corregir y anular ----
+// Un diagnóstico no se edita ni se borra (Res. 1995 de 1999): corregirlo crea uno nuevo, firmado por quien corrige, y el
+// anterior queda como «reemplazado» con su autor original; anularlo exige un motivo y lo conserva. Así cualquier profesional
+// puede atender al paciente y cada diagnóstico sigue mostrando quién lo escribió de verdad.
 export async function updateDiagnosis(id: string, _: FormState, fd: FormData): Promise<FormState> {
-  const user = await requireClinician();
+  const user = await requireClinicalAuthor();
   const parsed = diagnosisSchema.safeParse({ code: String(fd.get("code") ?? "").trim().toUpperCase(), tooth: fd.get("tooth") });
   if (!parsed.success) return { error: parsed.error.issues[0].message };
   const d = await db.diagnosis.findFirst({ where: { id, patient: { clinicId: user.clinicId } } });
   if (!d) return { error: "Diagnóstico no encontrado" };
+  if (d.status !== "ACTIVE") return { error: "Solo se corrige un diagnóstico activo" };
   const known = CIE10.find((c) => c.code === parsed.data.code);
   const description = known?.label ?? String(fd.get("description") ?? "").trim();
   if (!description) return { error: "Código fuera del catálogo: escribe la descripción" };
-  await db.diagnosis.update({ where: { id }, data: { code: parsed.data.code, description, tooth: parsed.data.tooth, note: String(fd.get("note") ?? "").trim().slice(0, 300) || null } });
-  await audit(user.id, "UPDATE", "Diagnosis", id);
+  const note = String(fd.get("note") ?? "").trim().slice(0, 300) || null;
+  if (d.code === parsed.data.code && d.tooth === parsed.data.tooth && (d.note ?? null) === note) return { error: "No cambiaste nada" };
+  const reason = String(fd.get("reason") ?? "").trim().slice(0, 300) || null;
+  const next = await db.$transaction(async (tx) => {
+    const closed = await tx.diagnosis.updateMany({ where: { id, status: "ACTIVE" }, data: { status: "REPLACED", resolvedAt: new Date(), closedById: user.id, closeReason: reason } });
+    if (!closed.count) return null;
+    return tx.diagnosis.create({ data: { patientId: d.patientId, dentistId: user.id, code: parsed.data.code, description, tooth: parsed.data.tooth, note, replacesId: d.id } });
+  });
+  if (!next) return { error: "Otro profesional acaba de cambiar este diagnóstico. Recarga la página." };
+  await audit(user.id, "REPLACE", "Diagnosis", id);
   revalidatePath(`/pacientes/${d.patientId}/plan`);
+  revalidatePath(`/pacientes/${d.patientId}`);
   return { ok: true };
 }
 
-export async function deleteDiagnosis(id: string): Promise<void> {
-  const user = await requireClinician();
+export async function voidDiagnosis(id: string, _: FormState, fd: FormData): Promise<FormState> {
+  const user = await requireClinicalAuthor();
+  const reason = String(fd.get("reason") ?? "").trim().slice(0, 300);
+  if (reason.length < 5) return { error: "Escribe el motivo de la anulación" };
   const d = await db.diagnosis.findFirst({ where: { id, patient: { clinicId: user.clinicId } } });
-  if (!d) return;
+  if (!d) return { error: "Diagnóstico no encontrado" };
+  const closed = await db.diagnosis.updateMany({ where: { id, status: "ACTIVE" }, data: { status: "VOIDED", resolvedAt: new Date(), closedById: user.id, closeReason: reason } });
+  if (!closed.count) return { error: "Solo se anula un diagnóstico activo" };
+  // Si lo había sugerido el sistema, no se vuelve a sugerir.
   if (d.sourceKey) await db.dismissedSuggestion.upsert({ where: { patientId_key: { patientId: d.patientId, key: d.sourceKey } }, update: {}, create: { patientId: d.patientId, key: d.sourceKey } });
-  await db.diagnosis.delete({ where: { id } });
-  await audit(user.id, `DELETE ${d.code}`, "Diagnosis", id);
+  await audit(user.id, `VOID ${d.code}`, "Diagnosis", id);
   revalidatePath(`/pacientes/${d.patientId}/plan`);
+  revalidatePath(`/pacientes/${d.patientId}`);
+  return { ok: true };
 }
 
 const itemEditSchema = z.object({
@@ -179,7 +198,7 @@ const itemEditSchema = z.object({
 });
 
 export async function updateItem(id: string, _: FormState, fd: FormData): Promise<FormState> {
-  const user = await requireClinician();
+  const user = await requireClinicalAuthor();
   const parsed = itemEditSchema.safeParse(Object.fromEntries(fd));
   if (!parsed.success) return { error: parsed.error.issues[0].message };
   const item = await db.treatmentItem.findFirst({ where: { id, plan: { patient: { clinicId: user.clinicId } } }, include: { plan: true } });
@@ -202,7 +221,7 @@ export async function updateItem(id: string, _: FormState, fd: FormData): Promis
 }
 
 export async function deleteItem(id: string): Promise<void> {
-  const user = await requireClinician();
+  const user = await requireClinicalAuthor();
   const item = await db.treatmentItem.findFirst({ where: { id, plan: { patient: { clinicId: user.clinicId } } }, include: { plan: true } });
   if (!item || item.status === "DONE") return; // lo realizado queda en la historia; solo se puede cancelar lo pendiente
   if (item.sourceKey) await db.dismissedSuggestion.upsert({ where: { patientId_key: { patientId: item.plan.patientId, key: item.sourceKey } }, update: {}, create: { patientId: item.plan.patientId, key: item.sourceKey } });
@@ -215,7 +234,7 @@ export async function deleteItem(id: string): Promise<void> {
 
 // Solo se elimina un plan que no se haya aceptado ni tenga procedimientos realizados.
 export async function deletePlan(planId: string): Promise<void> {
-  const user = await requireClinician();
+  const user = await requireClinicalAuthor();
   const plan = await db.treatmentPlan.findFirst({ where: { id: planId, patient: { clinicId: user.clinicId } }, include: { items: true } });
   if (!plan || !["DRAFT", "PRESENTED"].includes(plan.status) || plan.items.some((i) => i.status === "DONE")) return;
   const keys = plan.items.map((i) => i.sourceKey).filter((k): k is string => !!k);
