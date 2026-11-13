@@ -6,6 +6,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { requireAnyUser } from "@/lib/dal";
 import { password } from "@/lib/tokens";
+import { createSession } from "@/lib/session";
 
 export type PwState = { error?: string; ok?: boolean } | undefined;
 
@@ -15,8 +16,19 @@ export async function changePassword(_: PwState, fd: FormData): Promise<PwState>
   if (!next.success) return { error: next.error.issues[0].message };
   const row = await db.user.findUniqueOrThrow({ where: { id: user.id }, select: { passwordHash: true } });
   if (!(await bcrypt.compare(String(fd.get("current") ?? ""), row.passwordHash))) return { error: "La contraseña actual no es correcta" };
-  await db.user.update({ where: { id: user.id }, data: { passwordHash: await bcrypt.hash(next.data, 12) } });
+  // Cierra las demás sesiones (otro celular, un computador del consultorio) y deja abierta solo esta.
+  const u = await db.user.update({ where: { id: user.id }, data: { passwordHash: await bcrypt.hash(next.data, 12), sessionVersion: { increment: 1 } }, select: { sessionVersion: true } });
+  await createSession({ userId: user.id, clinicId: user.clinicId, role: user.role, sv: u.sessionVersion });
   await db.auditLog.create({ data: { userId: user.id, action: "PASSWORD_CHANGE", entity: "User", entityId: user.id } });
+  return { ok: true };
+}
+
+// Para un celular perdido o una sesión olvidada en otro computador: saca todas las sesiones menos esta.
+export async function endOtherSessions(): Promise<PwState> {
+  const user = await requireAnyUser();
+  const u = await db.user.update({ where: { id: user.id }, data: { sessionVersion: { increment: 1 } }, select: { sessionVersion: true } });
+  await createSession({ userId: user.id, clinicId: user.clinicId, role: user.role, sv: u.sessionVersion });
+  await db.auditLog.create({ data: { userId: user.id, action: "SESSIONS_END_OTHERS", entity: "User", entityId: user.id } });
   return { ok: true };
 }
 

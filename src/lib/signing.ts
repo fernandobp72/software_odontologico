@@ -12,6 +12,7 @@ import type { AuthenticationResponseJSON, RegistrationResponseJSON } from "@simp
 import { db } from "./db";
 import { appOrigin } from "./mail-links";
 import { deviceLabel } from "./device";
+import { clientIp } from "@/lib/client-ip";
 
 // Sello digital del profesional. Funciona como un sello físico: puede tener varios (celular, computador, llave USB, clave),
 // se reporta si se pierde y el administrador autoriza uno nuevo. Cada firma guarda la prueba criptográfica del dispositivo
@@ -45,7 +46,7 @@ async function rp() {
 
 export async function requestEvidence() {
   const h = await headers();
-  const ip = (h.get("x-forwarded-for") ?? "").split(",")[0].trim() || null;
+  const ip = await clientIp();
   return { ip, agent: h.get("user-agent")?.slice(0, 300) ?? null };
 }
 

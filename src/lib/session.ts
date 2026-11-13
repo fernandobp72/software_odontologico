@@ -9,7 +9,13 @@ export type SessionPayload = {
   userId: string;
   clinicId: string;
   role: "ADMIN" | "DENTIST" | "RECEPTION";
+  // Versión de sesión del usuario al ingresar. Si en la base es otra (cambió la contraseña, cerró las demás sesiones), el token ya no sirve.
+  // Los tokens emitidos antes de este campo no la traen y cuentan como 0.
+  sv: number;
 };
+
+// ¿Sigue vigente esta sesión para el usuario tal como está hoy en la base?
+export const sessionCurrent = (session: SessionPayload, user: { sessionVersion: number }) => (session.sv ?? 0) === user.sessionVersion;
 
 function key() {
   const secret = process.env.SESSION_SECRET;

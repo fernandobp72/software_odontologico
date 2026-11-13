@@ -22,16 +22,19 @@ export default async function PacientePage({ params, searchParams }: PageProps<"
   if (!p) notFound();
 
   const canEdit = canWriteClinical(user);
+  // Recepción no es equipo de salud: ve datos, citas y cuenta, pero no la historia clínica (Res. 1995 de 1999, art. 14).
+  const canReadClinical = user.role !== "RECEPTION";
+  const clin = <T,>(q: () => Promise<T>, empty: T) => (canReadClinical ? q() : Promise.resolve(empty));
   const now = new Date();
   const [allFindings, evolutions, openItemsRaw, initialSnap, activeDx, appts] = await Promise.all([
-    db.toothFinding.findMany({ where: { patientId: p.id }, orderBy: { createdAt: "asc" }, include: { author: { select: { name: true } } } }),
-    db.evolution.findMany({
+    clin(() => db.toothFinding.findMany({ where: { patientId: p.id }, orderBy: { createdAt: "asc" }, include: { author: { select: { name: true } } } }), []),
+    clin(() => db.evolution.findMany({
       where: { patientId: p.id }, orderBy: { signedAt: "desc" }, take: 50,
       include: { dentist: { select: { name: true } }, corrects: { select: { signedAt: true, dentist: { select: { name: true } } } }, corrections: { select: { signedAt: true, dentist: { select: { name: true } } }, orderBy: { signedAt: "asc" } } },
-    }),
-    db.treatmentItem.findMany({ where: { status: { in: ["PLANNED", "IN_PROGRESS"] }, plan: { patientId: p.id, status: { in: ["DRAFT", "PRESENTED", "ACCEPTED", "IN_PROGRESS"] } } }, orderBy: [{ phase: "asc" }, { createdAt: "asc" }] }),
-    db.odontogramSnapshot.findUnique({ where: { patientId_kind: { patientId: p.id, kind: "INITIAL" } } }),
-    db.diagnosis.findMany({ where: { patientId: p.id, status: "ACTIVE" }, select: { code: true, tooth: true } }),
+    }), []),
+    clin(() => db.treatmentItem.findMany({ where: { status: { in: ["PLANNED", "IN_PROGRESS"] }, plan: { patientId: p.id, status: { in: ["DRAFT", "PRESENTED", "ACCEPTED", "IN_PROGRESS"] } } }, orderBy: [{ phase: "asc" }, { createdAt: "asc" }] }), []),
+    clin(() => db.odontogramSnapshot.findUnique({ where: { patientId_kind: { patientId: p.id, kind: "INITIAL" } } }), null),
+    clin(() => db.diagnosis.findMany({ where: { patientId: p.id, status: "ACTIVE" }, select: { code: true, tooth: true } }), []),
     db.appointment.findMany({ where: { patientId: p.id, clinicId: user.clinicId }, orderBy: { startsAt: "desc" }, include: { dentist: { select: { name: true } }, branch: { select: { name: true } } }, take: 200 }),
   ]);
   // Citas del paciente: la próxima, el historial y cuántas veces no asistió o canceló.
@@ -140,6 +143,8 @@ export default async function PacientePage({ params, searchParams }: PageProps<"
           <div className="hidden space-y-3 lg:block">{dataPanel}</div>
         </aside>
         <div className="min-w-0 space-y-6 lg:col-span-2">
+          {!canReadClinical && <p className="card text-center text-slate-700">Sin acceso a la historia clínica.</p>}
+          {canReadClinical && <>
           <Odontogram patientId={p.id} findings={findings} canEdit={canEdit} initial={initialSnap ? (initialSnap.data as unknown as { tooth: number; surface: string | null; condition: ConditionKey }[]) : null} planned={pending} />
           {findingLog.length > 0 && (
             <details className="card">
@@ -174,6 +179,7 @@ export default async function PacientePage({ params, searchParams }: PageProps<"
             ))}
             {evolutions.length === 0 && <p className="card text-center text-slate-700">Sin evoluciones</p>}
           </section>
+          </>}
         </div>
       </div>
     </div>

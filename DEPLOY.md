@@ -5,6 +5,7 @@
 3. Variables de entorno de la aplicación (runtime):
    - `DATABASE_URL` = la Internal URL del paso 1
    - `SESSION_SECRET` = `openssl rand -base64 32`
+   - `TRUSTED_PROXY_HOPS` (opcional, por defecto 1): cuántos proxies hay delante de la app. Con Coolify solo (Traefik) se deja en 1. Si pones Cloudflare u otra CDN delante, súbelo a 2; si no, la app tomará la IP de la CDN como si fuera la del visitante (límite de intentos y evidencia de firmas).
 4. Dominio: asigna uno con HTTPS (Coolify genera el certificado). La sesión usa cookie `secure` en producción, así que el sitio debe servirse por HTTPS.
 5. Deploy. Las migraciones se aplican solas al arrancar.
 6. Primer usuario (una sola vez), desde la terminal de la app en Coolify:

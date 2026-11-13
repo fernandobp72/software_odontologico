@@ -2,7 +2,7 @@ import "server-only";
 import { cache } from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { readSession } from "./session";
+import { readSession, sessionCurrent } from "./session";
 import { db } from "./db";
 
 // Verificación real de sesión (el proxy solo hace una comprobación optimista).
@@ -12,9 +12,9 @@ export const requireAnyUser = cache(async () => {
   if (!session) redirect("/api/sesion/cerrar");
   const user = await db.user.findUnique({
     where: { id: session.userId },
-    select: { id: true, name: true, email: true, role: true, clinicId: true, active: true, isPlatformAdmin: true, licenseNumber: true, clinic: { select: { id: true, name: true, status: true, trialEndsAt: true, system: true, noun: true, logoUpdatedAt: true, appIconUpdatedAt: true, iconColor: true, requireSello: true } } },
+    select: { id: true, name: true, email: true, role: true, clinicId: true, active: true, sessionVersion: true, isPlatformAdmin: true, licenseNumber: true, clinic: { select: { id: true, name: true, status: true, trialEndsAt: true, system: true, noun: true, logoUpdatedAt: true, appIconUpdatedAt: true, iconColor: true, requireSello: true } } },
   });
-  if (!user || !user.active) redirect("/api/sesion/cerrar");
+  if (!user || !user.active || !sessionCurrent(session, user)) redirect("/api/sesion/cerrar");
   // Un consultorio suspendido no puede usar el sistema (los datos se conservan).
   if (user.clinic.status === "SUSPENDED") redirect("/suspendida");
   return user;
@@ -49,8 +49,8 @@ export async function requireClinicalAuthor() {
 export async function currentUser() {
   const session = await readSession();
   if (!session) return null;
-  const user = await db.user.findUnique({ where: { id: session.userId }, select: { id: true, name: true, role: true, clinicId: true, active: true } });
-  return user?.active ? user : null;
+  const user = await db.user.findUnique({ where: { id: session.userId }, select: { id: true, name: true, role: true, clinicId: true, active: true, sessionVersion: true } });
+  return user?.active && sessionCurrent(session, user) ? user : null;
 }
 
 export async function requirePlatformAdmin() {

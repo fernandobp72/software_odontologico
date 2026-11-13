@@ -1,13 +1,13 @@
 "use server";
 
 import bcrypt from "bcryptjs";
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { createSession } from "@/lib/session";
 import { isBlocked, recordFailure } from "@/lib/rate-limit";
 import { TERMS_VERSION, password } from "@/lib/tokens";
+import { clientIp } from "@/lib/client-ip";
 
 // Devuelve lo escrito (menos la contraseña) para que un error no borre el formulario.
 export type SignupState = { error?: string; values?: Record<string, string> } | undefined;
@@ -25,7 +25,7 @@ const schema = z.object({
 export async function signup(_: SignupState, fd: FormData): Promise<SignupState> {
   const values = Object.fromEntries(["noun", "clinicName", "nit", "name", "email"].map((k) => [k, String(fd.get(k) ?? "")]));
   if (process.env.ALLOW_SIGNUP === "false") return { error: "El registro está cerrado por ahora", values };
-  const ip = (await headers()).get("x-forwarded-for")?.split(",")[0].trim() ?? "local";
+  const ip = (await clientIp()) ?? "local";
   const key = `signup:${ip}`;
   if (isBlocked(key)) return { error: "Demasiados intentos. Espera unos minutos.", values };
   recordFailure(key); // cuenta cada intento para frenar registros masivos
@@ -46,6 +46,6 @@ export async function signup(_: SignupState, fd: FormData): Promise<SignupState>
     return admin;
   });
   await db.auditLog.create({ data: { userId: user.id, action: "SIGNUP", entity: "Clinic", entityId: user.clinicId } });
-  await createSession({ userId: user.id, clinicId: user.clinicId, role: user.role });
+  await createSession({ userId: user.id, clinicId: user.clinicId, role: user.role, sv: user.sessionVersion });
   redirect("/inicio");
 }
