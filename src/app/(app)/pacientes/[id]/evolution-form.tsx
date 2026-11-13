@@ -8,13 +8,19 @@ import { buildEvolutionText, replaceBlock, type DoneItem } from "@/lib/evolution
 import { prepareEvolutionSign, signEvolution, type EvolutionState } from "./actions";
 import { useSello } from "../../sello-client";
 import VoiceButton from "./voice-button";
+import { addPhrase, removePhrase } from "./phrase-actions";
+
+export type Phrase = { id: string; label: string; text: string };
 
 type AttendingAppointment = { id: string; time: string; reason: string | null };
 
 // Con «appointment» (cita de hoy o la que llega desde «Atender»), la evolución se liga a la cita: el motivo viene precargado
 // y al firmar la cita queda como atendida.
-export default function EvolutionForm({ patientId, openItems = [], appointment = null }: { patientId: string; openItems?: DoneItem[]; appointment?: AttendingAppointment | null }) {
+export default function EvolutionForm({ patientId, openItems = [], appointment = null, phrases = [] }: { patientId: string; openItems?: DoneItem[]; appointment?: AttendingAppointment | null; phrases?: Phrase[] }) {
   const [note, setNote] = useState("");
+  const [reason, setReason] = useState(appointment?.reason ?? "");
+  const [phraseMsg, setPhraseMsg] = useState<string>();
+  const [phraseLabel, setPhraseLabel] = useState("");
   const [checked, setChecked] = useState<string[]>([]);
   const [dx, setDx] = useState("");
   const [proc, setProc] = useState("");
@@ -32,6 +38,7 @@ export default function EvolutionForm({ patientId, openItems = [], appointment =
     const res = await signEvolution(prev, fd);
     if (res?.ok) {
       setNote("");
+      setReason("");
       setChecked([]);
       setDx("");
       setProc("");
@@ -44,9 +51,19 @@ export default function EvolutionForm({ patientId, openItems = [], appointment =
   const draftKey = `evolucion-${patientId}`;
 
   useEffect(() => {
-    // Recupera el borrador guardado en este dispositivo.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    try { setNote(localStorage.getItem(draftKey) ?? ""); } catch {}
+    // Recupera el borrador guardado en este dispositivo: nota, motivo y códigos (los borradores viejos solo traían la nota).
+    try {
+      const raw = localStorage.getItem(draftKey);
+      if (!raw) return;
+      let d: { note?: string; reason?: string; dx?: string; proc?: string } = { note: raw };
+      try { const j = JSON.parse(raw); if (j && typeof j === "object") d = j; } catch {}
+      /* eslint-disable react-hooks/set-state-in-effect */
+      if (d.note) setNote(d.note);
+      if (d.reason) setReason(d.reason);
+      if (d.dx) setDx(d.dx);
+      if (d.proc) setProc(d.proc);
+      /* eslint-enable react-hooks/set-state-in-effect */
+    } catch {}
   }, [draftKey]);
 
   useEffect(() => {
@@ -68,8 +85,18 @@ export default function EvolutionForm({ patientId, openItems = [], appointment =
   }
 
   useEffect(() => {
-    try { if (note) localStorage.setItem(draftKey, note); else localStorage.removeItem(draftKey); } catch {}
-  }, [note, draftKey]);
+    try {
+      if (note || dx || proc || (reason && reason !== (appointment?.reason ?? ""))) localStorage.setItem(draftKey, JSON.stringify({ note, reason, dx, proc }));
+      else localStorage.removeItem(draftKey);
+    } catch {}
+  }, [note, reason, dx, proc, draftKey, appointment?.reason]);
+
+  async function savePhrase() {
+    setPhraseMsg(undefined);
+    const r = await addPhrase(phraseLabel, note);
+    setPhraseMsg(r.error ?? "Frase guardada");
+    if (!r.error) setPhraseLabel("");
+  }
 
   // Al marcar lo realizado hoy, la nota y los códigos se completan solos (y se pueden editar).
   function toggleItem(id: string) {
@@ -103,7 +130,7 @@ export default function EvolutionForm({ patientId, openItems = [], appointment =
           <p className="rounded-lg border border-teal-700 bg-teal-50 px-3 py-2 text-sm text-slate-900">Atendiendo la cita del <strong>{appointment.time}</strong> · Al firmar, la cita queda como atendida.</p>
         </>
       )}
-      <label className="label">Motivo de consulta<input key={state?.ok ? "limpio" : "cita"} name="reason" defaultValue={state?.ok ? "" : appointment?.reason ?? ""} className="field" /></label>
+      <label className="label">Motivo de consulta<input name="reason" value={reason} onChange={(e) => setReason(e.target.value)} className="field" /></label>
       {openItems.length > 0 && (
         <fieldset>
           <legend className="label">Procedimientos del plan realizados hoy</legend>
@@ -137,12 +164,30 @@ export default function EvolutionForm({ patientId, openItems = [], appointment =
         <p className="muted">Al dictar di «coma», «punto», «punto y aparte», «dos puntos» o «nueva línea». Para borrar lo último que dictaste di «deshacer».</p>
         <textarea id="note" name="note" rows={5} value={note} onChange={(e) => setNote(e.target.value)} className="field" />
         <div className="mt-2 flex flex-wrap gap-2">
-          {NOTE_TEMPLATES.map((t) => (
-            <button key={t} type="button" onClick={() => setNote((cur) => (cur ? cur + " " : "") + t)} className="min-h-9 rounded-full border border-slate-500 bg-white px-3 py-1 text-sm text-slate-900 hover:bg-slate-100">
-              {t.split(" ").slice(0, 4).join(" ")}…
+          {[...phrases, ...NOTE_TEMPLATES.map((t) => ({ id: t.label, ...t }))].map((t) => (
+            <button key={t.id} type="button" title={t.text} onClick={() => setNote((cur) => (cur ? cur + " " : "") + t.text)} className={`min-h-9 rounded-full border px-3 py-1 text-sm text-slate-900 hover:bg-slate-100 ${phrases.some((p) => p.id === t.id) ? "border-teal-700 bg-teal-50" : "border-slate-500 bg-white"}`}>
+              {t.label}
             </button>
           ))}
         </div>
+        <details className="mt-2">
+          <summary className="cursor-pointer text-sm font-semibold text-teal-800">Mis frases frecuentes</summary>
+          <div className="mt-2 space-y-2">
+            <p className="muted">Escribe la frase en la nota, ponle un nombre corto y guárdala. Solo tú la ves.</p>
+            <div className="flex flex-wrap gap-2">
+              <input value={phraseLabel} onChange={(e) => setPhraseLabel(e.target.value)} maxLength={40} placeholder="Nombre corto, ej.: Endodoncia 1.ª cita" aria-label="Nombre de la frase" className="field mt-0 min-w-48 flex-1" />
+              <button type="button" onClick={savePhrase} disabled={!note.trim() || phraseLabel.trim().length < 2} className="btn-secondary">Guardar la nota como frase</button>
+            </div>
+            {phraseMsg && <p role="status" className="text-sm font-semibold text-slate-800">{phraseMsg}</p>}
+            {phrases.length > 0 && (
+              <ul className="space-y-1">
+                {phrases.map((p) => (
+                  <li key={p.id} className="flex items-center justify-between gap-2 text-sm"><span><strong>{p.label}</strong> · {p.text.slice(0, 80)}{p.text.length > 80 ? "…" : ""}</span><button type="button" onClick={() => removePhrase(p.id)} className="text-sm font-semibold text-red-700 underline">Quitar</button></li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </details>
       </div>
 
       {state?.error && <p role="alert" className="error-text">{state.error}</p>}

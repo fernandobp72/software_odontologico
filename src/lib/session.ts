@@ -53,3 +53,23 @@ export async function readSession(): Promise<SessionPayload | null> {
 export async function destroySession() {
   (await cookies()).delete(COOKIE);
 }
+
+// Paso intermedio de la verificación en dos pasos: la contraseña ya se comprobó y falta el código (5 minutos).
+const MFA_COOKIE = "mfa";
+export async function createMfaPending(userId: string, sv: number) {
+  const token = await new SignJWT({ uid: userId, sv, k: "mfa" }).setProtectedHeader({ alg: "HS256" }).setIssuedAt().setExpirationTime("300s").sign(key());
+  (await cookies()).set(MFA_COOKIE, token, { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/", maxAge: 300 });
+}
+export async function readMfaPending(): Promise<{ uid: string; sv: number } | null> {
+  const token = (await cookies()).get(MFA_COOKIE)?.value;
+  if (!token) return null;
+  try {
+    const { payload } = await jwtVerify(token, key(), { algorithms: ["HS256"] });
+    return payload.k === "mfa" && typeof payload.uid === "string" ? { uid: payload.uid, sv: Number(payload.sv ?? 0) } : null;
+  } catch {
+    return null;
+  }
+}
+export async function clearMfaPending() {
+  (await cookies()).delete(MFA_COOKIE);
+}

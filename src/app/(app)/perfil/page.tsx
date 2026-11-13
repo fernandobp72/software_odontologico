@@ -2,12 +2,13 @@ import { requireAnyUser } from "@/lib/dal";
 import { nounOf } from "@/lib/noun";
 import PasswordForm, { EmailForm, OtherSessionsForm, ProfileForm } from "./form";
 import { db } from "@/lib/db";
+import TwoFactor from "./two-factor";
 
 const ROLE: Record<string, string> = { ADMIN: "Administrador", DENTIST: "Odontólogo", RECEPTION: "Recepción" };
 
 export default async function PerfilPage() {
   const user = await requireAnyUser();
-  const me = await db.user.findUniqueOrThrow({ where: { id: user.id }, select: { licenseNumber: true, phone: true, email: true } });
+  const me = await db.user.findUniqueOrThrow({ where: { id: user.id }, select: { licenseNumber: true, phone: true, email: true, totpEnabledAt: true } });
   return (
     <div className="space-y-4">
       <h1 className="page-title">Mi cuenta</h1>
@@ -25,6 +26,7 @@ export default async function PerfilPage() {
         </a>
       )}
       <PasswordForm />
+      <TwoFactor enabled={!!me.totpEnabledAt} since={me.totpEnabledAt ? new Intl.DateTimeFormat("es-CO", { dateStyle: "medium", timeZone: "America/Bogota" }).format(me.totpEnabledAt) : null} />
       <OtherSessionsForm />
     </div>
   );

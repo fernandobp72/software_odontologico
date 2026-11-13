@@ -127,11 +127,12 @@ export const PHASES = [
   { n: 4, label: "Mantenimiento" },
 ] as const;
 
+// Frases rápidas para la nota, con un nombre corto visible en el botón.
 export const NOTE_TEMPLATES = [
-  "Se realiza anestesia infiltrativa, aislamiento y procedimiento sin complicaciones.",
-  "Paciente tolera bien el procedimiento. Se dan indicaciones postoperatorias.",
-  "Se realiza profilaxis y control de placa. Se refuerza técnica de cepillado.",
-  "Se prescribe analgésico y se cita a control.",
+  { label: "Anestesia y aislamiento", text: "Se realiza anestesia infiltrativa, aislamiento y procedimiento sin complicaciones." },
+  { label: "Tolera bien, indicaciones", text: "Paciente tolera bien el procedimiento. Se dan indicaciones postoperatorias." },
+  { label: "Profilaxis y cepillado", text: "Se realiza profilaxis y control de placa. Se refuerza técnica de cepillado." },
+  { label: "Analgésico y control", text: "Se prescribe analgésico y se cita a control." },
 ];
 
 // Cada estado combina color + abreviatura para no depender solo del color.

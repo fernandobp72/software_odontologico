@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
-import { canWriteClinical, requireUser } from "@/lib/dal";
+import { canWriteClinical, logClinicalRead, requireUser } from "@/lib/dal";
 import Link from "next/link";
 import PatientTabs from "./tabs";
 import DocLink from "@/app/doc-link";
@@ -11,6 +11,7 @@ export default async function PatientLayout({ children, params }: LayoutProps<"/
   const { id } = await params;
   const p = await db.patient.findFirst({ where: { id, clinicId: user.clinicId }, select: { firstName: true, lastName: true, documentType: true, documentNumber: true, birthDate: true, dataConsentAt: true } });
   if (!p) notFound();
+  if (user.role !== "RECEPTION") await logClinicalRead(user.id, id);
   return (
     <div className="space-y-4">
       <div className="flex items-start justify-between gap-3">

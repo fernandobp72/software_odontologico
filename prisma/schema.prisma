@@ -131,6 +131,10 @@ model User {
   lastLoginAt         DateTime?
   // Sube al cambiar o restablecer la contraseña, o al cerrar las demás sesiones: invalida las sesiones abiertas antes.
   sessionVersion      Int                  @default(0)
+  // Verificación en dos pasos (código de 6 dígitos de una app autenticadora). El secreto se guarda cifrado.
+  totpSecret          String?
+  totpEnabledAt       DateTime?
+  totpLastStep        Int? // último paso de 30 s usado: el mismo código no sirve dos veces
   createdAt           DateTime             @default(now())
   appointments        Appointment[]
   evolutions          Evolution[]
@@ -304,6 +308,9 @@ model Appointment {
   endsAt       DateTime
   reason       String?
   status       AppointmentStatus @default(SCHEDULED)
+  // Quién canceló (PATIENT o CLINIC) y por qué: para saber luego si la canceló el paciente o el consultorio.
+  cancelledBy  String?
+  cancelReason String?
   confirmToken String?           @unique
   branchId     String
   branch       Branch            @relation(fields: [branchId], references: [id])
@@ -1243,4 +1250,25 @@ model PayRunLine {
 
   @@index([payRunId])
   @@index([employeeId])
+}
+
+// Frases frecuentes propias de cada profesional para la nota de evolución (con un nombre corto visible en el botón).
+model NotePhrase {
+  id        String   @id @default(cuid())
+  userId    String
+  label     String
+  text      String
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+// Intentos fallidos (ingreso, olvido de contraseña, registro, formularios públicos) para frenar ataques de fuerza bruta.
+// En la base y no en memoria: funciona igual con varias réplicas y sobrevive a un reinicio.
+model RateHit {
+  id  String   @id @default(cuid())
+  key String
+  at  DateTime @default(now())
+
+  @@index([key, at])
 }

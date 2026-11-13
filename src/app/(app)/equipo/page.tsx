@@ -5,7 +5,7 @@ import { mailConfigured } from "@/lib/mailer";
 import { ROLE_LABEL } from "@/lib/roles";
 import { InviteForm, ResetButton } from "./forms";
 import { adminRevoke, authorizeNewSeal, setRequireSello } from "./sello-actions";
-import { revokeInvitation, setActive, setRole, setUserBranches, updatePerson } from "./actions";
+import { resetTwoFactor, revokeInvitation, setActive, setRole, setUserBranches, updatePerson } from "./actions";
 import ConfirmButton from "@/app/confirm-button";
 
 export default async function EquipoPage() {
@@ -120,6 +120,12 @@ export default async function EquipoPage() {
                   </div>
                 );
               })()}
+              <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-slate-900">
+                <span>Verificación en dos pasos: <strong>{u.totpEnabledAt ? "activa" : "no la usa"}</strong></span>
+                {u.totpEnabledAt && u.id !== user.id && (
+                  <form action={resetTwoFactor.bind(null, u.id)}><ConfirmButton className="btn-secondary min-h-9" confirmLabel="Sí, quitarla">Quitarla (celular perdido)</ConfirmButton></form>
+                )}
+              </div>
               <ResetButton userId={u.id} mailReady={mailReady} />
             </li>
           ))}

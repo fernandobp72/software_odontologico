@@ -4,7 +4,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { mailConfigured } from "@/lib/mailer";
 import { sendResetEmail } from "@/lib/mail-links";
-import { isBlocked, recordFailure } from "@/lib/rate-limit";
+import { anyBlocked, recordFailure } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/client-ip";
 
 export type ForgotState = { error?: string; sent?: boolean; email?: string } | undefined;
@@ -16,8 +16,8 @@ export async function requestReset(_: ForgotState, fd: FormData): Promise<Forgot
   if (!parsed.success) return { error: parsed.error.issues[0].message, email: typed };
   const ip = (await clientIp()) ?? "local";
   const keys = [`forgot:ip:${ip}`, `forgot:${parsed.data}`];
-  if (keys.some(isBlocked)) return { error: "Demasiadas solicitudes. Espera unos minutos.", email: typed };
-  keys.forEach(recordFailure);
+  if (await anyBlocked(keys)) return { error: "Demasiadas solicitudes. Espera unos minutos.", email: typed };
+  await Promise.all(keys.map(recordFailure));
   if (!(await mailConfigured())) return { error: "El envío de correos aún no está activado. Pide al administrador de tu cuenta un enlace para restablecerla.", email: typed };
 
   const user = await db.user.findUnique({ where: { email: parsed.data }, select: { id: true, name: true, email: true, active: true, clinic: { select: { status: true } } } });

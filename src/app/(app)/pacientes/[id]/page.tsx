@@ -17,7 +17,10 @@ import { STATUS } from "../../agenda/status";
 export default async function PacientePage({ params, searchParams }: PageProps<"/pacientes/[id]">) {
   const user = await requireUser();
   const { id } = await params;
-  const { cita } = await searchParams;
+  const { cita, evoluciones, desde } = await searchParams;
+  // Evoluciones: las 50 más recientes, o todas, o desde una fecha (filtro para tratamientos largos).
+  const allEvos = evoluciones === "todas";
+  const since = typeof desde === "string" && /^\d{4}-\d{2}-\d{2}$/.test(desde) ? new Date(`${desde}T05:00:00Z`) : null;
   const p = await db.patient.findFirst({ where: { id, clinicId: user.clinicId } });
   if (!p) notFound();
 
@@ -26,16 +29,18 @@ export default async function PacientePage({ params, searchParams }: PageProps<"
   const canReadClinical = user.role !== "RECEPTION";
   const clin = <T,>(q: () => Promise<T>, empty: T) => (canReadClinical ? q() : Promise.resolve(empty));
   const now = new Date();
-  const [allFindings, evolutions, openItemsRaw, initialSnap, activeDx, appts] = await Promise.all([
+  const [allFindings, evolutions, openItemsRaw, initialSnap, activeDx, appts, evoCount, phrases] = await Promise.all([
     clin(() => db.toothFinding.findMany({ where: { patientId: p.id }, orderBy: { createdAt: "asc" }, include: { author: { select: { name: true } } } }), []),
     clin(() => db.evolution.findMany({
-      where: { patientId: p.id }, orderBy: { signedAt: "desc" }, take: 50,
+      where: { patientId: p.id, ...(since ? { signedAt: { gte: since } } : {}) }, orderBy: { signedAt: "desc" }, ...(allEvos || since ? {} : { take: 50 }),
       include: { dentist: { select: { name: true } }, corrects: { select: { signedAt: true, dentist: { select: { name: true } } } }, corrections: { select: { signedAt: true, dentist: { select: { name: true } } }, orderBy: { signedAt: "asc" } } },
     }), []),
     clin(() => db.treatmentItem.findMany({ where: { status: { in: ["PLANNED", "IN_PROGRESS"] }, plan: { patientId: p.id, status: { in: ["DRAFT", "PRESENTED", "ACCEPTED", "IN_PROGRESS"] } } }, orderBy: [{ phase: "asc" }, { createdAt: "asc" }] }), []),
     clin(() => db.odontogramSnapshot.findUnique({ where: { patientId_kind: { patientId: p.id, kind: "INITIAL" } } }), null),
     clin(() => db.diagnosis.findMany({ where: { patientId: p.id, status: "ACTIVE" }, select: { code: true, tooth: true } }), []),
     db.appointment.findMany({ where: { patientId: p.id, clinicId: user.clinicId }, orderBy: { startsAt: "desc" }, include: { dentist: { select: { name: true } }, branch: { select: { name: true } } }, take: 200 }),
+    clin(() => db.evolution.count({ where: { patientId: p.id } }), 0),
+    canEdit ? db.notePhrase.findMany({ where: { userId: user.id }, orderBy: { label: "asc" }, select: { id: true, label: true, text: true } }) : Promise.resolve([]),
   ]);
   // Citas del paciente: la próxima, el historial y cuántas veces no asistió o canceló.
   const isOpenAppt = (a: { status: string }) => a.status === "SCHEDULED" || a.status === "CONFIRMED";
@@ -156,9 +161,18 @@ export default async function PacientePage({ params, searchParams }: PageProps<"
               </ul>
             </details>
           )}
-          {canEdit && <EvolutionForm patientId={p.id} openItems={openItems} appointment={attending ? { id: attending.id, time: fmt.format(attending.startsAt), reason: attending.reason } : null} />}
+          {canEdit && <EvolutionForm patientId={p.id} openItems={openItems} appointment={attending ? { id: attending.id, time: fmt.format(attending.startsAt), reason: attending.reason } : null} phrases={phrases} />}
           <section className="space-y-3">
-            <h2 className="section-title">Evoluciones</h2>
+            <div className="flex flex-wrap items-end justify-between gap-2">
+              <h2 className="section-title">Evoluciones{evoCount > evolutions.length ? ` · ${evolutions.length} de ${evoCount}` : ""}</h2>
+              {evoCount > 10 && (
+                <form className="flex flex-wrap items-end gap-2" action={`/pacientes/${p.id}`}>
+                  <label className="label">Desde<input type="date" name="desde" defaultValue={typeof desde === "string" ? desde : ""} className="field mt-1" /></label>
+                  <button className="btn-secondary">Filtrar</button>
+                  {(since || allEvos) && <a href={`/pacientes/${p.id}`} className="btn-secondary">Quitar filtro</a>}
+                </form>
+              )}
+            </div>
             {evolutions.map((e) => (
               <article key={e.id} className="card">
                 <p className="muted">{fmt.format(e.signedAt)} · {e.dentist.name}{e.diagnosisCode ? ` · ${e.diagnosisCode}` : ""}{e.procedureCode ? ` · CUPS ${e.procedureCode}` : ""} · <SealMark seal={e.seal} /></p>
@@ -177,7 +191,8 @@ export default async function PacientePage({ params, searchParams }: PageProps<"
                 {canEdit && !e.corrects && <CorrectionForm patientId={p.id} evolutionId={e.id} author={e.dentist.name} />}
               </article>
             ))}
-            {evolutions.length === 0 && <p className="card text-center text-slate-700">Sin evoluciones</p>}
+            {evolutions.length === 0 && <p className="card text-center text-slate-700">Sin evoluciones{since ? " desde esa fecha" : ""}</p>}
+            {evoCount > evolutions.length && !since && <a href={`/pacientes/${p.id}?evoluciones=todas`} className="btn-secondary w-full text-center">Ver las {evoCount} evoluciones</a>}
           </section>
           </>}
         </div>
