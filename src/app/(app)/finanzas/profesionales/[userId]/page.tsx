@@ -5,6 +5,7 @@ import { requireBranch } from "@/lib/dal";
 import { copFmt } from "@/lib/cartera";
 import { todayStr } from "@/lib/finanzas";
 import { proAccount } from "@/lib/pro-pay-data";
+import { financeSettings } from "@/lib/finanzas-data";
 import { AgreementForm, SettleForm } from "../forms";
 import ProLines from "../lines";
 
@@ -17,10 +18,11 @@ export default async function ProfesionalPage({ params }: PageProps<"/finanzas/p
   const pro = await db.user.findFirst({ where: { id: userId, clinicId: user.clinicId }, select: { id: true, name: true, proAgreement: true } });
   if (!pro) notFound();
   const a = pro.proAgreement?.active ? pro.proAgreement : null;
-  const [acc, history, openCash] = await Promise.all([
+  const [acc, history, openCash, settings] = await Promise.all([
     a ? proAccount(user.clinicId, pro.id, a) : null,
     db.proSettlement.findMany({ where: { clinicId: user.clinicId, userId: pro.id }, orderBy: { createdAt: "desc" }, take: 24, select: { id: true, number: true, total: true, retention: true, createdAt: true, voidedAt: true } }),
     db.cashSession.count({ where: { clinicId: user.clinicId, branchId: branch.id, closedAt: null } }),
+    financeSettings(user.clinicId),
   ]);
 
   return (
@@ -46,7 +48,7 @@ export default async function ProfesionalPage({ params }: PageProps<"/finanzas/p
             <h2 className="section-title">Detalle</h2>
             <ProLines lines={acc.lines} />
           </section>
-          <SettleForm userId={pro.id} due={acc.due} today={todayStr()} hasOpenCash={openCash > 0} />
+          <SettleForm userId={pro.id} due={acc.due} today={todayStr()} hasOpenCash={openCash > 0} retRate={settings.retHonorarios} applyRetention={settings.applyRetention} />
         </>
       )}
 

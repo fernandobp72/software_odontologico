@@ -24,3 +24,8 @@ export async function pendingRecurring(clinicId: string, period: string) {
     .filter((r) => !has.has(r.id))
     .map((r) => ({ id: r.id, payee: r.payee.name, category: r.category, amount: r.amount, description: r.description, dueDate: dueInMonth(period, r.dayOfMonth) }));
 }
+
+// Cifras configurables del consultorio (se crean con los valores de referencia la primera vez).
+export async function financeSettings(clinicId: string) {
+  return (await db.financeSettings.findUnique({ where: { clinicId } })) ?? { clinicId, minWage: 1_750_905, transportAid: 249_095, retHonorarios: 11, retServicios: 4, retCompras: 2.5, applyRetention: false, accountantName: null, accountantEmail: null, updatedAt: new Date(0) };
+}

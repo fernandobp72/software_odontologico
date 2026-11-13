@@ -798,6 +798,8 @@ model SupplyLot {
   expiresAt   DateTime?  @db.Date
   receivedAt  DateTime   @default(now())
   createdById String
+  // Costo de compra por unidad (COP), si se registró al ingresar: sirve para saber cuánto vale lo que hay en bodega.
+  unitCost    Int?
 
   @@index([itemId, branchId])
   @@index([clinicId, branchId])
@@ -1141,4 +1143,104 @@ model LabOrderEvent {
   at      DateTime @default(now())
 
   @@index([orderId])
+}
+
+// Cifras que cambian por año o que define el contador: salario mínimo, auxilio de transporte y retenciones sugeridas.
+// Son orientación editable; el software nunca liquida impuestos ni la nómina legal.
+model FinanceSettings {
+  clinicId        String   @id
+  minWage         Int      @default(1750905) // salario mínimo mensual (2026)
+  transportAid    Int      @default(249095) // auxilio de transporte mensual (2026)
+  retHonorarios   Float    @default(11) // % sugerido sobre honorarios de profesionales
+  retServicios    Float    @default(4) // % sugerido sobre servicios
+  retCompras      Float    @default(2.5) // % sugerido sobre compras
+  applyRetention  Boolean  @default(false) // el contador confirmó que la clínica practica retención
+  accountantName  String?
+  accountantEmail String?
+  updatedAt       DateTime @updatedAt
+}
+
+// Ficha laboral de un empleado (auxiliar, recepción, aseo). No reemplaza la nómina legal.
+model Employee {
+  id           String           @id @default(cuid())
+  clinicId     String
+  branchId     String?
+  userId       String? // si también usa el software
+  name         String
+  document     String?
+  position     String
+  contractType String // INDEFINIDO, FIJO, OBRA, APRENDIZ, PRESTACION
+  salary       Int // salario pactado mensual (COP)
+  payEvery     String           @default("QUINCENAL") // QUINCENAL | MENSUAL
+  startDate    DateTime         @db.Date
+  eps          String?
+  pension      String?
+  cesantias    String?
+  arl          String?
+  bank         String?
+  phone        String?
+  note         String?
+  active       Boolean          @default(true)
+  endDate      DateTime?        @db.Date
+  createdAt    DateTime         @default(now())
+  novelties    PayrollNovelty[]
+  payLines     PayRunLine[]
+
+  @@index([clinicId, active])
+}
+
+// Novedad: adelanto, préstamo, horas extra, falta, incapacidad, vacaciones, bono. Suma o resta en el siguiente pago.
+model PayrollNovelty {
+  id          String    @id @default(cuid())
+  clinicId    String
+  employeeId  String
+  employee    Employee  @relation(fields: [employeeId], references: [id])
+  kind        String
+  amount      Int // con signo: positivo suma al pago, negativo resta
+  date        DateTime  @db.Date
+  note        String?
+  payLineId   String? // en qué pago se aplicó
+  createdById String
+  createdAt   DateTime  @default(now())
+  voidedAt    DateTime?
+  voidedById  String?
+
+  @@index([employeeId, payLineId])
+}
+
+// Pago de un periodo (quincena o mes). Cada línea queda como gasto «Empleados y seguridad social».
+model PayRun {
+  id          String       @id @default(cuid())
+  clinicId    String
+  number      Int
+  label       String // «1.ª quincena de noviembre de 2026»
+  periodKey   String // 2026-11-Q1, 2026-11-Q2 o 2026-11-M
+  total       Int
+  createdById String
+  createdAt   DateTime     @default(now())
+  voidedAt    DateTime?
+  voidedById  String?
+  voidReason  String?
+  lines       PayRunLine[]
+
+  @@unique([clinicId, number])
+  @@index([clinicId, periodKey])
+}
+
+model PayRunLine {
+  id         String   @id @default(cuid())
+  payRunId   String
+  payRun     PayRun   @relation(fields: [payRunId], references: [id])
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id])
+  base       Int
+  transport  Int      @default(0)
+  additions  Int      @default(0)
+  deductions Int      @default(0)
+  total      Int
+  expenseId  String?
+  detail     Json? // cómo se armó: novedades y aportes sugeridos
+
+  @@index([payRunId])
+  @@index([employeeId])
 }

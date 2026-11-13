@@ -33,7 +33,7 @@ export function AgreementForm({ userId, name, percent, deductLab, note }: { user
   );
 }
 
-export function SettleForm({ userId, due, today, hasOpenCash }: { userId: string; due: number; today: string; hasOpenCash: boolean }) {
+export function SettleForm({ userId, due, today, hasOpenCash, retRate = SUGGESTED_RETENTION * 100, applyRetention = false }: { userId: string; due: number; today: string; hasOpenCash: boolean; retRate?: number; applyRetention?: boolean }) {
   const [state, action, pending] = useActionState<ProState, FormData>(settlePro.bind(null, userId), undefined);
   const [adj, setAdj] = useState<{ amount: string; note: string }[]>([]);
   const adjTotal = adj.reduce((s, a) => s + (Number(a.amount) || 0), 0);
@@ -79,9 +79,9 @@ export function SettleForm({ userId, due, today, hasOpenCash }: { userId: string
       </div>
       <label className="label">Retención (opcional)
         <input name="retention" type="number" min={0} step={1} value={retention} onChange={(e) => setRetention(e.target.value)} inputMode="numeric" className="field" />
-        <button type="button" onClick={() => setRetention(String(Math.round(total * SUGGESTED_RETENTION)))} className="mt-1 text-sm font-semibold text-teal-800 underline">Sugerir {Math.round(SUGGESTED_RETENTION * 100)} %</button>
+        <button type="button" onClick={() => setRetention(String(Math.round((total * retRate) / 100)))} className="mt-1 text-sm font-semibold text-teal-800 underline">Sugerir {retRate.toLocaleString("es-CO")} %</button>
       </label>
-      <p className="muted">Este pago podría llevar retención; revísalo con tu contador. Antes de pagar, pide la planilla de seguridad social del profesional.</p>
+      <p className="muted">{applyRetention ? "Tu contador confirmó que el consultorio practica retención: revisa el valor sugerido." : "Este pago podría llevar retención; revísalo con tu contador."} Antes de pagar, pide la planilla de seguridad social del profesional.</p>
 
       <PayChoice today={today} hasOpenCash={hasOpenCash} />
 

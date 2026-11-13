@@ -41,6 +41,7 @@ export function ReceiveForm({ itemId, unit, perishable, pack }: { itemId: string
       <QtyField unit={unit} pack={pack} />
       <label className="label">{perishable ? "Vence" : "Vence (opcional)"}<input name="expiresAt" type="date" required={perishable} className="field" /></label>
       <label className="label">Lote (opcional)<input name="lotCode" maxLength={40} className="field" /></label>
+      <label className="label">Costo total de la compra (opcional)<input name="cost" type="number" min={0} step={1} inputMode="numeric" className="field" placeholder="Para saber cuánto vale lo que hay" /></label>
       <Msg s={state} />
       <button disabled={pending} className="btn-primary min-h-11">{pending ? "Guardando…" : "Registrar ingreso"}</button>
     </form>

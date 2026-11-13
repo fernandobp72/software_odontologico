@@ -187,6 +187,7 @@ export async function voidExpense(expenseId: string, _: PayState, fd: FormData):
   const e = await db.expense.findFirst({ where: { id: expenseId, clinicId: user.clinicId, voidedAt: null }, include: { payments: true } });
   if (!e) return { error: "Gasto no encontrado o ya anulado" };
   if (await closedCashIn(e.payments)) return { error: "Se pagó con el efectivo de una caja que ya se cerró. Registra la corrección como un gasto nuevo o habla con tu contador." };
+  if (await db.payRunLine.count({ where: { expenseId: e.id, payRun: { voidedAt: null } } })) return { error: "Este gasto es parte de un pago a empleados. Anúlalo desde Empleados para que las novedades vuelvan a quedar pendientes." };
   const now = new Date();
   await db.$transaction([
     db.expensePayment.updateMany({ where: { expenseId: e.id, voidedAt: null }, data: { voidedAt: now, voidedById: user.id, voidReason: "Gasto anulado" } }),
