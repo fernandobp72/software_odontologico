@@ -35,7 +35,10 @@ export default async function PacientesPage({ searchParams }: PageProps<"/pacien
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
         <h1 className="page-title">Pacientes</h1>
-        <Link href="/pacientes/nuevo" className="btn-primary">Nuevo paciente</Link>
+        <span className="flex flex-wrap gap-2">
+          {user.role === "ADMIN" && <a href="/api/exportar?tipo=pacientes" className="btn-secondary">Descargar en Excel</a>}
+          <Link href="/pacientes/nuevo" className="btn-primary">Nuevo paciente</Link>
+        </span>
       </div>
       <form>
         <input name="q" defaultValue={term} placeholder="Buscar por nombre, documento o celular" aria-label="Buscar paciente" className="field md:max-w-md" />

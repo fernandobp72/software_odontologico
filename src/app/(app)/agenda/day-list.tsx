@@ -2,13 +2,13 @@ import Link from "next/link";
 import { normalizePhone, reminderParams, reminderText } from "@/lib/whatsapp";
 import { hhmm } from "@/lib/calendar";
 import SendButton from "../recordatorios/send-button";
-import RescheduleButton from "./item-actions";
+import RescheduleButton, { CancelButton, ReopenButton } from "./item-actions";
 import { setStatus } from "./actions";
 import { STATUS } from "./status";
 import ConfirmButton from "@/app/confirm-button";
 
 export type DayAppointment = {
-  id: string; patientId: string; startsAt: Date; endsAt: Date; reason: string | null; status: string;
+  id: string; patientId: string; startsAt: Date; endsAt: Date; reason: string | null; status: string; cancelledBy?: string | null; cancelReason?: string | null;
   patient: { firstName: string; lastName: string; phone: string | null; whatsappOptInAt: Date | null };
   dentist: { name: string };
   clinic: { name: string }; branch: { name: string };
@@ -41,13 +41,15 @@ export default function DayList({ items, showPro, now, canAttend = false }: { it
             {showPro && <p className="muted">Con {a.dentist.name}</p>}
             {a.patient.phone && <p className="muted">{a.patient.phone}</p>}
             {a.reason && <p className="muted">{a.reason}</p>}
+            {a.status === "CANCELLED" && a.cancelledBy && <p className="text-sm font-semibold text-red-800">Canceló {a.cancelledBy === "CLINIC" ? "el consultorio" : "el paciente"}{a.cancelReason ? `: ${a.cancelReason}` : ""}</p>}
             <div className="mt-3 flex flex-wrap gap-2">
               {/* Atender: abre la ficha con la evolución ligada a esta cita; al firmarla, la cita queda atendida. */}
               {canAttend && open && <Link href={`/pacientes/${a.patientId}?cita=${a.id}`} className="btn-primary">Atender</Link>}
               {a.status !== "CONFIRMED" && open && <form action={setStatus.bind(null, a.id, "CONFIRMED")}><button className="btn-secondary">Confirmar</button></form>}
               {a.status !== "ATTENDED" && <form action={setStatus.bind(null, a.id, "ATTENDED")}><ConfirmButton className="btn-secondary" confirmClassName="btn-primary" confirmLabel="Sí, marcar atendida">Atendida</ConfirmButton></form>}
               {overdue && <form action={setStatus.bind(null, a.id, "NO_SHOW")}><ConfirmButton className="btn-secondary" confirmLabel="Sí, no asistió">No asistió</ConfirmButton></form>}
-              {a.status !== "CANCELLED" && a.status !== "ATTENDED" && <form action={setStatus.bind(null, a.id, "CANCELLED")}><ConfirmButton confirmLabel="Sí, cancelar cita">Cancelar</ConfirmButton></form>}
+              {open && <CancelButton id={a.id} />}
+              {!open && a.startsAt.getTime() > now.getTime() - 7 * 86_400_000 && <ReopenButton id={a.id} label={a.status === "ATTENDED" ? "Deshacer «Atendida»" : a.status === "NO_SHOW" ? "Deshacer «No asistió»" : "Deshacer cancelación"} />}
               {a.status !== "ATTENDED" && <RescheduleButton id={a.id} current={localInput.format(a.startsAt).replace(" ", "T")} minutes={minutes} />}
             </div>
             {open && !overdue && (

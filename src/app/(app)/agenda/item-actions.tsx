@@ -1,7 +1,8 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { rescheduleAppointment } from "./actions";
+import ConfirmButton from "@/app/confirm-button";
+import { cancelAppointment, reopenAppointment, rescheduleAppointment, type CancelState } from "./actions";
 
 const DURATIONS: [number, string][] = [[15, "15 minutos"], [20, "20 minutos"], [30, "30 minutos"], [45, "45 minutos"], [60, "1 hora"], [90, "1 hora 30 minutos"], [120, "2 horas"]];
 
@@ -32,6 +33,39 @@ export default function RescheduleButton({ id, current, minutes }: { id: string;
         <button disabled={pending} className="btn-primary">{pending ? "Guardando…" : "Guardar nueva fecha"}</button>
         <button type="button" onClick={() => setOpen(false)} className="btn-secondary">Cerrar</button>
       </div>
+    </form>
+  );
+}
+
+// «Cancelar» abre una pregunta corta: quién canceló y por qué (opcional).
+export function CancelButton({ id }: { id: string }) {
+  const [open, setOpen] = useState(false);
+  const [state, action, pending] = useActionState<CancelState, FormData>(cancelAppointment.bind(null, id), undefined);
+  const [by, setBy] = useState<"PATIENT" | "CLINIC">("PATIENT");
+  if (!open) return <button type="button" onClick={() => setOpen(true)} className="btn-danger">Cancelar</button>;
+  return (
+    <form action={action} className="w-full space-y-2 rounded-lg border border-red-300 bg-red-50 p-3">
+      <p className="text-sm font-semibold text-slate-900">¿Quién canceló?</p>
+      <div className="flex flex-wrap gap-2">
+        {([["PATIENT", "El paciente"], ["CLINIC", "El consultorio"]] as const).map(([k, l]) => (
+          <button key={k} type="button" aria-pressed={by === k} onClick={() => setBy(k)} className={`min-h-11 rounded-full border px-4 text-sm font-semibold ${by === k ? "border-red-700 bg-red-700 text-white" : "border-slate-500 bg-white text-slate-900"}`}>{l}</button>
+        ))}
+      </div>
+      <input type="hidden" name="by" value={by} />
+      <label className="label">Motivo (opcional)<input name="reason" maxLength={200} className="field" placeholder="Ej.: viaje, enfermedad, el profesional no puede" /></label>
+      {state?.error && <p role="alert" className="error-text">{state.error}</p>}
+      <div className="flex gap-2">
+        <button disabled={pending} className="btn-danger">{pending ? "Guardando…" : "Cancelar la cita"}</button>
+        <button type="button" onClick={() => setOpen(false)} className="btn-secondary">No cancelar</button>
+      </div>
+    </form>
+  );
+}
+
+export function ReopenButton({ id, label }: { id: string; label: string }) {
+  return (
+    <form action={reopenAppointment.bind(null, id)}>
+      <ConfirmButton className="btn-secondary" confirmClassName="btn-primary" confirmLabel="Sí, volver a programada">{label}</ConfirmButton>
     </form>
   );
 }

@@ -75,9 +75,38 @@ export async function createAppointment(_: AppointmentState, formData: FormData)
   return { ok: true, newPatient: created };
 }
 
-export async function setStatus(id: string, status: "CONFIRMED" | "ATTENDED" | "CANCELLED" | "NO_SHOW") {
+export async function setStatus(id: string, status: "CONFIRMED" | "ATTENDED" | "NO_SHOW") {
   const { user, branches } = await requireBranch();
   await db.appointment.updateMany({ where: { id, clinicId: user.clinicId, branchId: { in: branches.map((b) => b.id) } }, data: { status } });
+  await db.auditLog.create({ data: { userId: user.id, action: `APPT_${status}`, entity: "Appointment", entityId: id } });
+  revalidatePath("/agenda");
+}
+
+export type CancelState = { error?: string; ok?: boolean } | undefined;
+
+// Cancelar pide quién canceló (paciente o consultorio) y, si se quiere, el motivo.
+export async function cancelAppointment(id: string, _: CancelState, fd: FormData): Promise<CancelState> {
+  const { user, branches } = await requireBranch();
+  const by = fd.get("by") === "CLINIC" ? "CLINIC" : fd.get("by") === "PATIENT" ? "PATIENT" : null;
+  if (!by) return { error: "Elige quién canceló" };
+  const reason = String(fd.get("reason") ?? "").trim().slice(0, 200) || null;
+  const r = await db.appointment.updateMany({ where: { id, clinicId: user.clinicId, branchId: { in: branches.map((b) => b.id) }, status: { in: ["SCHEDULED", "CONFIRMED"] } }, data: { status: "CANCELLED", cancelledBy: by, cancelReason: reason } });
+  if (!r.count) return { error: "La cita ya no está pendiente" };
+  await db.auditLog.create({ data: { userId: user.id, action: "APPT_CANCELLED", entity: "Appointment", entityId: id, detail: `${by === "CLINIC" ? "consultorio" : "paciente"}${reason ? `: ${reason}` : ""}` } });
+  revalidatePath("/agenda");
+  return { ok: true };
+}
+
+// Deshacer «Atendida», «No asistió» o «Cancelada» si se marcó por error: la cita vuelve a quedar programada.
+// No toca la evolución firmada, que es inalterable.
+export async function reopenAppointment(id: string): Promise<void> {
+  const { user, branches } = await requireBranch();
+  const since = new Date(Date.now() - 7 * 86_400_000);
+  const r = await db.appointment.updateMany({
+    where: { id, clinicId: user.clinicId, branchId: { in: branches.map((b) => b.id) }, status: { in: ["ATTENDED", "NO_SHOW", "CANCELLED"] }, startsAt: { gte: since } },
+    data: { status: "SCHEDULED", cancelledBy: null, cancelReason: null },
+  });
+  if (r.count) await db.auditLog.create({ data: { userId: user.id, action: "APPT_REOPEN", entity: "Appointment", entityId: id } });
   revalidatePath("/agenda");
 }
 

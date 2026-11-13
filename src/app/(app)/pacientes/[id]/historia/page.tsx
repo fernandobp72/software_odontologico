@@ -50,7 +50,7 @@ export default async function HistoriaPage({ params, searchParams }: PageProps<"
           <summary className="cursor-pointer font-semibold text-slate-900">Versiones anteriores ({versions.length - 1})</summary>
           <ul className="mt-3 divide-y divide-slate-200">
             {versions.slice(1).map((v) => (
-              <li key={v.id} className="py-2 text-sm text-slate-800">{fmt.format(v.createdAt)} · {v.author.name}</li>
+              <li key={v.id} className="py-2 text-sm text-slate-800"><a href={`/pacientes/${id}/historia/version/${v.id}`} className="font-semibold text-teal-800 underline">{fmt.format(v.createdAt)}</a> · {v.author.name} · ver qué decía y qué cambió</li>
             ))}
           </ul>
         </details>

@@ -8,6 +8,8 @@ import BranchSwitcher from "./branch-switcher";
 import { logout } from "../login/actions";
 import { BottomNav, SideNav } from "./nav";
 import ConnectionBanner from "./connection-banner";
+import SessionWarning from "./session-warning";
+import { readSession } from "@/lib/session";
 
 // App instalada del consultorio: su nombre y su ícono (en iPhone se toman de aquí al «Añadir a pantalla de inicio»).
 // El mismo ícono va en la pestaña del navegador (32 px) para que se vea igual que la app instalada.
@@ -65,6 +67,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (account.clinic.system) return <PlatformShell name={account.name}>{children}</PlatformShell>;
   const { user, branches, branch } = await branchState();
   const inv = branch ? await supplyAlerts(user.clinicId, branch.id) : undefined;
+  // Vencimiento de la sesión (JWT exp, en segundos) para avisar antes de que se cierre.
+  const exp = ((await readSession()) as { exp?: number } | null)?.exp;
+  const sessionExp = exp ? exp * 1000 : null;
   return (
     <div className="min-h-dvh md:flex">
       <aside className="hidden w-60 shrink-0 flex-col border-r border-slate-300 bg-white p-4 md:flex">
@@ -99,6 +104,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         )}
         {branches.length > 1 && branch && <div className="border-b border-slate-300 bg-white px-4 py-2 md:hidden"><BranchSwitcher branches={branches} activeId={branch.id} /></div>}
         <ConnectionBanner />
+        {sessionExp && <SessionWarning expiresAt={sessionExp} />}
         <main className="mx-auto w-full max-w-7xl p-4 md:p-8">{children}</main>
       </div>
       <BottomNav moreAlert={!!inv && inv.red + inv.yellow > 0} />

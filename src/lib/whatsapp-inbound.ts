@@ -41,7 +41,7 @@ export async function handleInbound(clinicId: string, payload: Payload) {
         const set = async (status: "CONFIRMED" | "CANCELLED") => {
           if (a.status === status) return;
           if (!["SCHEDULED", "CONFIRMED"].includes(a.status)) return;
-          await db.appointment.update({ where: { id: a.id }, data: { status } });
+          await db.appointment.update({ where: { id: a.id }, data: { status, ...(status === "CANCELLED" ? { cancelledBy: "PATIENT", cancelReason: "Respondió por WhatsApp" } : {}) } });
           await db.auditLog.create({ data: { action: `PATIENT_${status}`, entity: "Appointment", entityId: a.id, detail: `respondió por WhatsApp (${m.from})` } });
         };
         if (a.status === "CANCELLED" && action !== "N") {

@@ -304,6 +304,9 @@ model Appointment {
   endsAt       DateTime
   reason       String?
   status       AppointmentStatus @default(SCHEDULED)
+  // Quién canceló (PATIENT o CLINIC) y por qué: para saber luego si la canceló el paciente o el consultorio.
+  cancelledBy  String?
+  cancelReason String?
   confirmToken String?           @unique
   branchId     String
   branch       Branch            @relation(fields: [branchId], references: [id])
@@ -1243,4 +1246,15 @@ model PayRunLine {
 
   @@index([payRunId])
   @@index([employeeId])
+}
+
+// Frases frecuentes propias de cada profesional para la nota de evolución (con un nombre corto visible en el botón).
+model NotePhrase {
+  id        String   @id @default(cuid())
+  userId    String
+  label     String
+  text      String
+  createdAt DateTime @default(now())
+
+  @@index([userId])
 }

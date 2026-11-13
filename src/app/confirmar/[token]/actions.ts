@@ -8,7 +8,7 @@ export async function respond(token: string, decision: "CONFIRMED" | "CANCELLED"
   if (!token || token.length < 16) return;
   const a = await db.appointment.findUnique({ where: { confirmToken: token } });
   if (!a || a.startsAt < new Date() || !["SCHEDULED", "CONFIRMED"].includes(a.status)) return;
-  await db.appointment.update({ where: { id: a.id }, data: { status: decision } });
+  await db.appointment.update({ where: { id: a.id }, data: { status: decision, ...(decision === "CANCELLED" ? { cancelledBy: "PATIENT", cancelReason: "Desde el enlace del recordatorio" } : {}) } });
   await db.auditLog.create({ data: { action: `PATIENT_${decision}`, entity: "Appointment", entityId: a.id } });
   revalidatePath(`/confirmar/${token}`);
   revalidatePath("/agenda");

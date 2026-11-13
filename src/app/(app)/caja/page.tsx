@@ -101,7 +101,10 @@ export default async function CajaPage() {
 
       {history.length > 0 && (
         <section className="space-y-2">
-          <h2 className="section-title">Cierres anteriores</h2>
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h2 className="section-title">Cierres anteriores</h2>
+            <Link href="/caja/historial" className="text-sm font-semibold text-teal-800 underline">Ver por fechas</Link>
+          </div>
           <ul className="space-y-2">
             {history.map((s) => (
               <li key={s.id} className="card flex flex-wrap items-center justify-between gap-2 text-sm text-slate-900">

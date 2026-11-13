@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { ASSESSMENT_SECTIONS, type AssessmentData, type Field } from "@/lib/assessment";
 import { saveAssessment } from "./actions";
 
@@ -41,8 +41,52 @@ function Input({ f, value }: { f: Field; value: string | string[] | undefined })
 
 export default function AssessmentForm({ patientId, initial, intakeId }: { patientId: string; initial: AssessmentData | null; intakeId?: string }) {
   const [state, action, pending] = useActionState(saveAssessment.bind(null, patientId), undefined);
+  const form = useRef<HTMLFormElement>(null);
+  const key = `valoracion-${patientId}`;
+  const [draft, setDraft] = useState<{ at: number; data: Record<string, string[]> } | null>(null);
+
+  // Borrador en este dispositivo: si la sesión vence o se cae la señal, lo escrito no se pierde.
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(key);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      if (raw) setDraft(JSON.parse(raw));
+    } catch {}
+  }, [key]);
+  useEffect(() => {
+    if (state?.ok) try { localStorage.removeItem(key); } catch {}
+  }, [state, key]);
+
+  function remember() {
+    if (!form.current) return;
+    const data: Record<string, string[]> = {};
+    for (const [k, v] of new FormData(form.current).entries()) if (typeof v === "string" && k !== "intakeId") (data[k] ??= []).push(v);
+    try { localStorage.setItem(key, JSON.stringify({ at: Date.now(), data })); } catch {}
+  }
+
+  function restore() {
+    const f = form.current;
+    if (!f || !draft) return;
+    for (const el of Array.from(f.elements) as (HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement)[]) {
+      if (!el.name || el.name === "intakeId") continue;
+      const vals = draft.data[el.name] ?? [];
+      if (el instanceof HTMLInputElement && el.type === "checkbox") el.checked = vals.includes(el.value);
+      else el.value = vals[0] ?? "";
+    }
+    setDraft(null);
+  }
+
   return (
-    <form action={action} className="space-y-3">
+    <form ref={form} action={action} onChange={remember} className="space-y-3">
+      {draft && (
+        <div role="status" className="card flex flex-wrap items-center justify-between gap-2 border-amber-600 bg-amber-50">
+          <p className="text-sm font-semibold text-slate-900">Hay cambios sin guardar en este aparato ({new Date(draft.at).toLocaleString("es-CO", { dateStyle: "medium", timeStyle: "short" })}).</p>
+          <span className="flex gap-2">
+            <button type="button" onClick={restore} className="btn-primary min-h-10">Recuperar</button>
+            <button type="button" onClick={() => { try { localStorage.removeItem(key); } catch {} setDraft(null); }} className="btn-secondary min-h-10">Descartar</button>
+          </span>
+        </div>
+      )}
       {intakeId && <input type="hidden" name="intakeId" value={intakeId} />}
       {ASSESSMENT_SECTIONS.map((section, i) => (
         <details key={section.id} open={i === 0 || !!intakeId} className="card group p-0">

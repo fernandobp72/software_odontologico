@@ -102,7 +102,10 @@ export default async function AgendaPage({ searchParams }: { searchParams: Promi
           <h1 className="page-title">Agenda</h1>
           {branches.length > 1 && <p className="muted">Sede: {branch.name}</p>}
         </div>
-        <Link href="/recordatorios" className="btn-secondary">Recordatorios por WhatsApp</Link>
+        <span className="flex flex-wrap gap-2">
+          {user.role === "ADMIN" && <a href="/api/exportar?tipo=citas" className="btn-secondary" title="Citas de los últimos 30 días">Descargar citas</a>}
+          <Link href="/recordatorios" className="btn-secondary">Recordatorios por WhatsApp</Link>
+        </span>
       </div>
 
       <div className="card space-y-3">
