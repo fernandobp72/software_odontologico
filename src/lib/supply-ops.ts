@@ -29,9 +29,9 @@ export async function takeFefo(ctx: Ctx, itemId: string, qty: number, opts: { no
   return { taken: want, short: qty - want, have, ok: true };
 }
 
-export async function receiveLot(ctx: Ctx, item: { id: string }, qty: number, expiresAt: Date | null, lotCode: string | null) {
+export async function receiveLot(ctx: Ctx, item: { id: string }, qty: number, expiresAt: Date | null, lotCode: string | null, unitCost: number | null = null) {
   await db.$transaction(async (tx) => {
-    const lot = await tx.supplyLot.create({ data: { clinicId: ctx.clinicId, branchId: ctx.branchId, itemId: item.id, lotCode, quantity: qty, initialQty: qty, expiresAt, createdById: ctx.userId } });
+    const lot = await tx.supplyLot.create({ data: { clinicId: ctx.clinicId, branchId: ctx.branchId, itemId: item.id, lotCode, quantity: qty, initialQty: qty, expiresAt, createdById: ctx.userId, unitCost } });
     await tx.supplyMovement.create({ data: { clinicId: ctx.clinicId, branchId: ctx.branchId, itemId: item.id, lotId: lot.id, kind: "IN", delta: qty, note: lotCode ? `Lote ${lotCode}` : null, userId: ctx.userId } });
   });
 }

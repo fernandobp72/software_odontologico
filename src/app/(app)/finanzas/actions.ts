@@ -47,7 +47,7 @@ const expenseSchema = z.object({
 });
 
 function revalidateFinance() {
-  for (const p of ["/finanzas", "/finanzas/gastos", "/finanzas/por-pagar", "/finanzas/a-quien-le-pago", "/caja"]) revalidatePath(p);
+  for (const p of ["/finanzas", "/finanzas/gastos", "/finanzas/por-pagar", "/finanzas/a-quien-le-pago", "/finanzas/profesionales", "/finanzas/laboratorios", "/caja"]) revalidatePath(p);
 }
 
 async function openSessionId(clinicId: string, branchId: string) {
@@ -187,10 +187,15 @@ export async function voidExpense(expenseId: string, _: PayState, fd: FormData):
   const e = await db.expense.findFirst({ where: { id: expenseId, clinicId: user.clinicId, voidedAt: null }, include: { payments: true } });
   if (!e) return { error: "Gasto no encontrado o ya anulado" };
   if (await closedCashIn(e.payments)) return { error: "Se pagó con el efectivo de una caja que ya se cerró. Registra la corrección como un gasto nuevo o habla con tu contador." };
+  if (await db.payRunLine.count({ where: { expenseId: e.id, payRun: { voidedAt: null } } })) return { error: "Este gasto es parte de un pago a empleados. Anúlalo desde Empleados para que las novedades vuelvan a quedar pendientes." };
   const now = new Date();
   await db.$transaction([
     db.expensePayment.updateMany({ where: { expenseId: e.id, voidedAt: null }, data: { voidedAt: now, voidedById: user.id, voidReason: "Gasto anulado" } }),
     db.expense.update({ where: { id: e.id }, data: { voidedAt: now, voidedById: user.id, voidReason: reason.slice(0, 200) } }),
+    // Si era la factura de un laboratorio, sus trabajos vuelven a quedar por facturar.
+    db.labOrder.updateMany({ where: { expenseId: e.id }, data: { expenseId: null } }),
+    // Si era la liquidación de un profesional, se anula con él: lo que cubría vuelve a quedar pendiente.
+    db.proSettlement.updateMany({ where: { expenseId: e.id, voidedAt: null }, data: { voidedAt: now, voidedById: user.id, voidReason: `Gasto anulado: ${reason.slice(0, 180)}` } }),
     db.auditLog.create({ data: { userId: user.id, action: "EXPENSE_VOID", entity: "Expense", entityId: e.id } }),
   ]);
   revalidateFinance();

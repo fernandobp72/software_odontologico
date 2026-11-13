@@ -73,7 +73,7 @@ export async function saveItem(id: string, _: SupplyState, fd: FormData): Promis
 }
 
 // Valida y registra un ingreso. Compartida por el formulario y por la voz.
-async function receiveCore(ctx: { user: { id: string; clinicId: string }; branch: { id: string } }, itemId: string, rawQty: unknown, inPack: boolean, rawExpiry: string, rawLot: string): Promise<SupplyState> {
+async function receiveCore(ctx: { user: { id: string; clinicId: string }; branch: { id: string } }, itemId: string, rawQty: unknown, inPack: boolean, rawExpiry: string, rawLot: string, rawCost = ""): Promise<SupplyState> {
   const { user, branch } = ctx;
   const item = await ownItem(itemId, user.clinicId);
   if (!item || !item.active) return { error: "Producto no encontrado" };
@@ -91,14 +91,17 @@ async function receiveCore(ctx: { user: { id: string; clinicId: string }; branch
   } else if (item.perishable) {
     return { error: "Este producto vence: escribe la fecha de vencimiento del lote" };
   }
-  await receiveLot({ clinicId: user.clinicId, branchId: branch.id, userId: user.id }, item, total, expiresAt, rawLot.trim().slice(0, 40) || null);
+  // Costo total de la compra (opcional): se guarda por unidad para valorar el inventario.
+  const cost = rawCost.trim() ? Number(rawCost) : null;
+  if (cost !== null && (!Number.isInteger(cost) || cost < 0 || cost > 500_000_000)) return { error: "Revisa el costo de la compra" };
+  await receiveLot({ clinicId: user.clinicId, branchId: branch.id, userId: user.id }, item, total, expiresAt, rawLot.trim().slice(0, 40) || null, cost === null ? null : Math.round(cost / total));
   revalidatePath("/inventario");
   return { ok: `Ingresaron ${total} ${unitLabel(item.unit, total)}` };
 }
 
 export async function receiveStock(itemId: string, _: SupplyState, fd: FormData): Promise<SupplyState> {
   const ctx = await requireBranch();
-  return receiveCore(ctx, itemId, fd.get("quantity"), fd.get("inPack") === "pack", String(fd.get("expiresAt") ?? ""), String(fd.get("lotCode") ?? ""));
+  return receiveCore(ctx, itemId, fd.get("quantity"), fd.get("inPack") === "pack", String(fd.get("expiresAt") ?? ""), String(fd.get("lotCode") ?? ""), String(fd.get("cost") ?? ""));
 }
 
 async function consumeCore(ctx: { user: { id: string; clinicId: string }; branch: { id: string } }, itemId: string, rawQty: unknown, inPack: boolean, note: string | null): Promise<SupplyState> {

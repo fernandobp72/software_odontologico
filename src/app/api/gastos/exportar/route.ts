@@ -1,18 +1,9 @@
 import { db } from "@/lib/db";
 import { currentUser } from "@/lib/dal";
 import { categoryLabel, dateOnly, dateStr, dayStart, docLabel, isPeriodStr, monthRange, paidOf, sourceLabel, todayStr } from "@/lib/finanzas";
+import { csv, stamp } from "@/lib/csv";
 
-// Archivo para el contador (CSV que abre en Excel en español: punto y coma y BOM para las tildes).
-// tipo=gastos (por defecto): los gastos del mes con su saldo. tipo=pagos: la plata que salió en el mes.
-const cell = (v: unknown) => {
-  let s = v == null ? "" : String(v);
-  if (/^[=+\-@\t\r]/.test(s)) s = `'${s}`; // evita que Excel lo tome como fórmula
-  return /[";\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-};
-const csv = (rows: unknown[][]) => "﻿" + rows.map((r) => r.map(cell).join(";")).join("\r\n") + "\r\n";
-// Fecha y hora de Colombia como «2026-11-13 14:05», que Excel ordena bien.
-const stamp = (d: Date) => new Date(d.getTime() - 5 * 3_600_000).toISOString().slice(0, 16).replace("T", " ");
-
+// Archivo para el contador. tipo=gastos (por defecto): los gastos del mes con su saldo. tipo=pagos: la plata que salió en el mes.
 export async function GET(req: Request) {
   const user = await currentUser();
   if (!user || user.role !== "ADMIN") return new Response("No autorizado", { status: 401 });

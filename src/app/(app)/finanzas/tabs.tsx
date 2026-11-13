@@ -7,7 +7,12 @@ const TABS = [
   { href: "/finanzas", label: "Resumen" },
   { href: "/finanzas/gastos", label: "Gastos" },
   { href: "/finanzas/por-pagar", label: "Por pagar" },
+  { href: "/finanzas/profesionales", label: "Profesionales" },
+  { href: "/finanzas/laboratorios", label: "Laboratorios" },
+  { href: "/finanzas/empleados", label: "Empleados" },
+  { href: "/finanzas/resultados", label: "Resultados" },
   { href: "/finanzas/a-quien-le-pago", label: "A quién le pago" },
+  { href: "/finanzas/ajustes", label: "Ajustes" },
 ];
 
 // Pestañas de Finanzas. Recepción solo ve Gastos, así que no se muestran.

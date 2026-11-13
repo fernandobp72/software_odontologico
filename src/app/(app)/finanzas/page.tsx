@@ -6,6 +6,7 @@ import { copFmt } from "@/lib/cartera";
 import { CATEGORIES, PERIODS, categoryLabel, dayStart, dueState, dueText, periodRange, todayStr, type PeriodKey } from "@/lib/finanzas";
 import { openDebts, pendingRecurring } from "@/lib/finanzas-data";
 import { stopRecurring } from "./actions";
+import { isLabor, legalDates } from "@/lib/empleados";
 
 // Resumen del administrador: cuánto entró, cuánto salió, cuánto debo y qué vence esta semana.
 export default async function FinanzasPage({ searchParams }: PageProps<"/finanzas">) {
@@ -17,12 +18,15 @@ export default async function FinanzasPage({ searchParams }: PageProps<"/finanza
   const { from, to } = periodRange(period, today);
   const range = { gte: dayStart(from), lt: dayStart(to) };
 
-  const [inflow, outflows, debts, recurring] = await Promise.all([
+  const [inflow, outflows, debts, recurring, staff] = await Promise.all([
     db.payment.aggregate({ _sum: { amount: true }, where: { clinicId: user.clinicId, voidedAt: null, receivedAt: range } }),
     db.expensePayment.findMany({ where: { clinicId: user.clinicId, voidedAt: null, paidAt: range }, select: { amount: true, expense: { select: { category: true } } } }),
     openDebts(user.clinicId),
     pendingRecurring(user.clinicId, today.slice(0, 7)),
+    db.employee.findMany({ where: { clinicId: user.clinicId, active: true }, select: { contractType: true } }),
   ]);
+  // Fechas legales de empleados en los próximos 7 días (prima, cesantías, seguridad social…).
+  const legal = staff.some((e) => isLabor(e.contractType)) ? legalDates(today, 7) : [];
 
   const entered = inflow._sum.amount ?? 0;
   const left = outflows.reduce((s, p) => s + p.amount, 0);
@@ -101,7 +105,15 @@ export default async function FinanzasPage({ searchParams }: PageProps<"/finanza
               </Link>
             </li>
           ))}
-          {soon.length === 0 && <li className="card text-center text-slate-700">Nada vence en los próximos 7 días</li>}
+          {legal.map((d) => (
+            <li key={d.label + d.date}>
+              <Link href="/finanzas/empleados" className="card flex flex-wrap items-center justify-between gap-2 hover:border-teal-700">
+                <span><span className="block font-semibold">{d.label}</span><span className="muted">{d.days === 0 ? "Vence hoy" : d.days === 1 ? "Vence mañana" : `Vence en ${d.days} días`}{d.note ? ` · ${d.note}` : ""}</span></span>
+                <span className="btn-secondary min-h-10">Empleados</span>
+              </Link>
+            </li>
+          ))}
+          {soon.length === 0 && legal.length === 0 && <li className="card text-center text-slate-700">Nada vence en los próximos 7 días</li>}
         </ul>
       </section>
 
@@ -138,6 +150,11 @@ export default async function FinanzasPage({ searchParams }: PageProps<"/finanza
       <section className="card flex flex-wrap items-center justify-between gap-3">
         <span><span className="block font-semibold">Me deben los pacientes</span><span className="muted">Saldos pendientes y antigüedad</span></span>
         <Link href="/cartera" className="btn-secondary">Ver cartera</Link>
+      </section>
+
+      <section className="card flex flex-wrap items-center justify-between gap-3">
+        <span><span className="block font-semibold">Resultados del mes</span><span className="muted">Por sede, por profesional y lo que vale el inventario</span></span>
+        <Link href="/finanzas/resultados" className="btn-secondary">Ver resultados</Link>
       </section>
 
       <section className="card space-y-2">

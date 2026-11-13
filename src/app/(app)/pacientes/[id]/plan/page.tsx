@@ -7,6 +7,8 @@ import { deleteItem, deletePlan, resolveDiagnosis, setItemStatus, setPlanStatus 
 import { AutoGenerate, DiagnosisEditForm, DiagnosisForm, DiagnosisVoidForm, ItemEditForm, ItemForm, PlanForm, SuggestionCard } from "./forms";
 import ConfirmButton from "@/app/confirm-button";
 import DocLink from "@/app/doc-link";
+import Link from "next/link";
+import { labStatus } from "@/lib/labs";
 
 const cop = new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 });
 const PLAN_STATUS: Record<string, string> = { DRAFT: "Borrador", PRESENTED: "Presentado", ACCEPTED: "Aceptado", IN_PROGRESS: "En curso", COMPLETED: "Completado", CANCELLED: "Cancelado" };
@@ -22,13 +24,16 @@ export default async function PlanPage({ params }: PageProps<"/pacientes/[id]/pl
   const { id } = await params;
   if (user.role === "RECEPTION") return <p className="card">Sin acceso a la historia clínica.</p>;
 
-  const [diagnoses, plans, patient, pending, catalog] = await Promise.all([
+  const [diagnoses, plans, patient, pending, catalog, labOrders] = await Promise.all([
     db.diagnosis.findMany({ where: { patientId: id, patient: { clinicId: user.clinicId } }, orderBy: [{ status: "asc" }, { createdAt: "desc" }], include: { dentist: { select: { name: true } }, closedBy: { select: { name: true } } } }),
     db.treatmentPlan.findMany({ where: { patientId: id, patient: { clinicId: user.clinicId } }, orderBy: { createdAt: "desc" }, include: { items: { orderBy: [{ phase: "asc" }, { createdAt: "asc" }] } } }),
     db.patient.findFirst({ where: { id, clinicId: user.clinicId }, select: { autoPlanAt: true } }),
     pendingSuggestions(id),
     getCatalog(user.clinicId, { onlyActive: true }),
+    db.labOrder.findMany({ where: { patientId: id, clinicId: user.clinicId, voidedAt: null, itemId: { not: null } }, orderBy: { number: "asc" }, select: { id: true, number: true, itemId: true, status: true, payee: { select: { name: true } } } }),
   ]);
+  const labsByItem = new Map<string, typeof labOrders>();
+  for (const o of labOrders) labsByItem.set(o.itemId as string, [...(labsByItem.get(o.itemId as string) ?? []), o]);
   const pendingCount = pending.diagnoses.length + pending.items.length;
   const autoNeeded = !patient?.autoPlanAt && pendingCount > 0;
   const dxLabel = (d: { code: string; tooth: number | null }) => `${d.code} ${CIE10.find((c) => c.code === d.code)?.label ?? ""}${d.tooth ? ` (diente ${d.tooth})` : ""}`;
@@ -137,6 +142,9 @@ export default async function PlanPage({ params }: PageProps<"/pacientes/[id]/pl
                               <p className="font-semibold text-slate-900">{i.name}{i.material ? ` · ${i.material}` : ""}{i.tooth ? ` · diente ${i.tooth}` : ""}{i.surfaces ? ` (${i.surfaces})` : ""}{i.quantity > 1 ? ` ×${i.quantity}` : ""}{i.sourceKey && <span className="ml-2 rounded-full bg-teal-100 px-2 py-0.5 text-xs font-semibold text-teal-900">Sugerido</span>}</p>
                               <p className="muted">{i.procedureCode ? `CUPS ${i.procedureCode} · ` : ""}{cop.format(i.unitPrice * i.quantity)}{i.doneAt ? ` · realizado ${fmt.format(i.doneAt)}` : ""}</p>
                               {i.notes && <p className="muted">{i.notes}</p>}
+                              {labsByItem.get(i.id)?.map((o) => (
+                                <Link key={o.id} href={`/laboratorio/${o.id}`} className="mt-1 mr-2 inline-block rounded-full border border-slate-400 px-2 py-0.5 text-xs font-semibold text-slate-900">Laboratorio {o.payee.name}: {labStatus(o.status).label}</Link>
+                              ))}
                             </div>
                             <span className={`rounded-full px-3 py-1 text-xs font-semibold ${ITEM_STATUS[i.status].cls}`}>{ITEM_STATUS[i.status].label}</span>
                           </div>
@@ -146,6 +154,9 @@ export default async function PlanPage({ params }: PageProps<"/pacientes/[id]/pl
                               <form action={setItemStatus.bind(null, i.id, "DONE")}><button className="btn-primary min-h-10">Marcar realizado</button></form>
                               <form action={setItemStatus.bind(null, i.id, "CANCELLED")}><ConfirmButton className="btn-danger min-h-10" confirmLabel="Sí, cancelar procedimiento">Cancelar</ConfirmButton></form>
                             </div>
+                          )}
+                          {i.status !== "CANCELLED" && !labsByItem.has(i.id) && (
+                            <Link href={`/laboratorio/nueva?item=${i.id}`} className="mt-2 inline-block text-sm font-semibold text-teal-800 underline">Enviar a laboratorio</Link>
                           )}
                           {!closed && (i.status === "PLANNED" || i.status === "IN_PROGRESS") && (
                             <details className="mt-2">
