@@ -7,6 +7,7 @@ export default async function MasPage() {
   const user = await requireAnyUser();
   const items = user.clinic.system ? [["/plataforma", "Clientes"], ["/perfil", "Mi cuenta"]] : [
     ...(user.role === "ADMIN" ? [["/inicio", "Inicio guiado"], ["/equipo", "Equipo"], ["/sedes", "Sedes"], ["/catalogo", "Catálogo y tarifas"], ["/configuracion", `Mi ${nounOf(user.clinic.noun).name}`]] : []),
+    ...(user.role === "ADMIN" ? [["/finanzas", "Finanzas: gastos y lo que debo"]] : user.role === "RECEPTION" ? [["/finanzas/gastos", "Gastos de caja"]] : []),
     ...(user.isPlatformAdmin ? [["/plataforma", "Plataforma"]] : []),
     ["/recordatorios", "Recordatorios"],
     ["/inventario", "Inventario"],

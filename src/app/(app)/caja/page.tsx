@@ -1,3 +1,4 @@
+import Link from "next/link";
 import DocLink from "@/app/doc-link";
 import { db } from "@/lib/db";
 import { requireBranch } from "@/lib/dal";
@@ -11,10 +12,12 @@ export default async function CajaPage() {
   const session = await db.cashSession.findFirst({ where: { clinicId: user.clinicId, branchId: branch.id, closedAt: null }, include: { openedBy: { select: { name: true } } } });
   const fmt = new Intl.DateTimeFormat("es-CO", { dateStyle: "medium", timeStyle: "short", timeZone: "America/Bogota" });
 
-  const [payments, history] = await Promise.all([
+  const [payments, history, outflows] = await Promise.all([
     session ? db.payment.findMany({ where: { sessionId: session.id }, orderBy: { number: "desc" }, include: { patient: { select: { firstName: true, lastName: true } }, receivedBy: { select: { name: true } } } }) : Promise.resolve([]),
     db.cashSession.findMany({ where: { clinicId: user.clinicId, branchId: branch.id, closedAt: { not: null } }, orderBy: { closedAt: "desc" }, take: 8, include: { openedBy: { select: { name: true } } } }),
+    session ? db.expensePayment.findMany({ where: { sessionId: session.id, voidedAt: null }, orderBy: { paidAt: "desc" }, include: { expense: { select: { id: true, number: true, payee: { select: { name: true } } } } } }) : Promise.resolve([]),
   ]);
+  const cashOut = outflows.reduce((s, p) => s + p.amount, 0);
 
   const valid = payments.filter((p) => !p.voidedAt);
   const byMethod = (Object.keys(METHODS) as MethodKey[]).map((m) => ({ m, total: valid.filter((p) => p.method === m).reduce((s, p) => s + p.amount, 0) }));
@@ -39,7 +42,26 @@ export default async function CajaPage() {
             ))}
             <div className="card border-teal-700"><dt className="muted">Total recaudado</dt><dd className="text-lg font-bold text-teal-800">{copFmt.format(total)}</dd></div>
           </dl>
-          <p className="text-sm font-semibold text-slate-900">Efectivo esperado en caja: {copFmt.format(session.openingAmount + cash)}</p>
+          <p className="text-sm font-semibold text-slate-900">
+            Efectivo esperado en caja: {copFmt.format(session.openingAmount + cash - cashOut)}
+            {cashOut > 0 && <span className="font-normal text-slate-700"> (incluye {copFmt.format(cashOut)} de gastos pagados con la caja)</span>}
+          </p>
+          {manager && (
+            <p className="muted">¿Pagaste algo con el efectivo de la caja? <Link href="/finanzas/gastos" className="font-semibold text-teal-800 underline">Registra el gasto</Link> para que el cierre cuadre.</p>
+          )}
+          {outflows.length > 0 && (
+            <section className="space-y-2">
+              <h2 className="section-title">Gastos pagados con la caja</h2>
+              <ul className="space-y-2">
+                {outflows.map((o) => (
+                  <li key={o.id} className="card flex flex-wrap items-center justify-between gap-2 text-sm">
+                    <span><span className="font-semibold">{copFmt.format(o.amount)}</span> · {o.expense.payee.name}</span>
+                    {user.role === "ADMIN" ? <Link href={`/finanzas/gastos/${o.expense.id}`} className="text-teal-800 underline">Gasto {o.expense.number}</Link> : <span className="muted">Gasto {o.expense.number}</span>}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
 
           <div className="grid gap-6 xl:grid-cols-2 xl:items-start">
             <PaymentForm />

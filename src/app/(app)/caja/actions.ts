@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { requireBranch, requireUser } from "@/lib/dal";
+import { expectedCash } from "@/lib/caja";
 
 export type CashState = { error?: string; ok?: boolean; receiptId?: string } | undefined;
 
@@ -34,8 +35,8 @@ export async function closeSession(sessionId: string, _: CashState, fd: FormData
   if (!counted.success) return { error: "Escribe el efectivo contado" };
   const session = await db.cashSession.findFirst({ where: { id: sessionId, clinicId: user.clinicId, branchId: { in: user.branches.map((b) => b.id) }, closedAt: null } });
   if (!session) return { error: "La caja ya está cerrada" };
-  const cash = await db.payment.aggregate({ _sum: { amount: true }, where: { sessionId, method: "CASH", voidedAt: null } });
-  const expected = session.openingAmount + (cash._sum.amount ?? 0);
+  // Los gastos pagados con el efectivo de la caja también salen del cajón.
+  const expected = await expectedCash(sessionId);
   await db.cashSession.update({
     where: { id: sessionId },
     data: {
@@ -49,6 +50,7 @@ export async function closeSession(sessionId: string, _: CashState, fd: FormData
   });
   await db.auditLog.create({ data: { userId: user.id, action: "CASH_CLOSE", entity: "CashSession", entityId: sessionId } });
   revalidatePath("/caja");
+  revalidatePath("/finanzas");
   return { ok: true };
 }
 
