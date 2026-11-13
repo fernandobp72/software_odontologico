@@ -65,6 +65,8 @@ enum ItemStatus {
 enum DiagnosisStatus {
   ACTIVE
   RESOLVED
+  REPLACED // se corrigió: lo reemplaza otro diagnóstico (replacedBy), que guarda su propio autor
+  VOIDED // anulado por error, con motivo; no se borra (Res. 1995 de 1999)
 }
 
 model Clinic {
@@ -133,6 +135,8 @@ model User {
   auditLogs           AuditLog[]
   assessments         Assessment[]
   diagnoses           Diagnosis[]
+  closedDiagnoses     Diagnosis[]          @relation("DiagnosisClosedBy")
+  toothFindings       ToothFinding[]
   plans               TreatmentPlan[]
   consents            Consent[]
   odontogramSnapshots OdontogramSnapshot[]
@@ -335,6 +339,9 @@ model ToothFinding {
   surface   String? // M, D, O, V, L o null = diente completo
   condition ToothCondition
   note      String?
+  // Quién marcó el hallazgo (vacío en los registros anteriores a este cambio).
+  authorId  String?
+  author    User?          @relation(fields: [authorId], references: [id])
   createdAt DateTime       @default(now())
 
   @@index([patientId, tooth])
@@ -381,7 +388,15 @@ model Diagnosis {
   sourceKey   String?
   note        String?
   status      DiagnosisStatus @default(ACTIVE)
+  // Cuándo dejó de estar activo (resuelto, reemplazado o anulado), quién lo cerró y por qué.
   resolvedAt  DateTime?
+  closedById  String?
+  closedBy    User?           @relation("DiagnosisClosedBy", fields: [closedById], references: [id])
+  closeReason String?
+  // Corrección: el diagnóstico nuevo apunta al que reemplaza; el anterior se conserva tal cual lo escribió su autor.
+  replacesId  String?
+  replaces    Diagnosis?      @relation("DiagnosisReplacement", fields: [replacesId], references: [id])
+  replacedBy  Diagnosis[]     @relation("DiagnosisReplacement")
   createdAt   DateTime        @default(now())
 
   @@index([patientId, status])

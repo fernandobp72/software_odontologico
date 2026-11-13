@@ -3,8 +3,8 @@ import { requireUser } from "@/lib/dal";
 import { CIE10, PHASES, PROCEDURES } from "@/lib/catalogs";
 import { pendingSuggestions } from "@/lib/suggest-apply";
 import { getCatalog } from "@/lib/catalog";
-import { deleteDiagnosis, deleteItem, deletePlan, resolveDiagnosis, setItemStatus, setPlanStatus } from "./actions";
-import { AutoGenerate, DiagnosisEditForm, DiagnosisForm, ItemEditForm, ItemForm, PlanForm, SuggestionCard } from "./forms";
+import { deleteItem, deletePlan, resolveDiagnosis, setItemStatus, setPlanStatus } from "./actions";
+import { AutoGenerate, DiagnosisEditForm, DiagnosisForm, DiagnosisVoidForm, ItemEditForm, ItemForm, PlanForm, SuggestionCard } from "./forms";
 import ConfirmButton from "@/app/confirm-button";
 import DocLink from "@/app/doc-link";
 
@@ -23,7 +23,7 @@ export default async function PlanPage({ params }: PageProps<"/pacientes/[id]/pl
   if (user.role === "RECEPTION") return <p className="card">Sin acceso a la historia clínica.</p>;
 
   const [diagnoses, plans, patient, pending, catalog] = await Promise.all([
-    db.diagnosis.findMany({ where: { patientId: id, patient: { clinicId: user.clinicId } }, orderBy: [{ status: "asc" }, { createdAt: "desc" }] }),
+    db.diagnosis.findMany({ where: { patientId: id, patient: { clinicId: user.clinicId } }, orderBy: [{ status: "asc" }, { createdAt: "desc" }], include: { dentist: { select: { name: true } }, closedBy: { select: { name: true } } } }),
     db.treatmentPlan.findMany({ where: { patientId: id, patient: { clinicId: user.clinicId } }, orderBy: { createdAt: "desc" }, include: { items: { orderBy: [{ phase: "asc" }, { createdAt: "asc" }] } } }),
     db.patient.findFirst({ where: { id, clinicId: user.clinicId }, select: { autoPlanAt: true } }),
     pendingSuggestions(id),
@@ -35,7 +35,8 @@ export default async function PlanPage({ params }: PageProps<"/pacientes/[id]/pl
   const itemLabel = (i: { procId: string; tooth: number | null; surfaces: string }) => `${PROCEDURES.find((p) => p.id === i.procId)?.name ?? i.procId}${i.tooth ? ` (diente ${i.tooth}${i.surfaces ? `, ${i.surfaces}` : ""})` : ""}`;
   const fmt = new Intl.DateTimeFormat("es-CO", { dateStyle: "medium", timeZone: "America/Bogota" });
   const active = diagnoses.filter((d) => d.status === "ACTIVE");
-  const resolved = diagnoses.filter((d) => d.status === "RESOLVED");
+  const pastDx = diagnoses.filter((d) => d.status !== "ACTIVE");
+  const CLOSED_LABEL: Record<string, string> = { RESOLVED: "Resuelto", REPLACED: "Corregido", VOIDED: "Anulado" };
 
   return (
     <div className="space-y-6">
@@ -56,25 +57,33 @@ export default async function PlanPage({ params }: PageProps<"/pacientes/[id]/pl
                     {d.sourceKey && <span className="ml-2 rounded-full bg-teal-100 px-2 py-0.5 text-xs font-semibold text-teal-900">Sugerido</span>}
                   </p>
                   {d.note && <p className="muted">{d.note}</p>}
+                  <p className="text-xs text-slate-700">{fmt.format(d.createdAt)} · {d.dentist.name}{d.replacesId ? " · corrige un diagnóstico anterior" : ""}</p>
                 </div>
                 <form action={resolveDiagnosis.bind(null, d.id)}><button className="btn-secondary min-h-10">Marcar resuelto</button></form>
               </div>
               <details>
-                <summary className="cursor-pointer text-sm font-semibold text-teal-800">Modificar o eliminar</summary>
+                <summary className="cursor-pointer text-sm font-semibold text-teal-800">Corregir o anular</summary>
                 <div className="mt-3 space-y-3">
                   <DiagnosisEditForm d={{ id: d.id, code: d.code, tooth: d.tooth, note: d.note }} />
-                  <form action={deleteDiagnosis.bind(null, d.id)}><ConfirmButton className="btn-danger min-h-10" confirmLabel="Sí, eliminar diagnóstico">Eliminar diagnóstico</ConfirmButton></form>
+                  <DiagnosisVoidForm id={d.id} />
                 </div>
               </details>
             </li>
           ))}
           {active.length === 0 && <li className="py-2 text-slate-700">Sin diagnósticos activos</li>}
         </ul>
-        {resolved.length > 0 && (
+        {pastDx.length > 0 && (
           <details>
-            <summary className="cursor-pointer text-sm font-semibold text-slate-800">Resueltos ({resolved.length})</summary>
-            <ul className="mt-2 space-y-1 text-sm text-slate-800">
-              {resolved.map((d) => <li key={d.id}>{d.code} · {d.description}{d.tooth ? ` · diente ${d.tooth}` : ""} — {d.resolvedAt ? fmt.format(d.resolvedAt) : ""}</li>)}
+            <summary className="cursor-pointer text-sm font-semibold text-slate-800">Historial: resueltos, corregidos y anulados ({pastDx.length})</summary>
+            <ul className="mt-2 space-y-2 text-sm text-slate-800">
+              {pastDx.map((d) => (
+                <li key={d.id}>
+                  <span className={d.status === "RESOLVED" ? "" : "line-through decoration-slate-500"}>{d.code} · {d.description}{d.tooth ? ` · diente ${d.tooth}` : ""}</span>
+                  <span className="block text-xs text-slate-700">
+                    Registrado {fmt.format(d.createdAt)} por {d.dentist.name} · {CLOSED_LABEL[d.status]}{d.resolvedAt ? ` ${fmt.format(d.resolvedAt)}` : ""}{d.closedBy ? ` por ${d.closedBy.name}` : ""}{d.closeReason ? ` · Motivo: ${d.closeReason}` : ""}
+                  </span>
+                </li>
+              ))}
             </ul>
           </details>
         )}

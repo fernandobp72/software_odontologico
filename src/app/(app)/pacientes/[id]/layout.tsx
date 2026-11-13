@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
-import { requireUser } from "@/lib/dal";
+import { canWriteClinical, requireUser } from "@/lib/dal";
 import Link from "next/link";
 import PatientTabs from "./tabs";
 import DocLink from "@/app/doc-link";
@@ -27,6 +27,12 @@ export default async function PatientLayout({ children, params }: LayoutProps<"/
         <div role="status" className="rounded-lg border border-amber-500 bg-amber-50 p-3 text-sm text-amber-950">
           <p className="font-semibold">Ficha incompleta</p>
           <p>{isPreRegistered(p) ? "Solo se tiene el nombre y el celular. Faltan el documento y los demás datos: hasta completarlos no se puede firmar evoluciones, consentimientos ni fórmulas, ni registrar cobros." : "Falta registrar la autorización de tratamiento de datos del paciente."}{" "}<Link href={`/pacientes/${id}/editar`} className="font-semibold underline">Completar datos</Link></p>
+        </div>
+      )}
+      {user.role !== "RECEPTION" && !canWriteClinical(user) && (
+        <div role="alert" className="rounded-lg border border-amber-500 bg-amber-50 p-3 text-sm text-amber-950">
+          <p className="font-semibold">Falta tu registro profesional</p>
+          <p>Puedes consultar la historia clínica, pero para escribir en ella (evoluciones, odontograma, diagnósticos, plan, valoración, fórmulas o consentimientos) debes registrar tu número de RETHUS o tarjeta profesional. Así cada anotación queda a nombre de un profesional identificable.{" "}<Link href="/perfil" className="font-semibold underline">Registrarlo en Mis datos</Link></p>
         </div>
       )}
       <PatientTabs id={id} />

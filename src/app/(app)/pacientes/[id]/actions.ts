@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { redirect } from "next/navigation";
-import { branchState, requireClinician, requireUser } from "@/lib/dal";
+import { branchState, requireClinicalAuthor, requireUser } from "@/lib/dal";
 import { consumeForProcedures } from "@/lib/supply-ops";
 import { CONDITIONS, SURFACES, VALID_TEETH } from "@/lib/catalogs";
 import { syncPlan } from "@/lib/plan";
@@ -21,7 +21,7 @@ const findingsSchema = z.object({ patientId: z.string().min(1), changes: z.array
 
 // El odontograma es historial: borrar o deshacer también se registra (condición HEALTHY / valor previo).
 export async function applyFindings(input: z.input<typeof findingsSchema>): Promise<{ error?: string }> {
-  const user = await requireClinician();
+  const user = await requireClinicalAuthor();
   const parsed = findingsSchema.safeParse(input);
   if (!parsed.success) return { error: parsed.error.issues[0].message };
   const { patientId, changes } = parsed.data;
@@ -29,7 +29,7 @@ export async function applyFindings(input: z.input<typeof findingsSchema>): Prom
   const patient = await db.patient.findFirst({ where: { id: patientId, clinicId: user.clinicId } });
   if (!patient) return { error: "Paciente no encontrado" };
 
-  await db.toothFinding.createMany({ data: changes.map((c) => ({ patientId, ...c })) });
+  await db.toothFinding.createMany({ data: changes.map((c) => ({ patientId, authorId: user.id, ...c })) });
   await db.auditLog.create({
     data: { userId: user.id, action: "ODONTOGRAM", entity: "Patient", entityId: patientId },
   });
@@ -39,7 +39,7 @@ export async function applyFindings(input: z.input<typeof findingsSchema>): Prom
 
 // Foto fija del estado actual como odontograma inicial. Solo se puede hacer una vez.
 export async function saveInitialSnapshot(patientId: string): Promise<{ error?: string }> {
-  const user = await requireClinician();
+  const user = await requireClinicalAuthor();
   const patient = await db.patient.findFirst({ where: { id: patientId, clinicId: user.clinicId }, select: { id: true } });
   if (!patient) return { error: "Paciente no encontrado" };
   const all = await db.toothFinding.findMany({ where: { patientId }, orderBy: { createdAt: "asc" } });
@@ -62,23 +62,25 @@ const evolutionSchema = z.object({
   diagnosisCode: z.union([z.literal(""), z.string().regex(/^[A-Z]\d{2}(\.\d{1,2})?$/, "Código CIE-10 inválido")]).optional(),
   procedureCode: z.union([z.literal(""), z.string().regex(/^\d{6}$/, "El código CUPS debe tener 6 dígitos")]).optional(),
   note: z.string().trim().min(5, "Escribe la evolución"),
+  // Nota aclaratoria: corrige una evolución ya firmada sin tocarla (Res. 1995 de 1999).
+  correctsId: z.string().trim().optional(),
 });
 
 export type EvolutionState = { error?: string; ok?: boolean; attended?: boolean } | undefined;
 
 const evHash = (userId: string, d: z.infer<typeof evolutionSchema>) =>
-  evolutionSignHash({ patientId: d.patientId, dentistId: userId, reason: d.reason || null, diagnosisCode: d.diagnosisCode || null, procedureCode: d.procedureCode || null, note: d.note });
+  evolutionSignHash({ patientId: d.patientId, dentistId: userId, reason: d.reason || null, diagnosisCode: d.diagnosisCode || null, procedureCode: d.procedureCode || null, note: d.note, correctsId: d.correctsId || null });
 
 // Paso previo a firmar: valida y devuelve lo que debe confirmar el profesional con su sello (huella, rostro o clave).
 export async function prepareEvolutionSign(fd: FormData): Promise<SignPrep | { error: string }> {
-  const user = await requireClinician();
+  const user = await requireClinicalAuthor();
   const parsed = evolutionSchema.safeParse(Object.fromEntries(fd));
   if (!parsed.success) return { error: parsed.error.issues[0].message };
   return prepareSign(user, evHash(user.id, parsed.data));
 }
 
 export async function signEvolution(_: EvolutionState, formData: FormData): Promise<EvolutionState> {
-  const user = await requireClinician();
+  const user = await requireClinicalAuthor();
   const parsed = evolutionSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { error: parsed.error.issues[0].message };
   const d = parsed.data;
@@ -86,6 +88,8 @@ export async function signEvolution(_: EvolutionState, formData: FormData): Prom
   const patient = await db.patient.findFirst({ where: { id: d.patientId, clinicId: user.clinicId } });
   if (!patient) return { error: "Paciente no encontrado" };
   if (isPreRegistered(patient)) return { error: PRE_BLOCK };
+  // La evolución que se corrige debe ser de este mismo paciente.
+  if (d.correctsId && !(await db.evolution.findFirst({ where: { id: d.correctsId, patientId: patient.id }, select: { id: true } }))) return { error: "La evolución que quieres corregir no existe" };
 
   // Sello digital del profesional: si tiene uno (o el consultorio lo exige), debe confirmarlo; la prueba queda atada a este contenido.
   const hash = evHash(user.id, d);
@@ -110,6 +114,7 @@ export async function signEvolution(_: EvolutionState, formData: FormData): Prom
         diagnosisCode: d.diagnosisCode || null,
         procedureCode: d.procedureCode || null,
         note: d.note,
+        correctsId: d.correctsId || null,
       },
     });
     if (proof.result) await recordSignature({ userId: user.id, docKind: "Evolution", docId: ev.id, hash, result: proof.result }, tx);

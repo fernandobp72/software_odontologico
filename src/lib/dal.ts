@@ -12,7 +12,7 @@ export const requireAnyUser = cache(async () => {
   if (!session) redirect("/api/sesion/cerrar");
   const user = await db.user.findUnique({
     where: { id: session.userId },
-    select: { id: true, name: true, email: true, role: true, clinicId: true, active: true, isPlatformAdmin: true, clinic: { select: { id: true, name: true, status: true, trialEndsAt: true, system: true, noun: true, logoUpdatedAt: true, appIconUpdatedAt: true, iconColor: true, requireSello: true } } },
+    select: { id: true, name: true, email: true, role: true, clinicId: true, active: true, isPlatformAdmin: true, licenseNumber: true, clinic: { select: { id: true, name: true, status: true, trialEndsAt: true, system: true, noun: true, logoUpdatedAt: true, appIconUpdatedAt: true, iconColor: true, requireSello: true } } },
   });
   if (!user || !user.active) redirect("/api/sesion/cerrar");
   // Un consultorio suspendido no puede usar el sistema (los datos se conservan).
@@ -31,6 +31,17 @@ export async function requireUser() {
 export async function requireClinician() {
   const user = await requireUser();
   if (user.role === "RECEPTION") throw new Error("No autorizado para modificar la historia clínica");
+  return user;
+}
+
+// Escribir en la historia clínica de un paciente exige además el registro profesional (RETHUS o tarjeta profesional):
+// así cada anotación queda a nombre de un profesional identificable, también cuando el administrador no es odontólogo.
+export const NO_LICENSE = "Registra tu registro profesional (RETHUS o tarjeta profesional) en «Mis datos» para escribir en la historia clínica.";
+export const canWriteClinical = (user: { role: string; licenseNumber: string | null }) => user.role !== "RECEPTION" && !!user.licenseNumber?.trim();
+
+export async function requireClinicalAuthor() {
+  const user = await requireClinician();
+  if (!canWriteClinical(user)) throw new Error(NO_LICENSE);
   return user;
 }
 

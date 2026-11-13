@@ -36,8 +36,9 @@ const consentMaterial = (c: { id: string; patientId: string; dentistId: string; 
   ({ id: c.id, patientId: c.patientId, dentistId: c.dentistId, templateId: c.templateId, templateVersion: c.templateVersion, title: c.title, body: c.body, procedureNote: c.procedureNote, signerName: c.signerName, signerDocument: c.signerDocument, signerRelation: c.signerRelation, witnessName: c.witnessName, signature: createHash("sha256").update(c.signature).digest("hex"), signedAt: c.signedAt, ...(c.signMethod ? { signMethod: c.signMethod, signIp: c.signIp ?? null, signAgent: c.signAgent ?? null, ...(c.signDevice ? { signDevice: c.signDevice, signReadSec: c.signReadSec ?? null } : {}) } : {}) });
 
 // Lo que el profesional firma con su dispositivo (sin id ni fecha, que aún no existen al firmar).
-export const evolutionSignHash = (e: { patientId: string; dentistId: string; reason: string | null; diagnosisCode: string | null; procedureCode: string | null; note: string }) =>
-  contentHash("Evolution", { patientId: e.patientId, dentistId: e.dentistId, reason: e.reason || null, diagnosisCode: e.diagnosisCode || null, procedureCode: e.procedureCode || null, note: e.note });
+// correctsId solo entra si es una nota aclaratoria, para que las firmas anteriores sigan verificando igual.
+export const evolutionSignHash = (e: { patientId: string; dentistId: string; reason: string | null; diagnosisCode: string | null; procedureCode: string | null; note: string; correctsId?: string | null }) =>
+  contentHash("Evolution", { patientId: e.patientId, dentistId: e.dentistId, reason: e.reason || null, diagnosisCode: e.diagnosisCode || null, procedureCode: e.procedureCode || null, note: e.note, ...(e.correctsId ? { correctsId: e.correctsId } : {}) });
 
 export const rxSignHash = (r: { patientId: string; dentistId: string; diagnosisCode: string | null; diagnosisText: string | null; weightKg: unknown; notes: string | null; items: { position?: number; name: string; concentration: string; form: string; route: string; dose: string; frequency: string; duration: string; quantity: number; quantityText: string; instructions: string | null; override: string | null }[] }) =>
   contentHash("Prescription", {
