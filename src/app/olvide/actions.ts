@@ -1,11 +1,11 @@
 "use server";
 
-import { headers } from "next/headers";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { mailConfigured } from "@/lib/mailer";
 import { sendResetEmail } from "@/lib/mail-links";
 import { isBlocked, recordFailure } from "@/lib/rate-limit";
+import { clientIp } from "@/lib/client-ip";
 
 export type ForgotState = { error?: string; sent?: boolean; email?: string } | undefined;
 
@@ -14,7 +14,7 @@ export async function requestReset(_: ForgotState, fd: FormData): Promise<Forgot
   const typed = String(fd.get("email") ?? "");
   const parsed = z.string().trim().toLowerCase().email("Correo inválido").safeParse(typed);
   if (!parsed.success) return { error: parsed.error.issues[0].message, email: typed };
-  const ip = (await headers()).get("x-forwarded-for")?.split(",")[0].trim() ?? "local";
+  const ip = (await clientIp()) ?? "local";
   const keys = [`forgot:ip:${ip}`, `forgot:${parsed.data}`];
   if (keys.some(isBlocked)) return { error: "Demasiadas solicitudes. Espera unos minutos.", email: typed };
   keys.forEach(recordFailure);

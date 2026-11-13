@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { headers } from "next/headers";
 import { readSession } from "@/lib/session";
 import { hashToken } from "@/lib/tokens";
+import { clientIp } from "@/lib/client-ip";
 
 export const MAX_FAILURES = 5;
 
@@ -23,7 +24,7 @@ export const last4 = (doc: string | null | undefined) => {
 // Constancia técnica de la firma: desde qué red y con qué aparato se hizo.
 export async function evidence() {
   const h = await headers();
-  const ip = (h.get("cf-connecting-ip") ?? h.get("x-forwarded-for")?.split(",")[0] ?? h.get("x-real-ip") ?? "").trim().slice(0, 64) || null;
+  const ip = await clientIp();
   const agent = (h.get("user-agent") ?? "").slice(0, 300) || null;
   return { ip, agent };
 }

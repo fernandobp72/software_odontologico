@@ -129,6 +129,8 @@ model User {
   active              Boolean              @default(true)
   isPlatformAdmin     Boolean              @default(false)
   lastLoginAt         DateTime?
+  // Sube al cambiar o restablecer la contraseña, o al cerrar las demás sesiones: invalida las sesiones abiertas antes.
+  sessionVersion      Int                  @default(0)
   createdAt           DateTime             @default(now())
   appointments        Appointment[]
   evolutions          Evolution[]

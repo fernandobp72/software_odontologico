@@ -1,6 +1,6 @@
 import { requireAnyUser } from "@/lib/dal";
 import { nounOf } from "@/lib/noun";
-import PasswordForm, { EmailForm, ProfileForm } from "./form";
+import PasswordForm, { EmailForm, OtherSessionsForm, ProfileForm } from "./form";
 import { db } from "@/lib/db";
 
 const ROLE: Record<string, string> = { ADMIN: "Administrador", DENTIST: "Odontólogo", RECEPTION: "Recepción" };
@@ -25,6 +25,7 @@ export default async function PerfilPage() {
         </a>
       )}
       <PasswordForm />
+      <OtherSessionsForm />
     </div>
   );
 }

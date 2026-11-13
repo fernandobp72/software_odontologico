@@ -1,12 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { headers } from "next/headers";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { parseIntake } from "@/lib/intake";
 import { hashToken } from "@/lib/tokens";
 import { isBlocked, recordFailure } from "@/lib/rate-limit";
+import { clientIp } from "@/lib/client-ip";
 
 export type IntakeState = { error?: string; ok?: boolean } | undefined;
 
@@ -18,7 +18,7 @@ const schema = z.object({
 
 // Acción pública: la autoriza el token secreto del enlace (sin sesión).
 export async function submitIntake(token: string, _: IntakeState, fd: FormData): Promise<IntakeState> {
-  const ip = (await headers()).get("x-forwarded-for")?.split(",")[0]?.trim() ?? "?";
+  const ip = (await clientIp()) ?? "?";
   const key = `intake:${ip}`;
   if (isBlocked(key)) return { error: "Demasiados intentos. Espera unos minutos." };
   const form = token.length >= 16 ? await db.intakeForm.findUnique({ where: { tokenHash: hashToken(token) }, include: { patient: { select: { id: true, dataConsentAt: true } } } }) : null;

@@ -28,6 +28,6 @@ export async function accept(token: string, _: AcceptState, fd: FormData): Promi
   });
   if (!user) return { error: "La invitación ya fue usada" };
   await db.auditLog.create({ data: { userId: user.id, action: "ACCEPT_INVITE", entity: "User", entityId: user.id } });
-  await createSession({ userId: user.id, clinicId: user.clinicId, role: user.role });
+  await createSession({ userId: user.id, clinicId: user.clinicId, role: user.role, sv: user.sessionVersion });
   redirect("/agenda");
 }

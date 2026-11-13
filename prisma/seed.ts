@@ -18,9 +18,9 @@ async function platformAccount() {
       return;
     }
     await db.userBranch.deleteMany({ where: { userId: existing.id } });
-    await db.user.update({ where: { id: existing.id }, data: { clinicId: clinic.id, isPlatformAdmin: true, role: "ADMIN", ...(password && process.env.SEED_RESET === "1" ? { passwordHash: await bcrypt.hash(password, 12) } : {}) } });
+    await db.user.update({ where: { id: existing.id }, data: { clinicId: clinic.id, isPlatformAdmin: true, role: "ADMIN", ...(password && process.env.SEED_RESET === "1" ? { passwordHash: await bcrypt.hash(password, 12), sessionVersion: { increment: 1 } } : {}) } });
   } else if (existing) {
-    await db.user.update({ where: { id: existing.id }, data: { isPlatformAdmin: true, ...(password && process.env.SEED_RESET === "1" ? { passwordHash: await bcrypt.hash(password, 12) } : {}) } });
+    await db.user.update({ where: { id: existing.id }, data: { isPlatformAdmin: true, ...(password && process.env.SEED_RESET === "1" ? { passwordHash: await bcrypt.hash(password, 12), sessionVersion: { increment: 1 } } : {}) } });
   } else {
     if (!password) {
       console.error("Falta SEED_PLATFORM_PASSWORD para crear la cuenta de plataforma.");
@@ -51,7 +51,7 @@ async function main() {
   const demo = await db.user.upsert({
     where: { email },
     // Idempotente: no pisa la contraseña de un usuario existente salvo que SEED_RESET=1.
-    update: process.env.SEED_RESET === "1" ? { passwordHash: await bcrypt.hash(password, 12) } : {},
+    update: process.env.SEED_RESET === "1" ? { passwordHash: await bcrypt.hash(password, 12), sessionVersion: { increment: 1 } } : {},
     create: {
       clinicId: clinic.id,
       email,

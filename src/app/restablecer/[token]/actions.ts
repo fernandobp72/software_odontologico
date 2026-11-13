@@ -16,8 +16,9 @@ export async function resetPassword(token: string, _: ResetState, fd: FormData):
 
   const used = await db.passwordReset.updateMany({ where: { id: r.id, usedAt: null }, data: { usedAt: new Date() } });
   if (used.count === 0) return { error: "El enlace ya fue usado" };
-  await db.user.update({ where: { id: r.userId }, data: { passwordHash: await bcrypt.hash(pw.data, 12) } });
+  // Subir la versión de sesión saca a quien tuviera una sesión abierta con la contraseña anterior.
+  const u = await db.user.update({ where: { id: r.userId }, data: { passwordHash: await bcrypt.hash(pw.data, 12), sessionVersion: { increment: 1 } }, select: { sessionVersion: true } });
   await db.auditLog.create({ data: { userId: r.userId, action: "PASSWORD_RESET", entity: "User", entityId: r.userId } });
-  await createSession({ userId: r.user.id, clinicId: r.user.clinicId, role: r.user.role });
+  await createSession({ userId: r.user.id, clinicId: r.user.clinicId, role: r.user.role, sv: u.sessionVersion });
   redirect("/agenda");
 }

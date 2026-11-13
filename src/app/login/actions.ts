@@ -1,12 +1,12 @@
 "use server";
 
 import bcrypt from "bcryptjs";
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { createSession, destroySession } from "@/lib/session";
 import { clearFailures, isBlocked, recordFailure } from "@/lib/rate-limit";
+import { clientIp } from "@/lib/client-ip";
 
 const schema = z.object({
   email: z.string().email("Correo inválido"),
@@ -22,7 +22,7 @@ export async function login(_: LoginState, formData: FormData): Promise<LoginSta
   if (!parsed.success) return { error: parsed.error.issues[0].message, email: typed };
 
   const email = parsed.data.email.toLowerCase();
-  const ip = (await headers()).get("x-forwarded-for")?.split(",")[0].trim() ?? "local";
+  const ip = (await clientIp()) ?? "local";
   const keys = [`email:${email}`, `ip:${ip}`];
   if (keys.some(isBlocked)) return { error: "Demasiados intentos. Espera 15 minutos e inténtalo de nuevo.", email: typed };
 
@@ -37,7 +37,7 @@ export async function login(_: LoginState, formData: FormData): Promise<LoginSta
   keys.forEach(clearFailures);
 
   await db.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
-  await createSession({ userId: user.id, clinicId: user.clinicId, role: user.role });
+  await createSession({ userId: user.id, clinicId: user.clinicId, role: user.role, sv: user.sessionVersion });
   redirect("/agenda");
 }
 

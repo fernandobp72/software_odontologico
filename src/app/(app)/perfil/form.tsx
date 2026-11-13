@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { changeEmail, changePassword, saveProfile } from "./actions";
+import { changeEmail, changePassword, endOtherSessions, saveProfile } from "./actions";
 
 export default function PasswordForm() {
   const [state, action, pending] = useActionState(changePassword, undefined);
@@ -11,7 +11,7 @@ export default function PasswordForm() {
       <label className="label">Contraseña actual<input name="current" type="password" autoComplete="current-password" required className="field" /></label>
       <label className="label">Contraseña nueva (mínimo 10 caracteres)<input name="next" type="password" autoComplete="new-password" required minLength={10} className="field" /></label>
       {state?.error && <p role="alert" className="error-text">{state.error}</p>}
-      {state?.ok && <p className="ok-text">Contraseña actualizada</p>}
+      {state?.ok && <p className="ok-text">Contraseña actualizada. Se cerró la sesión en tus otros dispositivos.</p>}
       <button disabled={pending} className="btn-primary">{pending ? "Guardando…" : "Cambiar contraseña"}</button>
     </form>
   );
@@ -48,6 +48,19 @@ export function EmailForm({ email }: { email: string }) {
       {state?.ok && <p className="ok-text" role="status">Correo actualizado</p>}
       <button disabled={pending} className="btn-primary">{pending ? "Guardando…" : "Cambiar correo"}</button>
       <p className="muted">Es el correo con el que ingresas y al que llegan los enlaces de recuperación.</p>
+    </form>
+  );
+}
+
+export function OtherSessionsForm() {
+  const [state, action, pending] = useActionState(endOtherSessions, undefined);
+  return (
+    <form action={action} className="card max-w-md space-y-3">
+      <h2 className="section-title">Sesiones en otros dispositivos</h2>
+      <p className="muted">Si perdiste un celular o dejaste la sesión abierta en otro computador, ciérrala desde aquí. Este dispositivo sigue conectado.</p>
+      {state?.error && <p role="alert" className="error-text">{state.error}</p>}
+      {state?.ok && <p className="ok-text" role="status">Listo: se cerró la sesión en tus otros dispositivos.</p>}
+      <button disabled={pending} className="btn-secondary">{pending ? "Cerrando…" : "Cerrar sesión en los demás dispositivos"}</button>
     </form>
   );
 }
