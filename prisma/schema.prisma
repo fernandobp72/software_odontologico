@@ -147,7 +147,8 @@ model User {
   invoices            Invoice[]
   invitations         Invitation[]
   prescriptions       Prescription[]
-  passwordResets      PasswordReset[]
+  expenses            Expense[]
+  passwordResets     PasswordReset[]
   userBranches        UserBranch[]
   // Sello digital del profesional: cuántas veces se le ha reexpedido tras perder todos sus dispositivos.
   sealGeneration      Int                  @default(0)
@@ -918,4 +919,101 @@ model InvimaCache {
   atc       String   @id
   rows      Json
   fetchedAt DateTime @default(now())
+}
+
+// A quién le paga el consultorio: proveedores, laboratorios, arrendador, servicios públicos…
+model Payee {
+  id              String             @id @default(cuid())
+  clinicId        String
+  name            String
+  document        String? // NIT o cédula, como lo necesita el contador
+  phone           String?
+  bank            String? // dónde se le consigna
+  note            String?
+  // Última categoría usada: se sugiere sola en el siguiente gasto.
+  defaultCategory String?
+  active          Boolean            @default(true)
+  createdAt       DateTime           @default(now())
+  expenses        Expense[]
+  recurring       RecurringExpense[]
+
+  @@unique([clinicId, name])
+}
+
+// Gasto del consultorio. Inmutable: los errores se corrigen anulando con motivo.
+// Si no está pagado del todo (settledAt vacío) es una deuda y aparece en «Por pagar».
+model Expense {
+  id          String           @id @default(cuid())
+  clinicId    String
+  branchId    String
+  number      Int // consecutivo por consultorio
+  payeeId     String
+  payee       Payee            @relation(fields: [payeeId], references: [id])
+  category    String
+  description String?
+  amount      Int // COP, valor total a pagar
+  docKind     String           @default("NONE") // tipo de soporte: ver DOC_KINDS
+  docNumber   String?
+  expenseDate DateTime         @db.Date
+  dueDate     DateTime?        @db.Date
+  // Foto o PDF del soporte (se sirve en /api/gastos/<id>/soporte)
+  fileName    String?
+  mimeType    String?
+  data        Bytes?
+  // Si salió de un gasto que se repite: de cuál y de qué mes («2026-11»).
+  recurringId String?
+  period      String?
+  settledAt   DateTime?
+  createdById String
+  createdBy   User             @relation(fields: [createdById], references: [id])
+  createdAt   DateTime         @default(now())
+  voidedAt    DateTime?
+  voidedById  String?
+  voidReason  String?
+  payments    ExpensePayment[]
+
+  @@unique([clinicId, number])
+  @@index([clinicId, expenseDate])
+  @@index([clinicId, settledAt])
+  @@index([recurringId, period])
+}
+
+// Pago o abono a un gasto. source: de dónde salió la plata (ver SOURCES). Si salió de la caja del día,
+// queda ligado a esa sesión y se descuenta del efectivo esperado al cerrar.
+model ExpensePayment {
+  id         String    @id @default(cuid())
+  clinicId   String
+  expenseId  String
+  expense    Expense   @relation(fields: [expenseId], references: [id])
+  amount     Int // COP
+  source     String
+  sessionId  String?
+  reference  String?
+  paidAt     DateTime  @default(now())
+  paidById   String
+  voidedAt   DateTime?
+  voidedById String?
+  voidReason String?
+
+  @@index([clinicId, paidAt])
+  @@index([sessionId])
+  @@index([expenseId])
+}
+
+// Gasto que se repite cada mes (arriendo, servicios). Nunca se registra solo: cada mes se confirma con un toque.
+model RecurringExpense {
+  id          String   @id @default(cuid())
+  clinicId    String
+  branchId    String
+  payeeId     String
+  payee       Payee    @relation(fields: [payeeId], references: [id])
+  category    String
+  description String?
+  amount      Int
+  dayOfMonth  Int // día en que suele vencer
+  active      Boolean  @default(true)
+  createdById String
+  createdAt   DateTime @default(now())
+
+  @@index([clinicId, active])
 }

@@ -13,6 +13,7 @@ const base = [
 const admin = (noun: string) => [{ href: "/inicio", label: "Inicio" }, { href: "/equipo", label: "Equipo" }, { href: "/sedes", label: "Sedes" }, { href: "/catalogo", label: "Catálogo" }, { href: "/configuracion", label: `Mi ${noun}` }];
 const linksFor = (role: string, platform: boolean, noun: string) => [
   ...base,
+  ...(role === "ADMIN" ? [{ href: "/finanzas", label: "Finanzas" }] : role === "RECEPTION" ? [{ href: "/finanzas/gastos", label: "Gastos" }] : []),
   { href: "/recordatorios", label: "Recordatorios" },
   { href: "/inventario", label: "Inventario" },
   ...(role !== "RECEPTION" ? [{ href: "/vademecum", label: "Vademécum" }] : []),
