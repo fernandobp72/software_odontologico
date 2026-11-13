@@ -150,7 +150,10 @@ model User {
   invitations         Invitation[]
   prescriptions       Prescription[]
   expenses            Expense[]
-  passwordResets     PasswordReset[]
+  proAgreement        ProAgreement?
+  proSettlements      ProSettlement[]
+  labOrders           LabOrder[]
+  passwordResets      PasswordReset[]
   userBranches        UserBranch[]
   // Sello digital del profesional: cuántas veces se le ha reexpedido tras perder todos sus dispositivos.
   sealGeneration      Int                  @default(0)
@@ -938,6 +941,7 @@ model Payee {
   createdAt       DateTime           @default(now())
   expenses        Expense[]
   recurring       RecurringExpense[]
+  labOrders       LabOrder[]
 
   @@unique([clinicId, name])
 }
@@ -1018,4 +1022,123 @@ model RecurringExpense {
   createdAt   DateTime @default(now())
 
   @@index([clinicId, active])
+}
+
+// Acuerdo de pago de un profesional por porcentaje: «le pago 40 % de lo que el paciente ya pagó, después de descontar el laboratorio».
+// Uno vigente por profesional. El cambio aplica a lo que aún no se ha liquidado; lo ya pagado queda con su porcentaje.
+model ProAgreement {
+  id        String   @id @default(cuid())
+  clinicId  String
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id])
+  percent   Int // 0 a 100
+  deductLab Boolean  @default(true) // descuenta el costo de laboratorio antes del porcentaje
+  active    Boolean  @default(true)
+  note      String?
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  @@index([clinicId])
+}
+
+// Liquidación de un profesional. Inmutable: los errores se corrigen anulando con motivo.
+// Al liquidar se registra como gasto (Pagos a profesionales), pagado o por pagar.
+model ProSettlement {
+  id          String              @id @default(cuid())
+  clinicId    String
+  number      Int // consecutivo por consultorio
+  userId      String
+  user        User                @relation(fields: [userId], references: [id])
+  percent     Int
+  deductLab   Boolean
+  total       Int
+  expenseId   String?             @unique
+  retention   Int                 @default(0) // retención sugerida y editable (la decide el contador)
+  note        String?
+  createdById String
+  createdAt   DateTime            @default(now())
+  voidedAt    DateTime?
+  voidedById  String?
+  voidReason  String?
+  lines       ProSettlementLine[]
+
+  @@unique([clinicId, number])
+  @@index([clinicId, userId])
+}
+
+// Línea de una liquidación: un procedimiento (con lo recaudado hasta ese día) o un ajuste con nota.
+// earned es lo que le corresponde al profesional por ese procedimiento hasta esa fecha; amount, lo que se le paga en esta liquidación.
+model ProSettlementLine {
+  id           String        @id @default(cuid())
+  settlementId String
+  settlement   ProSettlement @relation(fields: [settlementId], references: [id])
+  itemId       String?
+  patientName  String
+  description  String
+  doneAt       DateTime?
+  price        Int           @default(0)
+  collected    Int           @default(0)
+  lab          Int           @default(0)
+  earned       Int           @default(0)
+  amount       Int
+  note         String?
+
+  @@index([settlementId])
+  @@index([itemId])
+}
+
+// Orden de trabajo para el laboratorio dental. Nace del procedimiento del paciente; su costo se suma a la cuenta del laboratorio
+// y se descuenta en la liquidación del profesional. status: SENT (enviado), RECEIVED (recibido), PLACED (colocado), ADJUST (devuelto para ajuste).
+model LabOrder {
+  id           String          @id @default(cuid())
+  clinicId     String
+  branchId     String
+  number       Int
+  payeeId      String
+  payee        Payee           @relation(fields: [payeeId], references: [id])
+  patientId    String
+  itemId       String?
+  dentistId    String
+  dentist      User            @relation(fields: [dentistId], references: [id])
+  workType     String
+  tooth        Int?
+  shade        String?
+  material     String?
+  instructions String?
+  promisedAt   DateTime?       @db.Date
+  cost         Int             @default(0)
+  status       String          @default("SENT")
+  sentAt       DateTime        @default(now())
+  receivedAt   DateTime?
+  placedAt     DateTime?
+  // Repetición: a qué orden repite, por qué y quién asume el costo (LAB, CLINIC, PRO).
+  redoOfId     String?
+  redoReason   String?
+  redoPayer    String?
+  // Factura del laboratorio que cubre este trabajo (gasto).
+  expenseId    String?
+  createdById  String
+  createdAt    DateTime        @default(now())
+  voidedAt     DateTime?
+  voidedById   String?
+  voidReason   String?
+  events       LabOrderEvent[]
+
+  @@unique([clinicId, number])
+  @@index([clinicId, status])
+  @@index([patientId])
+  @@index([itemId])
+  @@index([payeeId, expenseId])
+}
+
+model LabOrderEvent {
+  id      String   @id @default(cuid())
+  orderId String
+  order   LabOrder @relation(fields: [orderId], references: [id])
+  status  String
+  note    String?
+  byId    String
+  at      DateTime @default(now())
+
+  @@index([orderId])
 }

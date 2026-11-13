@@ -7,6 +7,8 @@ const TABS = [
   { href: "/finanzas", label: "Resumen" },
   { href: "/finanzas/gastos", label: "Gastos" },
   { href: "/finanzas/por-pagar", label: "Por pagar" },
+  { href: "/finanzas/profesionales", label: "Profesionales" },
+  { href: "/finanzas/laboratorios", label: "Laboratorios" },
   { href: "/finanzas/a-quien-le-pago", label: "A quién le pago" },
 ];
 

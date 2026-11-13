@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { requireBranch } from "@/lib/dal";
 import { copFmt } from "@/lib/cartera";
@@ -7,6 +8,7 @@ import { ExpenseForm, type RecurringPrefill } from "../forms";
 
 export default async function GastosPage({ searchParams }: PageProps<"/finanzas/gastos">) {
   const { user, branch, branches } = await requireBranch();
+  if (user.role === "DENTIST") redirect("/finanzas/mis-pagos");
   const admin = user.role === "ADMIN";
   const sp = await searchParams;
   const today = todayStr();
