@@ -85,3 +85,11 @@ export async function requireBranch() {
   if (!branch) redirect("/sin-sede");
   return { user, branches, branch };
 }
+
+// Registro de quién abre la historia clínica (Res. 1995 de 1999: reserva y acceso controlado).
+// Una anotación por persona y paciente cada 15 minutos, para que el registro sea legible.
+export async function logClinicalRead(userId: string, patientId: string) {
+  const since = new Date(Date.now() - 15 * 60 * 1000);
+  const recent = await db.auditLog.findFirst({ where: { userId, action: "READ_HC", entity: "Patient", entityId: patientId, createdAt: { gte: since } }, select: { id: true } });
+  if (!recent) await db.auditLog.create({ data: { userId, action: "READ_HC", entity: "Patient", entityId: patientId } });
+}

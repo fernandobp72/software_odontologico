@@ -128,3 +128,14 @@ export async function setUserBranches(userId: string, fd: FormData): Promise<voi
   await db.auditLog.create({ data: { userId: admin.id, action: "USER_BRANCHES", entity: "User", entityId: userId } });
   revalidatePath("/equipo");
 }
+
+// Celular perdido o cambiado: el administrador quita la verificación en dos pasos y la persona la vuelve a configurar en Mi cuenta.
+// Se cierran sus sesiones abiertas por si el celular quedó en manos de otro.
+export async function resetTwoFactor(userId: string): Promise<void> {
+  const admin = await requireAdmin();
+  const target = await db.user.findFirst({ where: { id: userId, clinicId: admin.clinicId }, select: { id: true } });
+  if (!target) return;
+  await db.user.update({ where: { id: userId }, data: { totpSecret: null, totpEnabledAt: null, totpLastStep: null, sessionVersion: { increment: 1 } } });
+  await db.auditLog.create({ data: { userId: admin.id, action: "TOTP_RESET", entity: "User", entityId: userId } });
+  revalidatePath("/equipo");
+}

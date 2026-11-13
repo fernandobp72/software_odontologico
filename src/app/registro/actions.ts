@@ -27,8 +27,8 @@ export async function signup(_: SignupState, fd: FormData): Promise<SignupState>
   if (process.env.ALLOW_SIGNUP === "false") return { error: "El registro está cerrado por ahora", values };
   const ip = (await clientIp()) ?? "local";
   const key = `signup:${ip}`;
-  if (isBlocked(key)) return { error: "Demasiados intentos. Espera unos minutos.", values };
-  recordFailure(key); // cuenta cada intento para frenar registros masivos
+  if (await isBlocked(key)) return { error: "Demasiados intentos. Espera unos minutos.", values };
+  await recordFailure(key); // cuenta cada intento para frenar registros masivos
 
   const parsed = schema.safeParse(Object.fromEntries(fd));
   if (!parsed.success) return { error: parsed.error.issues[0].message, values };

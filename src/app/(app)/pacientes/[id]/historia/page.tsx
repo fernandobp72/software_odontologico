@@ -33,6 +33,16 @@ export default async function HistoriaPage({ params, searchParams }: PageProps<"
       ? { kind: "pending", expires: fmt.format(form.expiresAt) }
       : { kind: "none" };
   const cop = copTotal(data);
+  // Solo el administrador ve quién abrió o imprimió esta historia (las anotaciones se hacen al entrar a la ficha del paciente).
+  const ACCESS: Record<string, string> = { READ_HC: "Abrió la historia", PRINT: "Imprimió la historia completa", READ_HC_VERSION: "Vio una versión anterior" };
+  const accesses = user.role === "ADMIN"
+    ? await db.auditLog.findMany({
+        where: { OR: [{ entity: "Patient", entityId: id, action: { in: ["READ_HC", "PRINT"] } }, { entity: "Assessment", action: "READ_HC_VERSION", entityId: { in: versions.map((v) => v.id) } }], user: { clinicId: user.clinicId } },
+        orderBy: { createdAt: "desc" },
+        take: 30,
+        select: { id: true, action: true, createdAt: true, user: { select: { name: true } } },
+      })
+    : [];
 
   return (
     <div className="space-y-4">
@@ -53,6 +63,19 @@ export default async function HistoriaPage({ params, searchParams }: PageProps<"
               <li key={v.id} className="py-2 text-sm text-slate-800"><a href={`/pacientes/${id}/historia/version/${v.id}`} className="font-semibold text-teal-800 underline">{fmt.format(v.createdAt)}</a> · {v.author.name} · ver qué decía y qué cambió</li>
             ))}
           </ul>
+        </details>
+      )}
+      {user.role === "ADMIN" && (
+        <details className="card">
+          <summary className="cursor-pointer font-semibold text-slate-900">Quién ha consultado esta historia</summary>
+          {accesses.length ? (
+            <ul className="mt-3 divide-y divide-slate-200">
+              {accesses.map((a) => (
+                <li key={a.id} className="py-2 text-sm text-slate-800">{fmt.format(a.createdAt)} · <strong>{a.user?.name ?? "—"}</strong> · {ACCESS[a.action] ?? a.action}</li>
+              ))}
+            </ul>
+          ) : <p className="muted mt-2">Todavía no hay consultas registradas.</p>}
+          <p className="muted mt-2">Últimas 30. Se anota una vez cada 15 minutos por persona. La historia clínica es reservada: solo debe abrirla quien atiende al paciente.</p>
         </details>
       )}
     </div>

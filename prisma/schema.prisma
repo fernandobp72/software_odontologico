@@ -131,6 +131,10 @@ model User {
   lastLoginAt         DateTime?
   // Sube al cambiar o restablecer la contraseña, o al cerrar las demás sesiones: invalida las sesiones abiertas antes.
   sessionVersion      Int                  @default(0)
+  // Verificación en dos pasos (código de 6 dígitos de una app autenticadora). El secreto se guarda cifrado.
+  totpSecret          String?
+  totpEnabledAt       DateTime?
+  totpLastStep        Int? // último paso de 30 s usado: el mismo código no sirve dos veces
   createdAt           DateTime             @default(now())
   appointments        Appointment[]
   evolutions          Evolution[]
@@ -1257,4 +1261,14 @@ model NotePhrase {
   createdAt DateTime @default(now())
 
   @@index([userId])
+}
+
+// Intentos fallidos (ingreso, olvido de contraseña, registro, formularios públicos) para frenar ataques de fuerza bruta.
+// En la base y no en memoria: funciona igual con varias réplicas y sobrevive a un reinicio.
+model RateHit {
+  id  String   @id @default(cuid())
+  key String
+  at  DateTime @default(now())
+
+  @@index([key, at])
 }

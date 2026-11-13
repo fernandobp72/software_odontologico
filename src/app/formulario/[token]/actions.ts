@@ -20,10 +20,10 @@ const schema = z.object({
 export async function submitIntake(token: string, _: IntakeState, fd: FormData): Promise<IntakeState> {
   const ip = (await clientIp()) ?? "?";
   const key = `intake:${ip}`;
-  if (isBlocked(key)) return { error: "Demasiados intentos. Espera unos minutos." };
+  if (await isBlocked(key)) return { error: "Demasiados intentos. Espera unos minutos." };
   const form = token.length >= 16 ? await db.intakeForm.findUnique({ where: { tokenHash: hashToken(token) }, include: { patient: { select: { id: true, dataConsentAt: true } } } }) : null;
   if (!form || form.revokedAt || form.expiresAt < new Date() || form.submittedAt) {
-    recordFailure(key);
+    await recordFailure(key);
     return { error: "Este enlace ya no está disponible. Pide uno nuevo en el lugar donde te atienden." };
   }
   const parsed = schema.safeParse(Object.fromEntries(fd));
